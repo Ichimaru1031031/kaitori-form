@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家電買取 簡易見積もり・出張買取</title>
+<style>
+:root{--primary:#1e3a8a;--accent:#2563eb;--green:#059669;--bg:#f8fafc;--border:#cbd5e1;--text:#0f172a;--muted:#64748b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:var(--text);line-height:1.55}
+.container{max-width:760px;margin:auto;padding:18px}.header{background:var(--primary);color:white;border-radius:14px;padding:18px 20px;margin-bottom:14px}.header h1{font-size:21px;margin:0 0 5px}.header p{margin:0;font-size:12px;opacity:.9}
+.notice{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px}
+.card{background:white;border:1px solid var(--border);border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px #00000008}
+.section-title{font-size:16px;font-weight:800;color:var(--primary);border-left:4px solid var(--accent);padding-left:9px;margin:4px 0 13px}
+label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,select,textarea{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:15px}textarea{resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{border:0;border-radius:9px;padding:11px 15px;color:#fff;background:var(--accent);font-weight:800;font-size:14px;cursor:pointer}.btn.green{background:var(--green)}.btn.gray{background:#64748b}.btn.red{background:#dc2626}.btn.full{width:100%}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice label{margin:0}.choice input{display:none}.choice span{display:block;border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center;background:white;font-weight:700}.choice input:checked+span{border-color:var(--accent);background:#eff6ff;color:var(--primary)}
+.item{border:1px solid var(--border);border-radius:11px;padding:12px;margin-top:10px;background:#fcfdff}.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.item-title{font-weight:800}.small{font-size:11px;color:var(--muted)}.details{display:none;margin-top:10px;border-top:1px dashed var(--border);padding-top:10px}.item.open .details{display:block}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.photo-box{border:1px dashed #94a3b8;border-radius:8px;padding:8px;text-align:center;font-size:11px;background:#f8fafc}.photo-box input{font-size:11px;padding:5px}
+.preview{display:none;position:fixed;inset:0;background:#0008;z-index:20;padding:14px;overflow:auto}.preview-card{max-width:720px;margin:auto;background:white;border-radius:14px;padding:16px}.preview-row{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid #e2e8f0;padding:6px 0;font-size:13px}.preview-row b{color:#475569}.photo-preview{display:flex;gap:7px;overflow:auto;margin-top:8px}.photo-preview img{width:90px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #ddd}
+.hidden{display:none!important}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.foot{font-size:11px;color:var(--muted);text-align:center;padding:12px}
+@media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}.choice{grid-template-columns:1fr 1fr}.photo-grid{grid-template-columns:1fr 1fr}.preview-row{grid-template-columns:95px 1fr}}
+
+/* スマホ向け写真欄：常に横3列でコンパクト表示 */
+.photo-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+.photo-box{padding:6px 3px!important;font-size:11px!important;min-width:0;overflow:hidden}
+.photo-box input[type="file"]{width:100%;font-size:10px;margin-top:4px}
+.photo-box .small{font-size:9px!important;line-height:1.2;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>家電買取 簡易見積もり・出張買取</h1>
+    <p>入力はできるだけ少なく。写真があれば、わかる範囲だけでOKです。</p>
+  </div>
+
+  <div class="notice">
+    <b>最初は「家電の種類＋写真＋お名前＋電話番号」だけでもOK。</b><br>
+    型番・年式・状態の詳しい入力は、わかる場合だけ追加してください。<br>
+    <b style="color:#b91c1c">買取対象年式：エアコンは製造10年以内、その他の家電は製造5年以内です。対象年式を超える製品は買取できません。</b>
+  </div>
+
+  <form id="quoteForm" novalidate onsubmit="event.preventDefault();showPreview();return false;">
+    <div class="card">
+      <div class="section-title">1. 何を売りたいですか？</div>
+      <div id="items"></div>
+      <button type="button" class="btn green full" onclick="addItem()">＋ 家電を追加</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">2. お客様情報</div>
+      <div class="grid2">
+        <div><label>お名前 *</label><input id="name" autocomplete="name" placeholder="山田 太郎" required></div>
+        <div><label>電話番号 *</label><input id="tel" type="tel" autocomplete="tel" placeholder="090-0000-0000" required></div>
+      </div>
+      <div style="margin-top:10px"><label>メールアドレス <span class="small">（見積結果をメールで受け取る場合）</span></label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com"></div>
+      <div style="margin-top:10px"><label>郵便番号</label><div style="display:flex;gap:7px"><input id="zip" inputmode="numeric" maxlength="7" placeholder="2700175"><button type="button" class="btn" onclick="searchAddress()">住所検索</button></div></div>
+      <div style="margin-top:10px"><label>住所 *</label><input id="address" autocomplete="street-address" placeholder="千葉県流山市..." required></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">3. まずは見積もり？出張買取？</div>
+      <div class="choice">
+        <label><input type="radio" name="mode" value="見積もりのみ" checked onchange="toggleVisit()"><span>💰 まずは見積もり</span></label>
+        <label><input type="radio" name="mode" value="出張買取希望" onchange="toggleVisit()"><span>🚚 出張買取も希望</span></label>
+      </div>
+    </div>
+
+    <div class="card hidden" id="visitCard">
+      <div class="section-title">4. 出張買取の希望</div>
+      <div class="notice">希望日時は仮受付です。店舗側で確認してから確定します。</div>
+      <div id="visitPreferences" style="display:grid;gap:10px">
+        <div class="grid2 visit-pref-row">
+          <div><label>第1希望日</label><input type="date" id="date1" onchange="validateVisitDate(this)"></div>
+          <div><label>第1希望時間</label><select id="time1"><option value="">おまかせ</option><option>10:00〜12:00</option><option>12:00〜14:00</option><option>14:00〜16:00</option><option>16:00〜18:00</option><option>18:00〜20:00</option></select></div>
+        </div>
+        <div id="extraVisitDates" style="display:grid;gap:10px"></div>
+      </div>
+      <button type="button" id="addVisitDateBtn" class="btn gray" style="margin-top:10px;width:100%" onclick="addVisitPreference()">＋ 希望日を追加</button>
+      <div style="margin-top:10px"><label>建物・搬出条件（わかる範囲）</label>
+        <div class="grid3">
+          <select id="building"><option value="">建物</option><option>戸建て</option><option>マンション</option><option>アパート</option></select>
+          <select id="floor"><option value="">階数</option><option>1階</option><option>2階</option><option>3階以上</option></select>
+          <select id="elevator"><option value="">EV</option><option>あり</option><option>なし</option></select>
+        </div>
+      </div>
+      <div style="margin-top:10px"><label>搬出について気になること（任意）</label><textarea id="carry" rows="2" placeholder="大型冷蔵庫、外階段、駐車しにくい等"></textarea></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">5. 連絡について</div>
+      <div class="grid2">
+        <div><label>希望連絡方法</label><select id="contact"><option>電話</option><option>SMS</option><option>メール</option><option>LINE</option></select></div>
+        <div><label>その他（任意）</label><input id="note" placeholder="土日のみ希望など"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn full" onclick="safeShowPreview()">👁️ 内容を確認</button>
+      <button type="button" class="btn gray full" onclick="clearAll()">クリア</button>
+    </div>
+  </form>
+
+  <div class="foot">※この簡易版は、店舗側の自動受付サーバーを接続できる構成です。送信先URLを設定すると「確認→送信」の1回操作にできます。</div>
+</div>
+
+<div class="preview" id="preview">
+  <div class="preview-card">
+    <h2 style="margin-top:0">見積もり依頼内容</h2>
+    <div id="previewBody"></div>
+    <div class="actions" style="margin-top:14px">
+      <button id="submitInquiryBtn" class="btn green" onclick="submitInquiry()">📨 見積もりを送信</button>
+      <button class="btn gray" onclick="closePreview()">修正する</button>
+    </div>
+    <div id="sendStatus" class="notice hidden" style="margin-top:10px"></div>
+  </div>
+</div>
+
+
+<div class="preview" id="successPreview">
+  <div class="preview-card" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:8px">✅</div>
+    <h2 style="margin:0 0 8px">受付が完了しました</h2>
+    <div class="notice" style="margin:14px 0">
+      受付番号<br>
+      <b id="successInquiryId" style="font-size:22px;letter-spacing:.5px"></b>
+    </div>
+    <p style="line-height:1.7">内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。</p>
+    <button type="button" class="btn full" onclick="finishAndReset()">新しい見積もりを入力</button>
+  </div>
+</div>
+
+<script>
+const CONFIG={
+  // Google Apps Script等の受信URLをここに入れると自動送信できます。
+  // 例: "https://script.google.com/macros/s/XXXXXXXX/exec"
+  WEBHOOK_URL:"https://script.google.com/macros/s/AKfycbyG-wfpBGOHtE2fCaWucjwkRr0b_leUZoHEOiOF_GZJvOhHpfbYp0XfYIZcZFeDsYod/exec",
+  STORE_NAME:"買取レスキュー"
+};
+
+  // 日本国内シェア上位順のメーカー、および各メーカーの主要機種（型番）
+  function buildModelSeries(prefixFn, sizes, sizeUnitFn) {
+    return sizes.map(size => `${prefixFn(size)} ${sizeUnitFn(size)}`);
+  }
+
+  const airconSizes = [6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 23, 26];
+  const airconSizeUnit = s => `${s}畳`;
+  const airconCapCode = { 6:'22', 7:'23', 8:'25', 9:'26', 10:'28', 11:'32', 12:'36', 13:'38', 14:'40', 16:'45', 18:'56', 20:'63', 23:'71', 26:'80' };
+
+  const washerVerticalSizes = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 11];
+  const washerDrumSizes = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 14];
+  const sizeUnitKg = s => `${s}kg`;
+
+  const fridge2doorSizes = [110, 130, 138, 150, 168, 180, 200, 217, 230, 250];
+  const fridge3doorSizes = [270, 285, 300, 320, 340, 350, 370, 390, 400, 410, 420, 440, 450, 470];
+  const fridge6doorSizes = [400, 410, 430, 450, 460, 480, 500, 520, 540, 560, 580, 600, 620, 650, 680, 700, 740, 800];
+  const sizeUnitL = s => `${s}L`;
+
+  const tvLcdSizes = [19, 22, 24, 32, 40, 43, 49, 50, 55, 58, 60, 65, 70, 75, 77, 80, 85, 86, 90, 98];
+  const tvOledSizes = [42, 48, 55, 65, 70, 77, 83, 88, 97];
+  const tvMiniLedSizes = [55, 65, 75, 85];
+  const sizeUnitInch = s => `${s}型`;
+
+  const makerData = {
+    "エアコン": {
+      "ダイキン": [
+        ...buildModelSeries(s => `S${airconCapCode[s]}ZTES-W`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `S${airconCapCode[s]}ZTRES-W`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `S${airconCapCode[s]}ZVES-W`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `S${airconCapCode[s]}ZRX`, airconSizes, airconSizeUnit)
+      ],
+      "三菱電機": [
+        ...buildModelSeries(s => `MSZ-GV${airconCapCode[s]}`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `MSZ-ZW${airconCapCode[s]}`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `MSZ-X${airconCapCode[s]}`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `MSZ-FZ${airconCapCode[s]}`, airconSizes, airconSizeUnit)
+      ],
+      "パナソニック": [
+        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DFL`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DEX`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DX`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DGX`, airconSizes, airconSizeUnit)
+      ],
+      "日立": [
+        ...buildModelSeries(s => `RAS-AJ${airconCapCode[s]}N`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `RAS-XJ${airconCapCode[s]}N`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `RAS-VX${airconCapCode[s]}N`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `RAS-S${airconCapCode[s]}N`, airconSizes, airconSizeUnit)
+      ],
+      "富士通ゼネラル": [
+        ...buildModelSeries(s => `AS-C${airconCapCode[s]}M`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `AS-Z${airconCapCode[s]}M`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `AS-X${airconCapCode[s]}M`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `AS-D${airconCapCode[s]}M`, airconSizes, airconSizeUnit)
+      ],
+      "シャープ": [
+        ...buildModelSeries(s => `AY-N${airconCapCode[s]}D`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `AY-R${airconCapCode[s]}D`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `AY-G${airconCapCode[s]}D`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `AY-D${airconCapCode[s]}D`, airconSizes, airconSizeUnit)
+      ],
+      "東芝キヤリア": [
+        ...buildModelSeries(s => `RAS-N${airconCapCode[s]}1M`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `RAS-D${airconCapCode[s]}1M`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `RAS-E${airconCapCode[s]}1M`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `RAS-S${airconCapCode[s]}1M`, airconSizes, airconSizeUnit)
+      ],
+      "ハイセンス": [
+        ...buildModelSeries(s => `HA-${airconCapCode[s]}H`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `HA-${airconCapCode[s]}HX`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `HA-${airconCapCode[s]}HP`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `HA-${airconCapCode[s]}HR`, airconSizes, airconSizeUnit)
+      ],
+      "ハイアール": [
+        ...buildModelSeries(s => `JA-${airconCapCode[s]}V`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `JA-${airconCapCode[s]}VX`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `JA-${airconCapCode[s]}VP`, airconSizes, airconSizeUnit),
+        ...buildModelSeries(s => `JA-${airconCapCode[s]}VD`, airconSizes, airconSizeUnit)
+      ]
+    },
+    "洗濯機": {
+      "パナソニック": [
+        ...buildModelSeries(s => `NA-F${s}B1`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `NA-FA${s}H9`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `NA-VG${s}0L`, washerDrumSizes, sizeUnitKg)
+      ],
+      "日立": [
+        ...buildModelSeries(s => `NW-${s}0G`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `BW-V${s}0H`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `BD-SV${s}0H`, washerDrumSizes, sizeUnitKg)
+      ],
+      "シャープ": [
+        ...buildModelSeries(s => `ES-GE${s}D`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `ES-PU${s}D`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `ES-W${s}H`, washerDrumSizes, sizeUnitKg)
+      ],
+      "東芝": [
+        ...buildModelSeries(s => `AW-${s}GA`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `AW-${s}DH3`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `TW-${s}X9L`, washerDrumSizes, sizeUnitKg)
+      ],
+      "AQUA": [
+        ...buildModelSeries(s => `AQW-S${s}M`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `AQW-V${s}G`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `AQW-DX${s}N`, washerDrumSizes, sizeUnitKg)
+      ],
+      "三菱電機": [
+        ...buildModelSeries(s => `MAW-${s}0GM`, washerVerticalSizes, sizeUnitKg),
+        ...buildModelSeries(s => `MAW-${s}0XP`, washerVerticalSizes, sizeUnitKg)
+      ]
+    },
+    "冷蔵庫": {
+      "パナソニック": [
+        ...buildModelSeries(s => `NR-B${s}FW`, fridge2doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `NR-C${s}FM`, fridge3doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `NR-F${s}HPX`, fridge6doorSizes, sizeUnitL)
+      ],
+      "日立": [
+        ...buildModelSeries(s => `R-S${s}KV`, fridge2doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `R-V${s}S`, fridge3doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `R-WX${s}L`, fridge6doorSizes, sizeUnitL)
+      ],
+      "三菱電機": [
+        ...buildModelSeries(s => `MR-P${s}G`, fridge2doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `MR-B${s}H`, fridge3doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `MR-WX${s}K`, fridge6doorSizes, sizeUnitL)
+      ],
+      "シャープ": [
+        ...buildModelSeries(s => `SJ-D${s}G`, fridge2doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `SJ-GD${s}H`, fridge3doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `SJ-MW${s}H`, fridge6doorSizes, sizeUnitL)
+      ],
+      "東芝": [
+        ...buildModelSeries(s => `GR-T${s}BS`, fridge2doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `GR-S${s}GT`, fridge3doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `GR-W${s}TK`, fridge6doorSizes, sizeUnitL)
+      ],
+      "AQUA": [
+        ...buildModelSeries(s => `AQR-${s}G`, fridge2doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `AQR-${s}N`, fridge3doorSizes, sizeUnitL),
+        ...buildModelSeries(s => `AQR-SBS${s}L`, fridge6doorSizes, sizeUnitL)
+      ]
+    },
+    "テレビ": {
+      "ソニー": [
+        ...buildModelSeries(s => `BRAVIA KJ-${s}X8000`, tvLcdSizes, sizeUnitInch),
+        ...buildModelSeries(s => `BRAVIA XRJ-${s}A80L`, tvOledSizes, sizeUnitInch),
+        ...buildModelSeries(s => `BRAVIA XRJ-${s}X95L`, tvMiniLedSizes, sizeUnitInch)
+      ],
+      "シャープ": [
+        ...buildModelSeries(s => `AQUOS 4T-C${s}EL1`, tvLcdSizes, sizeUnitInch),
+        ...buildModelSeries(s => `AQUOS 8T-C${s}DX1`, tvOledSizes, sizeUnitInch),
+        ...buildModelSeries(s => `AQUOS 8T-C${s}EX1`, tvMiniLedSizes, sizeUnitInch)
+      ],
+      "パナソニック": [
+        ...buildModelSeries(s => `VIERA TH-${s}MX800`, tvLcdSizes, sizeUnitInch),
+        ...buildModelSeries(s => `VIERA TH-${s}MZ2000`, tvOledSizes, sizeUnitInch),
+        ...buildModelSeries(s => `VIERA TH-${s}MZ1800`, tvMiniLedSizes, sizeUnitInch)
+      ],
+      "東芝": [
+        ...buildModelSeries(s => `REGZA ${s}M550M`, tvLcdSizes, sizeUnitInch),
+        ...buildModelSeries(s => `REGZA ${s}X9900L`, tvOledSizes, sizeUnitInch),
+        ...buildModelSeries(s => `REGZA ${s}Z970N`, tvMiniLedSizes, sizeUnitInch)
+      ],
+      "ハイセンス": [
+        ...buildModelSeries(s => `${s}E6H`, tvLcdSizes, sizeUnitInch),
+        ...buildModelSeries(s => `${s}A9H`, tvOledSizes, sizeUnitInch),
+        ...buildModelSeries(s => `${s}U8H`, tvMiniLedSizes, sizeUnitInch)
+      ],
+      "LG": [
+        ...buildModelSeries(s => `${s}UR7300PSA`, tvLcdSizes, sizeUnitInch),
+        ...buildModelSeries(s => `OLED${s}B3PJA`, tvOledSizes, sizeUnitInch),
+        ...buildModelSeries(s => `${s}QNED87JSA`, tvMiniLedSizes, sizeUnitInch)
+      ]
+    }
+  };
+
+
+let items=[];
+let inquiry=null;
+const photoFiles={};
+
+function addItem(){
+  const id=crypto.randomUUID();
+  items.push({id,type:"冷蔵庫",qty:1,photos:[]});
+  renderItems();
+}
+function removeItem(id){items=items.filter(x=>x.id!==id);renderItems()}
+function makerOptions(type, selected){
+  const makers=Object.keys((makerData[type]||{}));
+  return `<option value="__custom__" ${selected==='__custom__'?'selected':''}>手動入力</option><option value="" ${!selected?'selected':''}>未選択</option>`+makers.map(m=>`<option value="${escAttr(m)}" ${m===selected?'selected':''}>${esc(m)}</option>`).join('');
+}
+function modelOptions(type,maker,selected){
+  const models=((makerData[type]||{})[maker]||[]);
+  return `<option value="__custom__" ${selected==='__custom__'?'selected':''}>手動入力</option><option value="" ${!selected?'selected':''}>未選択</option>`+models.map(m=>`<option value="${escAttr(m)}" ${m===selected?'selected':''}>${esc(m)}</option>`).join('');
+}
+function yearOptions(selected,type){
+  const y=new Date().getFullYear(), n=type==='エアコン'?10:5;
+  let a=['<option value="">未選択</option>'];
+  for(let i=0;i<n;i++){const v=(y-i)+'年製';a.push(`<option ${v===selected?'selected':''}>${v}</option>`)}
+  return a.join('');
+}
+function changeItemType(id,v){const x=items.find(x=>x.id===id);if(!x)return;x.type=v;x.maker='';x.model='';x.year='';saveDraft();renderItems()}
+function changeMaker(id,v){const x=items.find(x=>x.id===id);if(!x)return;x.maker=v;x.model='';saveDraft();renderItems()}
+function setCustom(id,k,v){const x=items.find(x=>x.id===id);if(x){x[k]=v;saveDraft()}}
+let visitPreferenceCount=1;
+function isThursdayDate(value){
+  if(!value)return false;
+  const d=new Date(value+"T00:00:00");
+  return d.getDay()===4;
+}
+function validateVisitDate(input){
+  if(isThursdayDate(input.value)){
+    alert("木曜日は休業日のため選択できません。別の日をお選びください。");
+    input.value="";
+    input.focus();
+    return false;
+  }
+  return true;
+}
+function addVisitPreference(){
+ if(visitPreferenceCount>=3)return;
+ visitPreferenceCount++;
+ const n=visitPreferenceCount, root=document.getElementById('extraVisitDates');
+ const div=document.createElement('div');div.id='visitPref'+n;div.className='grid2 visit-pref-row';
+ div.innerHTML=`<div><label>第${n}希望日</label><input type="date" id="date${n}" onchange="validateVisitDate(this)"></div><div><label>第${n}希望時間</label><select id="time${n}"><option value="">おまかせ</option><option>10:00〜12:00</option><option>12:00〜14:00</option><option>14:00〜16:00</option><option>16:00〜18:00</option><option>18:00〜20:00</option></select></div>`;
+ root.appendChild(div);
+ if(visitPreferenceCount>=3)document.getElementById('addVisitDateBtn').style.display='none';
+}
+function renderItems(){
+  const root=document.getElementById("items");
+  if(!items.length){addItem();return}
+  root.innerHTML=items.map((x,i)=>`
+    <div class="item ${x.open?"open":""}" id="item-${x.id}">
+      <div class="item-head">
+        <div class="item-title">${i+1}. <select onchange="changeItemType('${x.id}',this.value)" style="width:auto;font-weight:800">
+          ${["エアコン","冷蔵庫","洗濯機","テレビ","その他"].map(v=>`<option ${v===x.type?"selected":""}>${v}</option>`).join("")}
+        </select></div>
+        <div style="display:flex;gap:5px"><button type="button" class="btn gray" style="padding:7px 9px;font-size:11px" onclick="toggleDetails('${x.id}',this)">${x.open?"▲ 詳細を閉じる":"▼ 詳細を入力"}</button>
+        <button type="button" class="btn red" style="padding:7px 9px;font-size:11px" onclick="removeItem('${x.id}')">削除</button></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <div style="flex:1"><label>台数</label><input type="number" min="1" value="${x.qty}" onchange="setItem('${x.id}','qty',this.value)"></div>
+      </div>
+      <div class="photo-grid" style="margin-top:9px">
+        ${[0,1,2].map((p)=>`<div class="photo-box">📷${p+1}<input type="file" accept="image/*,.heic,.heif" onchange="photoChanged('${x.id}',${p},this.files[0],this)"><div class="small" style="margin-top:4px">${x.photos&&x.photos[p]?"✓ "+esc(x.photos[p].name):"写真を選択"}</div></div>`).join("")}
+      </div>
+      <div class="details">
+        <div class="grid3">
+          <div><label>メーカー（任意）</label><select onchange="changeMaker('${x.id}',this.value)">${makerOptions(x.type,x.maker||'')}</select>${x.maker==='__custom__'?`<input style="margin-top:6px" placeholder="メーカー名を入力" value="${escAttr(x.makerCustom||'')}" oninput="setCustom('${x.id}','makerCustom',this.value)">`:''}</div>
+          <div><label>型番（任意）</label><select onchange="setItem('${x.id}','model',this.value);renderItems()">${modelOptions(x.type,x.maker,x.model||'')}</select>${x.model==='__custom__'?`<input style="margin-top:6px" placeholder="型番を入力" value="${escAttr(x.modelCustom||'')}" oninput="setCustom('${x.id}','modelCustom',this.value)">`:''}</div>
+          <div><label>年式（任意）</label><select onchange="setItem('${x.id}','year',this.value)">${yearOptions(x.year||'',x.type)}</select></div>
+        </div>
+        <div style="margin-top:10px"><label>動作</label>
+          <select onchange="setItem('${x.id}','operation',this.value)">
+            ${["正常","不具合あり","不明"].map(v=>`<option ${v===(x.operation||"不明")?"selected":""}>${v}</option>`).join("")}
+          </select>
+        </div>
+        <div style="margin-top:10px"><label>キズ・汚れ</label><select onchange="setItem('${x.id}','condition',this.value)">
+          ${["少ない","使用感あり","目立つ","不明"].map(v=>`<option ${v===(x.condition||"不明")?"selected":""}>${v}</option>`).join("")}
+        </select></div>
+      </div>
+    </div>`).join("");
+}
+function toggleDetails(id,btn){
+  const x=items.find(v=>v.id===id); if(!x)return;
+  x.open=!x.open;
+  const el=document.getElementById("item-"+id);
+  if(el)el.classList.toggle("open",x.open);
+  if(btn)btn.textContent=x.open?"▲ 詳細を閉じる":"▼ 詳細を入力";
+  saveDraft();
+}
+function setItem(id,k,v){const x=items.find(v=>v.id===id);if(x)x[k]=v;saveDraft()}
+function photoChanged(id,p,file,inputEl){
+  const x=items.find(v=>v.id===id); if(!x||!file)return;
+  const key=id+"_"+p;
+  photoFiles[key]=file;
+  x.photos=x.photos||[];
+  x.photos[p]={name:file.name,size:file.size,type:file.type};
+  const box = inputEl ? inputEl.closest(".photo-box") : null;
+  if(box){const note=box.querySelector(".small");if(note)note.textContent="✓ 選択済み："+file.name;}
+  saveDraft();
+}
+
+function fileToDataURL(file,maxSide=1600,quality=.78){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=reject;
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.naturalWidth,h=img.naturalHeight;
+        const scale=Math.min(1,maxSide/Math.max(w,h));
+        w=Math.round(w*scale); h=Math.round(h*scale);
+        const c=document.createElement("canvas"); c.width=w; c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        resolve({
+          name:(file.name||"photo").replace(/\\.[^.]+$/,"")+".jpg",
+          type:"image/jpeg",
+          data:c.toDataURL("image/jpeg",quality).split(",")[1]
+        });
+      };
+      img.onerror=reject;
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function buildInquiryPayload(){
+  const d=JSON.parse(JSON.stringify(inquiry));
+  d.photos=[];
+  for(const x of d.items||[]){
+    for(let p=0;p<3;p++){
+      const f=photoFiles[x.id+"_"+p];
+      if(f){
+        const photo=await fileToDataURL(f);
+        d.photos.push({
+          itemId:x.id,
+          itemType:x.type,
+          position:p+1,
+          originalName:f.name,
+          ...photo
+        });
+      }
+    }
+  }
+  return d;
+}
+function toggleVisit(){document.getElementById("visitCard").classList.toggle("hidden",document.querySelector('input[name="mode"]:checked').value!=="出張買取希望")}
+function searchAddress(){
+  const zip=document.getElementById("zip").value.replace(/\D/g,"");
+  if(zip.length!==7){alert("郵便番号7桁を入力してください。");return}
+  fetch("https://zipcloud.ibsnet.co.jp/api/search?zipcode="+zip).then(r=>r.json()).then(d=>{
+    if(d.results&&d.results[0]){
+      const a=d.results[0];document.getElementById("address").value=a.address1+a.address2+a.address3;
+    }else alert("住所が見つかりませんでした。");
+  }).catch(()=>alert("住所検索に失敗しました。"));
+}
+function val(id){
+  const el=document.getElementById(id);
+  return el ? (el.value || "") : "";
+}
+function getData(){
+  const mode=document.querySelector('input[name="mode"]:checked').value;
+  if(mode==="出張買取希望"){
+    for(let n=1;n<=3;n++){
+      const el=document.getElementById("date"+n);
+      if(el && el.value && isThursdayDate(el.value)){
+        alert("木曜日は休業日のため、第"+n+"希望日は別の日をお選びください。");
+        el.value="";
+        return null;
+      }
+    }
+  }
+  return {
+    inquiryId:"KR-"+Math.random().toString(36).slice(2,6).toUpperCase(),
+    createdAt:new Date().toISOString(),store:CONFIG.STORE_NAME,
+    name:document.getElementById("name").value.trim(),
+    tel:document.getElementById("tel").value.trim(),
+    email:document.getElementById("email").value.trim(),
+    zip:document.getElementById("zip").value.trim(),
+    address:document.getElementById("address").value.trim(),
+    mode,items:items.map(x=>({...x,maker:x.maker==='__custom__'?(x.makerCustom||''):x.maker,model:x.model==='__custom__'?(x.modelCustom||''):x.model})),
+    visit:mode==="出張買取希望"?{
+      date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
+      building:document.getElementById("building").value,floor:document.getElementById("floor").value,
+      elevator:document.getElementById("elevator").value,carry:[document.getElementById("carry").value.trim(),val("date2")?("第2希望: "+val("date2")+" "+(val("time2")||"おまかせ")):"",val("date3")?("第3希望: "+val("date3")+" "+(val("time3")||"おまかせ")):""].filter(Boolean).join(" / ")
+    }:null,
+    contact:document.getElementById("contact").value,note:document.getElementById("note").value.trim()
+  };
+}
+function safeShowPreview(){
+  try{
+    showPreview();
+  }catch(err){
+    console.error(err);
+    alert("確認画面を開けませんでした。入力内容を確認してください。\n" + (err && err.message ? err.message : err));
+  }
+}
+function showPreview(){
+  isSubmitting=false;
+  const submitBtn=document.getElementById("submitInquiryBtn");
+  if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";}
+  const oldStatus=document.getElementById("sendStatus");
+  if(oldStatus){oldStatus.classList.add("hidden");oldStatus.innerHTML="";}
+
+  if(!items.length){alert("商品を1つ追加してください。");return}
+  const d=getData(); if(!d)return; if(!d.name||!d.tel||!d.address){alert("お名前・電話番号・住所を入力してください。");return}
+  inquiry=d;
+  const itemHtml=d.items.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px">
+    <b>${i+1}. ${esc(x.type)} × ${esc(x.qty)}台</b>
+    <div class="small">${esc(x.maker||"メーカー不明")} / ${esc(x.model||"型番不明")} / ${esc(x.year||"年式不明")}</div>
+    <div class="small">動作：${esc(x.operation||"不明")}　状態：${esc(x.condition||"不明")}</div>
+  </div>`).join("");
+  document.getElementById("previewBody").innerHTML=`
+    <div class="preview-row"><b>受付番号</b><span>${d.inquiryId}</span></div>
+    <div class="preview-row"><b>お名前</b><span>${esc(d.name)}</span></div>
+    <div class="preview-row"><b>電話</b><span>${esc(d.tel)}</span></div>
+    ${d.email?`<div class="preview-row"><b>メール</b><span>${esc(d.email)}</span></div>`:""}
+    <div class="preview-row"><b>住所</b><span>${esc(d.address)}</span></div>
+    <div class="preview-row"><b>依頼</b><span>${esc(d.mode)}</span></div>
+    <div style="margin-top:10px"><b>商品</b>${itemHtml}</div>
+    ${d.visit?`<div class="preview-row"><b>希望</b><span>${esc(d.visit.date||"おまかせ")} ${esc(d.visit.time||"")}${d.visit.date2?`<br>第2希望：${esc(d.visit.date2)} ${esc(d.visit.time2||"おまかせ")}`:""}${d.visit.date3?`<br>第3希望：${esc(d.visit.date3)} ${esc(d.visit.time3||"おまかせ")}`:""}</span></div><div class="preview-row"><b>搬出</b><span>${esc([d.visit.building,d.visit.floor,d.visit.elevator].filter(Boolean).join(" / "))}<br>${esc(d.visit.carry)}</span></div>`:""}
+    <div class="preview-row"><b>連絡</b><span>${esc(d.contact)} ${esc(d.note)}</span></div>`;
+  document.getElementById("sendStatus").classList.add("hidden");
+  document.getElementById("preview").style.display="block";
+}
+let isSubmitting=false;
+async function submitInquiry(){
+  if(!inquiry || isSubmitting)return;
+  isSubmitting=true;
+  const submitBtn=document.getElementById("submitInquiryBtn");
+  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送信中…";submitBtn.style.opacity=".6";}
+  localStorage.setItem("lastInquiry",JSON.stringify(inquiry));
+  const status=document.getElementById("sendStatus");status.classList.remove("hidden");
+  if(!CONFIG.WEBHOOK_URL){
+    status.innerHTML="<b>受付データを端末に保存しました。</b><br>送信先URLが未設定です。";
+    isSubmitting=false;if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
+    return;
+  }
+  status.textContent="送信中…写真を圧縮してアップロードしています。";
+  try{
+    const payload=await buildInquiryPayload();
+    const r=await fetch(CONFIG.WEBHOOK_URL,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const result=await r.json().catch(()=>({ok:true}));
+    status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
+      (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
+    if(submitBtn){submitBtn.textContent="✓ 送信済み";}
+    showSuccessAndReset(inquiry.inquiryId);
+  }catch(e){
+    console.error(e);
+    status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
+    isSubmitting=false;
+    if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
+  }
+}
+function showSuccessAndReset(inquiryId){
+  document.getElementById("successInquiryId").textContent=inquiryId||"";
+  document.getElementById("preview").style.display="none";
+  document.getElementById("successPreview").style.display="block";
+
+  // 送信成功後、入力内容を初期化。完了画面は残す。
+  document.getElementById("quoteForm").reset();
+  items=[{id:crypto.randomUUID(),type:"冷蔵庫",qty:1,photos:[]}];
+  Object.keys(photoFiles).forEach(k=>delete photoFiles[k]);
+  inquiry=null;
+  visitPreferenceCount=1;
+  const extra=document.getElementById("extraVisitDates");
+  if(extra)extra.innerHTML="";
+  const addBtn=document.getElementById("addVisitDateBtn");
+  if(addBtn)addBtn.style.display="";
+  localStorage.removeItem("quoteDraft");
+  renderItems();
+  toggleVisit();
+  isSubmitting=false;
+}
+function finishAndReset(){
+  document.getElementById("successPreview").style.display="none";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function closePreview(){
+  document.getElementById("preview").style.display="none";
+  const btn=document.getElementById("submitInquiryBtn");
+  if(btn){btn.disabled=false;btn.textContent="📨 見積もりを送信";btn.style.opacity="1";}
+  isSubmitting=false;
+  const status=document.getElementById("sendStatus");
+  if(status){status.classList.add("hidden");status.innerHTML="";}
+}
+function clearAll(){if(!confirm("入力内容をすべて消しますか？"))return;document.getElementById("quoteForm").reset();items=[];addItem();toggleVisit();localStorage.removeItem("quoteDraft")}
+function saveDraft(){try{localStorage.setItem("quoteDraft",JSON.stringify({items}))}catch(e){}}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function escAttr(v){return esc(v)}
+document.getElementById("quoteForm").addEventListener("input",()=>saveDraft());
+(function(){
+  // 起動時は必ず1商品だけ表示。商品追加はユーザー操作でのみ行う。
+  items=[{id:crypto.randomUUID(),type:"冷蔵庫",qty:1,photos:[]}];
+  renderItems();
+  toggleVisit();
+})();
+</script>
+</body>
+</html>
