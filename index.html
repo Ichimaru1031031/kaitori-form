@@ -67,8 +67,8 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       </div>
     </div>
 
-    <div class="card hidden" id="visitCard">
-      <div class="section-title">4. 出張買取の希望</div>
+    <div class="card" id="visitCard">
+      <div class="section-title">4. 訪問希望日時（任意）</div>
       <div class="notice">希望日時は仮受付です。店舗側で確認してから確定します。</div>
       <div id="visitPreferences" style="display:grid;gap:10px">
         <div class="grid2 visit-pref-row">
@@ -423,7 +423,7 @@ function photoChanged(id,p,file,inputEl){
   saveDraft();
 }
 
-function fileToDataURL(file,maxSide=1600,quality=.78){
+function fileToDataURL(file,maxSide=1200,quality=.68){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     reader.onerror=reject;
@@ -468,7 +468,7 @@ async function buildInquiryPayload(){
   }
   return d;
 }
-function toggleVisit(){document.getElementById("visitCard").classList.toggle("hidden",document.querySelector('input[name="mode"]:checked').value!=="出張買取希望")}
+function toggleVisit(){document.getElementById("visitCard").classList.remove("hidden")}
 function searchAddress(){
   const zip=document.getElementById("zip").value.replace(/\D/g,"");
   if(zip.length!==7){alert("郵便番号7桁を入力してください。");return}
@@ -503,7 +503,7 @@ function getData(){
     zip:document.getElementById("zip").value.trim(),
     address:document.getElementById("address").value.trim(),
     mode,items:items.map(x=>({...x,maker:x.maker==='__custom__'?(x.makerCustom||''):x.maker,model:x.model==='__custom__'?(x.modelCustom||''):x.model})),
-    visit:mode==="出張買取希望"?{
+    visit:(mode==="出張買取希望" || val("date1") || val("date2") || val("date3"))?{
       date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
       building:document.getElementById("building").value,floor:document.getElementById("floor").value,
       elevator:document.getElementById("elevator").value,carry:[document.getElementById("carry").value.trim(),val("date2")?("第2希望: "+val("date2")+" "+(val("time2")||"おまかせ")):"",val("date3")?("第3希望: "+val("date3")+" "+(val("time3")||"おまかせ")):""].filter(Boolean).join(" / ")
@@ -570,13 +570,14 @@ async function submitInquiry(){
     });
     if(!r.ok)throw new Error("HTTP "+r.status);
     const result=await r.json().catch(()=>({ok:true}));
+    if(result && result.ok===false) throw new Error(result.error||"受付サーバーでエラーが発生しました");
     status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
       (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
     if(submitBtn){submitBtn.textContent="✓ 送信済み";}
     showSuccessAndReset(inquiry.inquiryId);
   }catch(e){
     console.error(e);
-    status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
+    status.innerHTML="<b>送信に失敗しました。</b><br>入力内容は端末に保存しています。<br><span class=\"small\">"+esc(e && e.message ? e.message : "通信エラー")+"</span>";
     isSubmitting=false;
     if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
   }
