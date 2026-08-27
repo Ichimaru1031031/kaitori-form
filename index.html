@@ -13,7 +13,7 @@
 .section-title{font-size:16px;font-weight:800;color:var(--primary);border-left:4px solid var(--accent);padding-left:9px;margin:4px 0 13px}
 label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,select,textarea{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:15px}textarea{resize:vertical}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.btn{border:0;border-radius:9px;padding:11px 15px;color:#fff;background:var(--accent);font-weight:800;font-size:14px;cursor:pointer}.btn.green{background:var(--green)}.btn.gray{background:#64748b}.btn.red{background:#dc2626}.btn.full{width:100%}
+.btn{border:0;border-radius:9px;padding:11px 15px;color:#fff;background:var(--accent);font-weight:800;font-size:14px;cursor:pointer}.btn.green{background:#008f63;box-shadow:0 2px 5px #0002}.btn.green:not(:disabled):hover{background:#007c56}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.gray{background:#64748b}.btn.red{background:#dc2626}.btn.full{width:100%}
 .choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice label{margin:0}.choice input{display:none}.choice span{display:block;border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center;background:white;font-weight:700}.choice input:checked+span{border-color:var(--accent);background:#eff6ff;color:var(--primary)}
 .item{border:1px solid var(--border);border-radius:11px;padding:12px;margin-top:10px;background:#fcfdff}.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.item-title{font-weight:800}.small{font-size:11px;color:var(--muted)}.details{display:none;margin-top:10px;border-top:1px dashed var(--border);padding-top:10px}.item.open .details{display:block}
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.photo-box{border:1px dashed #94a3b8;border-radius:8px;padding:8px;text-align:center;font-size:11px;background:#f8fafc}.photo-box input{font-size:11px;padding:5px}
@@ -67,8 +67,8 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       </div>
     </div>
 
-    <div class="card" id="visitCard">
-      <div class="section-title">4. 訪問希望日時（任意）</div>
+    <div class="card hidden" id="visitCard">
+      <div class="section-title">4. 出張買取の希望</div>
       <div class="notice">希望日時は仮受付です。店舗側で確認してから確定します。</div>
       <div id="visitPreferences" style="display:grid;gap:10px">
         <div class="grid2 visit-pref-row">
@@ -127,7 +127,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       <b id="successInquiryId" style="font-size:22px;letter-spacing:.5px"></b>
     </div>
     <p style="line-height:1.7">内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。</p>
-    <button type="button" class="btn full" onclick="finishAndReset()">新しい見積もりを入力</button>
+    <button type="button" class="btn full" onclick="finishAndReset()">入力画面に戻る</button>
   </div>
 </div>
 
@@ -423,7 +423,7 @@ function photoChanged(id,p,file,inputEl){
   saveDraft();
 }
 
-function fileToDataURL(file,maxSide=1200,quality=.68){
+function fileToDataURL(file,maxSide=1600,quality=.78){
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     reader.onerror=reject;
@@ -468,7 +468,7 @@ async function buildInquiryPayload(){
   }
   return d;
 }
-function toggleVisit(){document.getElementById("visitCard").classList.remove("hidden")}
+function toggleVisit(){document.getElementById("visitCard").classList.toggle("hidden",document.querySelector('input[name="mode"]:checked').value!=="出張買取希望")}
 function searchAddress(){
   const zip=document.getElementById("zip").value.replace(/\D/g,"");
   if(zip.length!==7){alert("郵便番号7桁を入力してください。");return}
@@ -503,7 +503,7 @@ function getData(){
     zip:document.getElementById("zip").value.trim(),
     address:document.getElementById("address").value.trim(),
     mode,items:items.map(x=>({...x,maker:x.maker==='__custom__'?(x.makerCustom||''):x.maker,model:x.model==='__custom__'?(x.modelCustom||''):x.model})),
-    visit:(mode==="出張買取希望" || val("date1") || val("date2") || val("date3"))?{
+    visit:mode==="出張買取希望"?{
       date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
       building:document.getElementById("building").value,floor:document.getElementById("floor").value,
       elevator:document.getElementById("elevator").value,carry:[document.getElementById("carry").value.trim(),val("date2")?("第2希望: "+val("date2")+" "+(val("time2")||"おまかせ")):"",val("date3")?("第3希望: "+val("date3")+" "+(val("time3")||"おまかせ")):""].filter(Boolean).join(" / ")
@@ -545,6 +545,9 @@ function showPreview(){
     ${d.visit?`<div class="preview-row"><b>希望</b><span>${esc(d.visit.date||"おまかせ")} ${esc(d.visit.time||"")}${d.visit.date2?`<br>第2希望：${esc(d.visit.date2)} ${esc(d.visit.time2||"おまかせ")}`:""}${d.visit.date3?`<br>第3希望：${esc(d.visit.date3)} ${esc(d.visit.time3||"おまかせ")}`:""}</span></div><div class="preview-row"><b>搬出</b><span>${esc([d.visit.building,d.visit.floor,d.visit.elevator].filter(Boolean).join(" / "))}<br>${esc(d.visit.carry)}</span></div>`:""}
     <div class="preview-row"><b>連絡</b><span>${esc(d.contact)} ${esc(d.note)}</span></div>`;
   document.getElementById("sendStatus").classList.add("hidden");
+  isSubmitting=false;
+  const previewSendBtn=document.getElementById("submitInquiryBtn");
+  if(previewSendBtn){previewSendBtn.disabled=false;previewSendBtn.textContent="📨 見積もりを送信";previewSendBtn.style.opacity="1";}
   document.getElementById("preview").style.display="block";
 }
 let isSubmitting=false;
@@ -570,14 +573,13 @@ async function submitInquiry(){
     });
     if(!r.ok)throw new Error("HTTP "+r.status);
     const result=await r.json().catch(()=>({ok:true}));
-    if(result && result.ok===false) throw new Error(result.error||"受付サーバーでエラーが発生しました");
     status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
       (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
     if(submitBtn){submitBtn.textContent="✓ 送信済み";}
     showSuccessAndReset(inquiry.inquiryId);
   }catch(e){
     console.error(e);
-    status.innerHTML="<b>送信に失敗しました。</b><br>入力内容は端末に保存しています。<br><span class=\"small\">"+esc(e && e.message ? e.message : "通信エラー")+"</span>";
+    status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
     isSubmitting=false;
     if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
   }
