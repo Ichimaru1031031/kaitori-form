@@ -1,632 +1,3479 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>家電買取 簡易見積もり・出張買取</title>
-<style>
-:root{--primary:#1e3a8a;--accent:#2563eb;--green:#059669;--bg:#f8fafc;--border:#cbd5e1;--text:#0f172a;--muted:#64748b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:var(--text);line-height:1.55}
-.container{max-width:760px;margin:auto;padding:18px}.header{background:var(--primary);color:white;border-radius:14px;padding:18px 20px;margin-bottom:14px}.header h1{font-size:21px;margin:0 0 5px}.header p{margin:0;font-size:12px;opacity:.9}
-.notice{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px}
-.card{background:white;border:1px solid var(--border);border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px #00000008}
-.section-title{font-size:16px;font-weight:800;color:var(--primary);border-left:4px solid var(--accent);padding-left:9px;margin:4px 0 13px}
-label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,select,textarea{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:15px}textarea{resize:vertical}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.btn{border:0;border-radius:9px;padding:11px 15px;color:#fff;background:var(--accent);font-weight:800;font-size:14px;cursor:pointer}.btn.green{background:#008f63;box-shadow:0 2px 5px #0002}.btn.green:not(:disabled):hover{background:#007c56}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.gray{background:#64748b}.btn.red{background:#dc2626}.btn.full{width:100%}
-.choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice label{margin:0}.choice input{display:none}.choice span{display:block;border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center;background:white;font-weight:700}.choice input:checked+span{border-color:var(--accent);background:#eff6ff;color:var(--primary)}
-.item{border:1px solid var(--border);border-radius:11px;padding:12px;margin-top:10px;background:#fcfdff}.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.item-title{font-weight:800}.small{font-size:11px;color:var(--muted)}.details{display:none;margin-top:10px;border-top:1px dashed var(--border);padding-top:10px}.item.open .details{display:block}
-.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.photo-box{border:1px dashed #94a3b8;border-radius:8px;padding:8px;text-align:center;font-size:11px;background:#f8fafc}.photo-box input{font-size:11px;padding:5px}
-.preview{display:none;position:fixed;inset:0;background:#0008;z-index:20;padding:14px;overflow:auto}.preview-card{max-width:720px;margin:auto;background:white;border-radius:14px;padding:16px}.preview-row{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid #e2e8f0;padding:6px 0;font-size:13px}.preview-row b{color:#475569}.photo-preview{display:flex;gap:7px;overflow:auto;margin-top:8px}.photo-preview img{width:90px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #ddd}
-.hidden{display:none!important}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.foot{font-size:11px;color:var(--muted);text-align:center;padding:12px}
-@media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}.choice{grid-template-columns:1fr 1fr}.photo-grid{grid-template-columns:1fr 1fr}.preview-row{grid-template-columns:95px 1fr}}
+const SHEET_ID = '1TutE1HcqQ859w-8R2eCGWVYyRZlWDkOEztbTKx1k0DQ';
+const SHEET_NAME = '受付';
+const ROOT_FOLDER_NAME = '買取レスキュー_写真';
+const MAX_PHOTOS = 6;
+const STORE_PHONE = '090-6292-8720';
+const STORE_PHONE_LINK = '09062928720';
+// Webアプリを再デプロイした後、/exec のURLをここに貼ってください。
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyG-wfpBGOHtE2fCaWucjwkRr0b_leUZoHEOiOF_GZJvOhHpfbYp0XfYIZcZFeDsYod/exec';
+const STATUS_LIST = [
+  '🔴 新規',
+  '🟡 査定中',
+  '🟢 見積回答済',
+  '🟢 お客様回答待ち',
+  '🔵 買取確定',
+  '⚫ キャンセル',
+  '✅ 訪問日時確定'
+];
 
-/* スマホ向け写真欄：常に横3列でコンパクト表示 */
-.photo-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
-.photo-box{padding:6px 3px!important;font-size:11px!important;min-width:0;overflow:hidden}
-.photo-box input[type="file"]{width:100%;font-size:10px;margin-top:4px}
-.photo-box .small{font-size:9px!important;line-height:1.2;overflow-wrap:anywhere}
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="header">
-    <h1>家電買取 簡易見積もり・出張買取</h1>
-    <p>入力はできるだけ少なく。写真があれば、わかる範囲だけでOKです。</p>
-  </div>
+const HEADERS = [
+  '受付日時','受付番号','氏名','電話','メール','郵便番号','住所','依頼種別','商品',
+  '希望日','希望時間','建物','階数','EV','搬出メモ','連絡方法','備考',
+  '📷1','📷2','📷3','📷4','📷5','📷6',
+  '商品1査定額','商品2査定額','商品3査定額','商品4査定額','商品5査定額','商品6査定額','査定合計','査定額','ステータス','次にやること','希望日時（第1〜第3希望）','確定日時','回答文','回答日時','第1希望','第2希望','第3希望','日時確定送信日時','訪問日時承認日時'
+];
 
-  <div class="notice">
-    <b>最初は「家電の種類＋写真＋お名前＋電話番号」だけでもOK。</b><br>
-    型番・年式・状態の詳しい入力は、わかる場合だけ追加してください。<br>
-    <b style="color:#b91c1c">買取対象年式：エアコンは製造10年以内、その他の家電は製造5年以内です。対象年式を超える製品は買取できません。</b>
-  </div>
+function getRootFolder_() {
+  const it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(ROOT_FOLDER_NAME);
+}
 
-  <form id="quoteForm" novalidate onsubmit="event.preventDefault();showPreview();return false;">
-    <div class="card">
-      <div class="section-title">1. 何を売りたいですか？</div>
-      <div id="items"></div>
-      <button type="button" class="btn green full" onclick="addItem()">＋ 家電を追加</button>
-    </div>
+function authorizeDrive() {
+  const root = getRootFolder_();
+  Logger.log(root.getUrl());
+}
 
-    <div class="card">
-      <div class="section-title">2. お客様情報</div>
-      <div class="grid2">
-        <div><label>お名前 *</label><input id="name" autocomplete="name" placeholder="山田 太郎" required></div>
-        <div><label>電話番号 *</label><input id="tel" type="tel" autocomplete="tel" placeholder="090-0000-0000" required></div>
-      </div>
-      <div style="margin-top:10px"><label>メールアドレス <span class="small">（見積結果をメールで受け取る場合）</span></label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com"></div>
-      <div style="margin-top:10px"><label>郵便番号</label><div style="display:flex;gap:7px"><input id="zip" inputmode="numeric" maxlength="7" placeholder="2700175"><button type="button" class="btn" onclick="searchAddress()">住所検索</button></div></div>
-      <div style="margin-top:10px"><label>住所 *</label><input id="address" autocomplete="street-address" placeholder="千葉県流山市..." required></div>
-    </div>
+// 最初に1回だけ手動実行してください。
+function setupCaseManagement() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
 
-    <div class="card">
-      <div class="section-title">3. まずは見積もり？出張買取？</div>
-      <div class="choice">
-        <label><input type="radio" name="mode" value="見積もりのみ" checked onchange="toggleVisit()"><span>💰 まずは見積もり</span></label>
-        <label><input type="radio" name="mode" value="出張買取希望" onchange="toggleVisit()"><span>🚚 出張買取も希望</span></label>
-      </div>
-    </div>
+  // 既存データを壊さず、必要な列を追加・整備
+  const oldLastCol = Math.max(sh.getLastColumn(), 1);
+  const oldHeaders = sh.getLastRow() ? sh.getRange(1, 1, 1, oldLastCol).getValues()[0] : [];
 
-    <div class="card hidden" id="visitCard">
-      <div class="section-title">4. 出張買取の希望</div>
-      <div class="notice">希望日時は仮受付です。店舗側で確認してから確定します。</div>
-      <div id="visitPreferences" style="display:grid;gap:10px">
-        <div class="grid2 visit-pref-row">
-          <div><label>第1希望日</label><input type="date" id="date1" onchange="validateVisitDate(this)"></div>
-          <div><label>第1希望時間</label><select id="time1"><option value="">おまかせ</option><option>10:00〜12:00</option><option>12:00〜14:00</option><option>14:00〜16:00</option><option>16:00〜18:00</option><option>18:00〜20:00</option></select></div>
-        </div>
-        <div id="extraVisitDates" style="display:grid;gap:10px"></div>
-      </div>
-      <button type="button" id="addVisitDateBtn" class="btn gray" style="margin-top:10px;width:100%" onclick="addVisitPreference()">＋ 希望日を追加</button>
-      <div style="margin-top:10px"><label>建物・搬出条件（わかる範囲）</label>
-        <div class="grid3">
-          <select id="building"><option value="">建物</option><option>戸建て</option><option>マンション</option><option>アパート</option></select>
-          <select id="floor"><option value="">階数</option><option>1階</option><option>2階</option><option>3階以上</option></select>
-          <select id="elevator"><option value="">EV</option><option>あり</option><option>なし</option></select>
-        </div>
-      </div>
-      <div style="margin-top:10px"><label>搬出について気になること（任意）</label><textarea id="carry" rows="2" placeholder="大型冷蔵庫、外階段、駐車しにくい等"></textarea></div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">5. 連絡について</div>
-      <div class="grid2">
-        <div><label>希望連絡方法</label><select id="contact"><option>電話</option><option>SMS</option><option>メール</option><option>LINE</option></select></div>
-        <div><label>その他（任意）</label><input id="note" placeholder="土日のみ希望など"></div>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button type="button" class="btn full" onclick="safeShowPreview()">👁️ 内容を確認</button>
-      <button type="button" class="btn gray full" onclick="clearAll()">クリア</button>
-    </div>
-  </form>
-
-  <div class="foot">※この簡易版は、店舗側の自動受付サーバーを接続できる構成です。送信先URLを設定すると「確認→送信」の1回操作にできます。</div>
-</div>
-
-<div class="preview" id="preview">
-  <div class="preview-card">
-    <h2 style="margin-top:0">見積もり依頼内容</h2>
-    <div id="previewBody"></div>
-    <div class="actions" style="margin-top:14px">
-      <button id="submitInquiryBtn" class="btn green" onclick="submitInquiry()">📨 見積もりを送信</button>
-      <button class="btn gray" onclick="closePreview()">修正する</button>
-    </div>
-    <div id="sendStatus" class="notice hidden" style="margin-top:10px"></div>
-  </div>
-</div>
-
-
-<div class="preview" id="successPreview">
-  <div class="preview-card" style="text-align:center">
-    <div style="font-size:48px;margin-bottom:8px">✅</div>
-    <h2 style="margin:0 0 8px">受付が完了しました</h2>
-    <div class="notice" style="margin:14px 0">
-      受付番号<br>
-      <b id="successInquiryId" style="font-size:22px;letter-spacing:.5px"></b>
-    </div>
-    <p style="line-height:1.7">内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。</p>
-    <button type="button" class="btn full" onclick="finishAndReset()">入力画面に戻る</button>
-  </div>
-</div>
-
-<script>
-const CONFIG={
-  // Google Apps Script等の受信URLをここに入れると自動送信できます。
-  // 例: "https://script.google.com/macros/s/XXXXXXXX/exec"
-WEBHOOK_URL:"https://script.google.com/macros/s/AKfycbyrJHy5jATp_IFGZicrfsYS6c-4IgNACBCWs0XGydkfJvPmNWERuHtulCdSDZUTI-xX/exec",
-  STORE_NAME:"買取レスキュー"
-};
-
-  // 日本国内シェア上位順のメーカー、および各メーカーの主要機種（型番）
-  function buildModelSeries(prefixFn, sizes, sizeUnitFn) {
-    return sizes.map(size => `${prefixFn(size)} ${sizeUnitFn(size)}`);
+  // 旧「ステータス」列が23列目にある場合、査定額をその前に挿入する
+  let statusCol = oldHeaders.indexOf('ステータス') + 1;
+  if (statusCol && oldHeaders.indexOf('査定額') === -1) {
+    sh.insertColumnBefore(statusCol);
   }
 
-  const airconSizes = [6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 23, 26];
-  const airconSizeUnit = s => `${s}畳`;
-  const airconCapCode = { 6:'22', 7:'23', 8:'25', 9:'26', 10:'28', 11:'32', 12:'36', 13:'38', 14:'40', 16:'45', 18:'56', 20:'63', 23:'71', 26:'80' };
-
-  const washerVerticalSizes = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 11];
-  const washerDrumSizes = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 14];
-  const sizeUnitKg = s => `${s}kg`;
-
-  const fridge2doorSizes = [110, 130, 138, 150, 168, 180, 200, 217, 230, 250];
-  const fridge3doorSizes = [270, 285, 300, 320, 340, 350, 370, 390, 400, 410, 420, 440, 450, 470];
-  const fridge6doorSizes = [400, 410, 430, 450, 460, 480, 500, 520, 540, 560, 580, 600, 620, 650, 680, 700, 740, 800];
-  const sizeUnitL = s => `${s}L`;
-
-  const tvLcdSizes = [19, 22, 24, 32, 40, 43, 49, 50, 55, 58, 60, 65, 70, 75, 77, 80, 85, 86, 90, 98];
-  const tvOledSizes = [42, 48, 55, 65, 70, 77, 83, 88, 97];
-  const tvMiniLedSizes = [55, 65, 75, 85];
-  const sizeUnitInch = s => `${s}型`;
-
-  const makerData = {
-    "エアコン": {
-      "ダイキン": [
-        ...buildModelSeries(s => `S${airconCapCode[s]}ZTES-W`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `S${airconCapCode[s]}ZTRES-W`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `S${airconCapCode[s]}ZVES-W`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `S${airconCapCode[s]}ZRX`, airconSizes, airconSizeUnit)
-      ],
-      "三菱電機": [
-        ...buildModelSeries(s => `MSZ-GV${airconCapCode[s]}`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `MSZ-ZW${airconCapCode[s]}`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `MSZ-X${airconCapCode[s]}`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `MSZ-FZ${airconCapCode[s]}`, airconSizes, airconSizeUnit)
-      ],
-      "パナソニック": [
-        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DFL`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DEX`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DX`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `CS-${airconCapCode[s]}4DGX`, airconSizes, airconSizeUnit)
-      ],
-      "日立": [
-        ...buildModelSeries(s => `RAS-AJ${airconCapCode[s]}N`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `RAS-XJ${airconCapCode[s]}N`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `RAS-VX${airconCapCode[s]}N`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `RAS-S${airconCapCode[s]}N`, airconSizes, airconSizeUnit)
-      ],
-      "富士通ゼネラル": [
-        ...buildModelSeries(s => `AS-C${airconCapCode[s]}M`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `AS-Z${airconCapCode[s]}M`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `AS-X${airconCapCode[s]}M`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `AS-D${airconCapCode[s]}M`, airconSizes, airconSizeUnit)
-      ],
-      "シャープ": [
-        ...buildModelSeries(s => `AY-N${airconCapCode[s]}D`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `AY-R${airconCapCode[s]}D`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `AY-G${airconCapCode[s]}D`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `AY-D${airconCapCode[s]}D`, airconSizes, airconSizeUnit)
-      ],
-      "東芝キヤリア": [
-        ...buildModelSeries(s => `RAS-N${airconCapCode[s]}1M`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `RAS-D${airconCapCode[s]}1M`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `RAS-E${airconCapCode[s]}1M`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `RAS-S${airconCapCode[s]}1M`, airconSizes, airconSizeUnit)
-      ],
-      "ハイセンス": [
-        ...buildModelSeries(s => `HA-${airconCapCode[s]}H`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `HA-${airconCapCode[s]}HX`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `HA-${airconCapCode[s]}HP`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `HA-${airconCapCode[s]}HR`, airconSizes, airconSizeUnit)
-      ],
-      "ハイアール": [
-        ...buildModelSeries(s => `JA-${airconCapCode[s]}V`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `JA-${airconCapCode[s]}VX`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `JA-${airconCapCode[s]}VP`, airconSizes, airconSizeUnit),
-        ...buildModelSeries(s => `JA-${airconCapCode[s]}VD`, airconSizes, airconSizeUnit)
-      ]
-    },
-    "洗濯機": {
-      "パナソニック": [
-        ...buildModelSeries(s => `NA-F${s}B1`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `NA-FA${s}H9`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `NA-VG${s}0L`, washerDrumSizes, sizeUnitKg)
-      ],
-      "日立": [
-        ...buildModelSeries(s => `NW-${s}0G`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `BW-V${s}0H`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `BD-SV${s}0H`, washerDrumSizes, sizeUnitKg)
-      ],
-      "シャープ": [
-        ...buildModelSeries(s => `ES-GE${s}D`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `ES-PU${s}D`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `ES-W${s}H`, washerDrumSizes, sizeUnitKg)
-      ],
-      "東芝": [
-        ...buildModelSeries(s => `AW-${s}GA`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `AW-${s}DH3`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `TW-${s}X9L`, washerDrumSizes, sizeUnitKg)
-      ],
-      "AQUA": [
-        ...buildModelSeries(s => `AQW-S${s}M`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `AQW-V${s}G`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `AQW-DX${s}N`, washerDrumSizes, sizeUnitKg)
-      ],
-      "三菱電機": [
-        ...buildModelSeries(s => `MAW-${s}0GM`, washerVerticalSizes, sizeUnitKg),
-        ...buildModelSeries(s => `MAW-${s}0XP`, washerVerticalSizes, sizeUnitKg)
-      ]
-    },
-    "冷蔵庫": {
-      "パナソニック": [
-        ...buildModelSeries(s => `NR-B${s}FW`, fridge2doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `NR-C${s}FM`, fridge3doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `NR-F${s}HPX`, fridge6doorSizes, sizeUnitL)
-      ],
-      "日立": [
-        ...buildModelSeries(s => `R-S${s}KV`, fridge2doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `R-V${s}S`, fridge3doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `R-WX${s}L`, fridge6doorSizes, sizeUnitL)
-      ],
-      "三菱電機": [
-        ...buildModelSeries(s => `MR-P${s}G`, fridge2doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `MR-B${s}H`, fridge3doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `MR-WX${s}K`, fridge6doorSizes, sizeUnitL)
-      ],
-      "シャープ": [
-        ...buildModelSeries(s => `SJ-D${s}G`, fridge2doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `SJ-GD${s}H`, fridge3doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `SJ-MW${s}H`, fridge6doorSizes, sizeUnitL)
-      ],
-      "東芝": [
-        ...buildModelSeries(s => `GR-T${s}BS`, fridge2doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `GR-S${s}GT`, fridge3doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `GR-W${s}TK`, fridge6doorSizes, sizeUnitL)
-      ],
-      "AQUA": [
-        ...buildModelSeries(s => `AQR-${s}G`, fridge2doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `AQR-${s}N`, fridge3doorSizes, sizeUnitL),
-        ...buildModelSeries(s => `AQR-SBS${s}L`, fridge6doorSizes, sizeUnitL)
-      ]
-    },
-    "テレビ": {
-      "ソニー": [
-        ...buildModelSeries(s => `BRAVIA KJ-${s}X8000`, tvLcdSizes, sizeUnitInch),
-        ...buildModelSeries(s => `BRAVIA XRJ-${s}A80L`, tvOledSizes, sizeUnitInch),
-        ...buildModelSeries(s => `BRAVIA XRJ-${s}X95L`, tvMiniLedSizes, sizeUnitInch)
-      ],
-      "シャープ": [
-        ...buildModelSeries(s => `AQUOS 4T-C${s}EL1`, tvLcdSizes, sizeUnitInch),
-        ...buildModelSeries(s => `AQUOS 8T-C${s}DX1`, tvOledSizes, sizeUnitInch),
-        ...buildModelSeries(s => `AQUOS 8T-C${s}EX1`, tvMiniLedSizes, sizeUnitInch)
-      ],
-      "パナソニック": [
-        ...buildModelSeries(s => `VIERA TH-${s}MX800`, tvLcdSizes, sizeUnitInch),
-        ...buildModelSeries(s => `VIERA TH-${s}MZ2000`, tvOledSizes, sizeUnitInch),
-        ...buildModelSeries(s => `VIERA TH-${s}MZ1800`, tvMiniLedSizes, sizeUnitInch)
-      ],
-      "東芝": [
-        ...buildModelSeries(s => `REGZA ${s}M550M`, tvLcdSizes, sizeUnitInch),
-        ...buildModelSeries(s => `REGZA ${s}X9900L`, tvOledSizes, sizeUnitInch),
-        ...buildModelSeries(s => `REGZA ${s}Z970N`, tvMiniLedSizes, sizeUnitInch)
-      ],
-      "ハイセンス": [
-        ...buildModelSeries(s => `${s}E6H`, tvLcdSizes, sizeUnitInch),
-        ...buildModelSeries(s => `${s}A9H`, tvOledSizes, sizeUnitInch),
-        ...buildModelSeries(s => `${s}U8H`, tvMiniLedSizes, sizeUnitInch)
-      ],
-      "LG": [
-        ...buildModelSeries(s => `${s}UR7300PSA`, tvLcdSizes, sizeUnitInch),
-        ...buildModelSeries(s => `OLED${s}B3PJA`, tvOledSizes, sizeUnitInch),
-        ...buildModelSeries(s => `${s}QNED87JSA`, tvMiniLedSizes, sizeUnitInch)
-      ]
+  // 現在の見出しを名前ベースで補完
+  let current = sh.getRange(1,1,1,Math.max(sh.getLastColumn(),1)).getValues()[0];
+  HEADERS.forEach(function(h) {
+    if (current.indexOf(h) === -1) {
+      sh.getRange(1, sh.getLastColumn() + 1).setValue(h);
+      current.push(h);
     }
-  };
+  });
 
+  formatCaseSheet_(sh);
+  try { setupReceptionWorkspace(); } catch (err) { console.log('受付レイアウト設定エラー: ' + err); }
+}
 
-let items=[];
-let inquiry=null;
-const photoFiles={};
+function formatCaseSheet_(sh) {
+  const map = headerMap_(sh);
+  const rows = Math.max(sh.getMaxRows() - 1, 1);
 
-function addItem(){
-  const id=crypto.randomUUID();
-  items.push({id,type:"冷蔵庫",qty:1,photos:[]});
-  renderItems();
-}
-function removeItem(id){items=items.filter(x=>x.id!==id);renderItems()}
-function makerOptions(type, selected){
-  const makers=Object.keys((makerData[type]||{}));
-  return `<option value="__custom__" ${selected==='__custom__'?'selected':''}>手動入力</option><option value="" ${!selected?'selected':''}>未選択</option>`+makers.map(m=>`<option value="${escAttr(m)}" ${m===selected?'selected':''}>${esc(m)}</option>`).join('');
-}
-function modelOptions(type,maker,selected){
-  const models=((makerData[type]||{})[maker]||[]);
-  return `<option value="__custom__" ${selected==='__custom__'?'selected':''}>手動入力</option><option value="" ${!selected?'selected':''}>未選択</option>`+models.map(m=>`<option value="${escAttr(m)}" ${m===selected?'selected':''}>${esc(m)}</option>`).join('');
-}
-function yearOptions(selected,type){
-  const y=new Date().getFullYear(), n=type==='エアコン'?10:5;
-  let a=['<option value="">未選択</option>'];
-  for(let i=0;i<n;i++){const v=(y-i)+'年製';a.push(`<option ${v===selected?'selected':''}>${v}</option>`)}
-  return a.join('');
-}
-function changeItemType(id,v){const x=items.find(x=>x.id===id);if(!x)return;x.type=v;x.maker='';x.model='';x.year='';saveDraft();renderItems()}
-function changeMaker(id,v){const x=items.find(x=>x.id===id);if(!x)return;x.maker=v;x.model='';saveDraft();renderItems()}
-function setCustom(id,k,v){const x=items.find(x=>x.id===id);if(x){x[k]=v;saveDraft()}}
-let visitPreferenceCount=1;
-function isThursdayDate(value){
-  if(!value)return false;
-  const d=new Date(value+"T00:00:00");
-  return d.getDay()===4;
-}
-function validateVisitDate(input){
-  if(isThursdayDate(input.value)){
-    alert("木曜日は休業日のため選択できません。別の日をお選びください。");
-    input.value="";
-    input.focus();
-    return false;
+  // 受付日時を短く表示
+  if (map['受付日時']) {
+    sh.getRange(2, map['受付日時'], rows, 1).setNumberFormat('M/d H:mm');
   }
-  return true;
-}
-function addVisitPreference(){
- if(visitPreferenceCount>=3)return;
- visitPreferenceCount++;
- const n=visitPreferenceCount, root=document.getElementById('extraVisitDates');
- const div=document.createElement('div');div.id='visitPref'+n;div.className='grid2 visit-pref-row';
- div.innerHTML=`<div><label>第${n}希望日</label><input type="date" id="date${n}" onchange="validateVisitDate(this)"></div><div><label>第${n}希望時間</label><select id="time${n}"><option value="">おまかせ</option><option>10:00〜12:00</option><option>12:00〜14:00</option><option>14:00〜16:00</option><option>16:00〜18:00</option><option>18:00〜20:00</option></select></div>`;
- root.appendChild(div);
- if(visitPreferenceCount>=3)document.getElementById('addVisitDateBtn').style.display='none';
-}
-function renderItems(){
-  const root=document.getElementById("items");
-  if(!items.length){addItem();return}
-  root.innerHTML=items.map((x,i)=>`
-    <div class="item ${x.open?"open":""}" id="item-${x.id}">
-      <div class="item-head">
-        <div class="item-title">${i+1}. <select onchange="changeItemType('${x.id}',this.value)" style="width:auto;font-weight:800">
-          ${["エアコン","冷蔵庫","洗濯機","テレビ","その他"].map(v=>`<option ${v===x.type?"selected":""}>${v}</option>`).join("")}
-        </select></div>
-        <div style="display:flex;gap:5px"><button type="button" class="btn gray" style="padding:7px 9px;font-size:11px" onclick="toggleDetails('${x.id}',this)">${x.open?"▲ 詳細を閉じる":"▼ 詳細を入力"}</button>
-        <button type="button" class="btn red" style="padding:7px 9px;font-size:11px" onclick="removeItem('${x.id}')">削除</button></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:9px">
-        <div style="flex:1"><label>台数</label><input type="number" min="1" value="${x.qty}" onchange="setItem('${x.id}','qty',this.value)"></div>
-      </div>
-      <div class="photo-grid" style="margin-top:9px">
-        ${[0,1,2].map((p)=>`<div class="photo-box">📷${p+1}<input type="file" accept="image/*,.heic,.heif" onchange="photoChanged('${x.id}',${p},this.files[0],this)"><div class="small" style="margin-top:4px">${x.photos&&x.photos[p]?"✓ "+esc(x.photos[p].name):"写真を選択"}</div></div>`).join("")}
-      </div>
-      <div class="details">
-        <div class="grid3">
-          <div><label>メーカー（任意）</label><select onchange="changeMaker('${x.id}',this.value)">${makerOptions(x.type,x.maker||'')}</select>${x.maker==='__custom__'?`<input style="margin-top:6px" placeholder="メーカー名を入力" value="${escAttr(x.makerCustom||'')}" oninput="setCustom('${x.id}','makerCustom',this.value)">`:''}</div>
-          <div><label>型番（任意）</label><select onchange="setItem('${x.id}','model',this.value);renderItems()">${modelOptions(x.type,x.maker,x.model||'')}</select>${x.model==='__custom__'?`<input style="margin-top:6px" placeholder="型番を入力" value="${escAttr(x.modelCustom||'')}" oninput="setCustom('${x.id}','modelCustom',this.value)">`:''}</div>
-          <div><label>年式（任意）</label><select onchange="setItem('${x.id}','year',this.value)">${yearOptions(x.year||'',x.type)}</select></div>
-        </div>
-        <div style="margin-top:10px"><label>動作</label>
-          <select onchange="setItem('${x.id}','operation',this.value)">
-            ${["正常","不具合あり","不明"].map(v=>`<option ${v===(x.operation||"不明")?"selected":""}>${v}</option>`).join("")}
-          </select>
-        </div>
-        <div style="margin-top:10px"><label>キズ・汚れ</label><select onchange="setItem('${x.id}','condition',this.value)">
-          ${["少ない","使用感あり","目立つ","不明"].map(v=>`<option ${v===(x.condition||"不明")?"selected":""}>${v}</option>`).join("")}
-        </select></div>
-      </div>
-    </div>`).join("");
-}
-function toggleDetails(id,btn){
-  const x=items.find(v=>v.id===id); if(!x)return;
-  x.open=!x.open;
-  const el=document.getElementById("item-"+id);
-  if(el)el.classList.toggle("open",x.open);
-  if(btn)btn.textContent=x.open?"▲ 詳細を閉じる":"▼ 詳細を入力";
-  saveDraft();
-}
-function setItem(id,k,v){const x=items.find(v=>v.id===id);if(x)x[k]=v;saveDraft()}
-function photoChanged(id,p,file,inputEl){
-  const x=items.find(v=>v.id===id); if(!x||!file)return;
-  const key=id+"_"+p;
-  photoFiles[key]=file;
-  x.photos=x.photos||[];
-  x.photos[p]={name:file.name,size:file.size,type:file.type};
-  const box = inputEl ? inputEl.closest(".photo-box") : null;
-  if(box){const note=box.querySelector(".small");if(note)note.textContent="✓ 選択済み："+file.name;}
-  saveDraft();
+
+  // 商品別査定額・合計を円表示
+  for (let i = 1; i <= 6; i++) {
+    if (map['商品' + i + '査定額']) {
+      sh.getRange(2, map['商品' + i + '査定額'], rows, 1).setNumberFormat('¥#,##0');
+      sh.setColumnWidth(map['商品' + i + '査定額'], 95);
+    }
+  }
+  if (map['査定合計']) {
+    sh.getRange(2, map['査定合計'], rows, 1).setNumberFormat('¥#,##0');
+    sh.setColumnWidth(map['査定合計'], 95);
+  }
+  if (map['査定額']) {
+    sh.getRange(2, map['査定額'], rows, 1).setNumberFormat('¥#,##0');
+  }
+
+  // ステータスをプルダウン化
+  if (map['ステータス']) {
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList([
+        '🔴 新規','🟡 査定中','🟢 見積回答済','🟢 お客様回答待ち',
+        '🔵 買取確定','⚫ キャンセル','✅ 訪問日時確定'
+      ], true)
+      .setAllowInvalid(false)
+      .build();
+    sh.getRange(2, map['ステータス'], rows, 1).setDataValidation(rule);
+  }
+
+  sh.setFrozenRows(1);
+  sh.getRange(1,1,1,sh.getLastColumn()).setFontWeight('bold');
+
+  // 横幅をコンパクトに
+  ['📷1','📷2','📷3','📷4','📷5','📷6'].forEach(function(h){
+    if(map[h]) sh.setColumnWidth(map[h], 55);
+  });
+  if(map['受付番号']) sh.setColumnWidth(map['受付番号'], 90);
+  if(map['査定額']) sh.setColumnWidth(map['査定額'], 90);
+  if(map['ステータス']) sh.setColumnWidth(map['ステータス'], 120);
+  if(map['回答文']) {
+    sh.setColumnWidth(map['回答文'], 300);
+    // 回答文は長いため普段は非表示。必要な時だけ列を再表示できます。
+    sh.hideColumns(map['回答文']);
+  }
+
+  // 確定訪問日：セルをクリックしてカレンダーから選択
+  if (map['確定訪問日']) {
+    const dateRule = SpreadsheetApp.newDataValidation()
+      .requireDate()
+      .setAllowInvalid(false)
+      .setHelpText('カレンダーから確定訪問日を選択してください')
+      .build();
+
+    sh.getRange(2, map['確定訪問日'], rows, 1)
+      .setDataValidation(dateRule)
+      .setNumberFormat('m/d (ddd)');
+    sh.setColumnWidth(map['確定訪問日'], 105);
+  }
+
+  // 確定訪問時間：選択式
+  if (map['確定訪問時間']) {
+    const timeRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList([
+        '10:00〜12:00',
+        '12:00〜14:00',
+        '14:00〜16:00',
+        '16:00〜18:00',
+        '18:00〜20:00',
+        'その他'
+      ], true)
+      .setAllowInvalid(true)
+      .setHelpText('時間帯を選択してください。「その他」の時間は直接入力できます。')
+      .build();
+    sh.getRange(2, map['確定訪問時間'], rows, 1).setDataValidation(timeRule);
+    sh.setColumnWidth(map['確定訪問時間'], 120);
+  }
 }
 
-function fileToDataURL(file,maxSide=1600,quality=.78){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onerror=reject;
-    reader.onload=()=>{
-      const img=new Image();
-      img.onload=()=>{
-        let w=img.naturalWidth,h=img.naturalHeight;
-        const scale=Math.min(1,maxSide/Math.max(w,h));
-        w=Math.round(w*scale); h=Math.round(h*scale);
-        const c=document.createElement("canvas"); c.width=w; c.height=h;
-        c.getContext("2d").drawImage(img,0,0,w,h);
-        resolve({
-          name:(file.name||"photo").replace(/\\.[^.]+$/,"")+".jpg",
-          type:"image/jpeg",
-          data:c.toDataURL("image/jpeg",quality).split(",")[1]
-        });
-      };
-      img.onerror=reject;
-      img.src=reader.result;
+// セルの表示値を見出し名から安全に取得
+function getDisplay_(sh, row, map, header) {
+  return map[header] ? sh.getRange(row, map[header]).getDisplayValue() : '';
+}
+
+
+// ============================================================
+// 受付シート：業務で使いやすい表示
+// ============================================================
+
+
+function setReceptionStatusSafe_(sh,row,map,status){
+  if(!map['ステータス']) return;
+  const allowed=[
+    '🔴 新規','🟡 査定中','🟢 見積回答済','🟢 お客様回答待ち',
+    '🔵 買取確定','⚫ キャンセル','✅ 訪問日時確定'
+  ];
+  const cell=sh.getRange(row,map['ステータス']);
+  const rule=SpreadsheetApp.newDataValidation()
+    .requireValueInList(allowed,true)
+    .setAllowInvalid(false)
+    .build();
+  cell.setDataValidation(rule);
+  cell.setValue(status);
+}
+
+
+function normalizeReceptionStatus_(status){
+  const s=String(status||'').trim();
+  if(s.indexOf('新規')>=0) return '🔴 新規';
+  if(s.indexOf('査定中')>=0) return '🟡 査定中';
+  if(s.indexOf('お客様回答待ち')>=0) return '🟢 お客様回答待ち';
+  if(s.indexOf('買取確定')>=0) return '🔵 買取確定';
+  if(s.indexOf('キャンセル')>=0) return '⚫ キャンセル';
+  if(s.indexOf('訪問日時確定')>=0) return '✅ 訪問日時確定';
+  return s;
+}
+function receptionStatusPair_(status){
+  const s=normalizeReceptionStatus_(status);
+  const pairs={
+    '🔴 新規':'査定',
+    '🟡 査定中':'見積メール送る',
+    '🟢 お客様回答待ち':'スタンバイ',
+    '🔵 買取確定':'訪問日時メール送る',
+    '⚫ キャンセル':'',
+    '✅ 訪問日時確定':'訪問待ち'
+  };
+  return {status:s,next:Object.prototype.hasOwnProperty.call(pairs,s)?pairs[s]:''};
+}
+function receptionNextAction_(status){
+  return receptionStatusPair_(status).next;
+}
+
+
+function moveHeaderToPosition_(sh, header, targetCol) {
+  const map = headerMap_(sh);
+  const currentCol = map[header];
+  if (!currentCol || currentCol === targetCol) return;
+
+  // destinationIndex が移動元列の範囲内になると
+  // "The destination index cannot be within the span being moved" になるため、
+  // 右方向への移動だけ +1 して安全に移動する。
+  const source = sh.getRange(1, currentCol, sh.getMaxRows(), 1);
+  const destinationIndex = currentCol < targetCol ? targetCol + 1 : targetCol;
+  sh.moveColumns(source, destinationIndex);
+}
+
+
+function receptionPrefSummary_(sh, row, map) {
+  const vals = ['第1希望','第2希望','第3希望'].map(function(h){
+    return map[h] ? sh.getRange(row,map[h]).getDisplayValue() : '';
+  }).filter(Boolean);
+  return vals.map(function(v,i){ return ['①','②','③'][i] + ' ' + v; }).join('\n');
+}
+
+function receptionConfirmedSummary_(sh, row, map) {
+  const d = map['確定訪問日'] ? sh.getRange(row,map['確定訪問日']).getDisplayValue() : '';
+  const t = map['確定訪問時間'] ? sh.getRange(row,map['確定訪問時間']).getDisplayValue() : '';
+  return [d,t].filter(Boolean).join('\n');
+}
+
+// 選択行の「承り伝票」プレビューを開く。
+// 現在の完全版に既存の伝票関数がある場合はそれを優先して呼びます。
+function receiptEscape_(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function receiptYen_(v) {
+  const n = Number(String(v == null ? '' : v).replace(/[^\d.-]/g,''));
+  return isNaN(n) ? '' : n.toLocaleString('ja-JP') + '円';
+}
+
+function receiptDate_(v) {
+  if (!v) return '';
+  if (v instanceof Date && !isNaN(v)) {
+    return Utilities.formatDate(v, Session.getScriptTimeZone() || 'Asia/Tokyo', 'yyyy-MM-dd');
+  }
+  return String(v);
+}
+
+function receiptProducts_(sh, row, map) {
+  const raw = getDisplay_(sh,row,map,'商品');
+  const lines = String(raw || '').split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean);
+  const result = [];
+  for (let i=0; i<Math.min(lines.length,10); i++) {
+    const qty = (lines[i].match(/(\d+)\s*台/) || [,'1'])[1];
+    const priceHeader = '商品' + (i+1) + '査定額';
+    const price = map[priceHeader] ? sh.getRange(row,map[priceHeader]).getDisplayValue() : '';
+    result.push({desc:lines[i], qty:qty, price:price});
+  }
+  return result;
+}
+
+function openReceiptSlip() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const c = getActiveCase_(), sh=c.sh, row=c.row, map=c.map;
+    const id = getDisplay_(sh,row,map,'受付番号');
+    const name = getDisplay_(sh,row,map,'氏名');
+    const phone = getDisplay_(sh,row,map,'電話');
+    const address = getDisplay_(sh,row,map,'住所');
+    const type = getDisplay_(sh,row,map,'依頼種別');
+    const accepted = map['受付日時'] ? sh.getRange(row,map['受付日時']).getValue() : '';
+    const confirmedDate = getDisplay_(sh,row,map,'確定訪問日');
+    const confirmedTime = getDisplay_(sh,row,map,'確定訪問時間');
+    const note = [getDisplay_(sh,row,map,'搬出メモ'),getDisplay_(sh,row,map,'備考')].filter(Boolean).join(' / ');
+    const total = updateAssessmentTotal_(sh,row,map);
+    const products = receiptProducts_(sh,row,map);
+    const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
+    const qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=130x130&chld=M|0&chl=' + encodeURIComponent(mapUrl);
+
+    let rows = '';
+    for (let i=0; i<10; i++) {
+      const p = products[i] || {desc:'',qty:'',price:''};
+      rows += '<tr><td class="no">'+(i+1)+'</td><td>'+receiptEscape_(p.desc)+'</td><td class="qty">'+receiptEscape_(p.qty)+'</td><td class="price">'+receiptEscape_(p.price ? receiptYen_(p.price) : '')+'</td></tr>';
+    }
+
+    const checked = function(label) {
+      return String(type).indexOf(label) !== -1 ? '☑' : '□';
     };
-    reader.readAsDataURL(file);
+    const html = HtmlService.createHtmlOutput(
+      '<!doctype html><html><head><meta charset="utf-8"><style>'+
+      '@page{size:A4 portrait;margin:9mm}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;margin:0;background:#eef2f6;color:#111}.tools{position:sticky;top:0;background:#fff;padding:10px;text-align:center;border-bottom:1px solid #ccc;z-index:3}.printBtn{background:#1557b0;color:white;border:0;border-radius:8px;padding:11px 24px;font-weight:800;font-size:15px;cursor:pointer}.paper{width:190mm;min-height:270mm;margin:12px auto;background:#fff;padding:8mm;border:1px solid #aaa}.head{display:grid;grid-template-columns:1fr 58mm;border-bottom:2px solid #111;padding-bottom:4mm}.title{text-align:center;font-size:24px;font-weight:800}.types{text-align:center;margin-top:6px;font-size:14px}.headright{display:grid;grid-template-columns:1fr 25mm;gap:4px;align-items:start}.meta{font-size:13px;line-height:1.7;white-space:nowrap}.qr{text-align:center;font-size:9px}.qr img{width:22mm;height:22mm}.customer{display:grid;grid-template-columns:1fr 62mm;gap:4mm;margin-top:4mm}.box{border:1.5px solid #111;padding:4mm;min-height:31mm}.line{display:grid;grid-template-columns:25mm 1fr;margin:4px 0}.label{font-weight:700}.value{border-bottom:1px solid #111;font-size:16px;font-weight:650}.visit .value{font-size:15px}.products{width:100%;border-collapse:collapse;margin-top:4mm;table-layout:fixed}.products th,.products td{border:1px solid #111;padding:5px;font-size:12px;height:9mm}.products th{text-align:center;background:#fafafa}.no{width:12mm;text-align:center}.qty{width:18mm;text-align:center}.price{width:42mm;text-align:right}.foot{display:grid;grid-template-columns:1fr 62mm;gap:4mm;margin-top:3mm}.note{border:1px solid #111;padding:3mm;min-height:25mm;font-size:11px}.total{border:1px solid #111;padding:3mm}.shop{font-size:11px}.totalrow{border-top:1px solid #111;margin-top:5px;padding-top:7px;display:flex;justify-content:space-between;font-size:16px;font-weight:800}@media print{body{background:#fff}.tools{display:none}.paper{margin:0;border:0;width:auto;min-height:auto;padding:0}}'+
+      '</style></head><body><div class="tools"><button class="printBtn" onclick="window.print()">🖨️ この買取伝票を印刷</button></div><div class="paper">'+
+      '<div class="head"><div><div class="title">買取伝票（店舗控え）</div></div>'+
+      '<div class="headright"><div class="meta">受付日：<b>'+receiptEscape_(receiptDate_(accepted))+'</b><br>受付ID：<b>'+receiptEscape_(id)+'</b></div><div class="qr"><a href="'+receiptEscape_(mapUrl)+'" target="_blank"><img src="'+receiptEscape_(qrUrl)+'"></a><br>Googleマップ</div></div></div>'+
+      '<div class="customer"><div class="box"><div class="line"><div class="label">氏名：</div><div class="value">'+receiptEscape_(name)+'</div></div><div class="line"><div class="label">住所：</div><div class="value">'+receiptEscape_(address)+'</div></div></div>'+
+      '<div class="box visit"><div class="line"><div class="label">電話番号：</div><div class="value">'+receiptEscape_(phone)+'</div></div><div class="line"><div class="label">訪問日：</div><div class="value">'+receiptEscape_(confirmedDate)+'</div></div><div class="line"><div class="label">時間：</div><div class="value">'+receiptEscape_(confirmedTime)+'</div></div></div></div>'+
+      '<table class="products"><thead><tr><th class="no">番号</th><th>商品種類・メーカー / 型番 / 摘要</th><th class="qty">個数</th><th class="price">価格 / 査定（税込）</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="foot"><div class="note"><b>その他特記事項：</b><br>'+receiptEscape_(note)+'</div><div class="total"><div class="shop">中古家電専門リサイクルショップ<br><b>買取レスキュー合同会社</b></div><div class="totalrow"><span>買取合計金額</span><span>￥ '+Number(total||0).toLocaleString('ja-JP')+' -</span></div></div></div>'+
+      '</div></body></html>'
+    ).setWidth(1100).setHeight(820);
+    ui.showModalDialog(html,'買取伝票プレビュー');
+  } catch(err) {
+    ui.alert('買取伝票を作成できません',String(err.message||err),ui.ButtonSet.OK);
+  }
+}
+
+// 受付で常時使う右側ショートカットパネル
+// サイドバー用：現在選択中の受付行だけを軽量取得
+function getQuickSelectionKey() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (!sh || sh.getName() !== SHEET_NAME) return '';
+  const row = sh.getActiveRange().getRow();
+  if (row < 2) return '';
+  return String(row);
+}
+
+function getQuickAssessmentData() {
+  const c = getActiveCase_(), sh = c.sh, row = c.row, map = c.map;
+
+  // 高速化：必要なセルを1個ずつ読まず、選択行を1回だけまとめて取得
+  const rowValues = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
+  const rowDisplay = sh.getRange(row, 1, 1, sh.getLastColumn()).getDisplayValues()[0];
+  const val = function(header) { const col = map[header]; return col ? rowValues[col - 1] : ''; };
+  const disp = function(header) { const col = map[header]; return col ? rowDisplay[col - 1] : ''; };
+
+  const raw = disp('商品');
+  const products = String(raw || '').split('\n').filter(Boolean).slice(0, 6).map(function(line) {
+    const parts = line.split(' / ');
+    return {label:parts[0]||'', maker:parts[1]||'', model:parts[2]||'', year:parts[3]||''};
+  });
+
+  let total = 0, hasPrice = false;
+  const items = products.map(function(p, i) {
+    const amount = val('商品' + (i + 1) + '査定額');
+    if (amount !== '' && !isNaN(Number(amount))) { total += Number(amount); hasPrice = true; }
+    return {no:i+1, name:[p.label,p.maker,p.model,p.year].filter(Boolean).join(' / '), amount:amount};
+  });
+
+  return {row:row, id:disp('受付番号'), name:disp('氏名'), phone:disp('電話'), address:disp('住所'), visitDate:disp('確定訪問日'), visitTime:disp('確定訪問時間'), items:items, total:hasPrice ? total : ''};
+}
+
+function saveQuickAssessment(amounts) {
+  const c = getActiveCase_(), sh = c.sh, row = c.row, map = c.map;
+
+  // 高速化：6セルを個別更新せず、査定額列をまとめて更新する
+  const cols = [];
+  for (let i=1;i<=6;i++) if (map['商品'+i+'査定額']) cols.push(map['商品'+i+'査定額']);
+  const cleaned = (amounts || []).slice(0,6).map(function(v,i) {
+    const x = String(v == null ? '' : v).replace(/[,，￥¥円\s]/g,'');
+    if (x === '') return '';
+    if (isNaN(Number(x))) throw new Error('商品'+(i+1)+'の査定額は数字で入力してください。');
+    return Number(x);
+  });
+
+  let total=0, hasPrice=false;
+  cleaned.forEach(function(v){ if(v!=='' ){ total+=Number(v); hasPrice=true; } });
+
+  // 商品別査定額は通常連続列なので1回で書き込み。万一非連続なら個別にフォールバック。
+  if (cols.length) {
+    const consecutive = cols.every(function(c,i){ return i===0 || c===cols[0]+i; });
+    if (consecutive) {
+      const vals=[]; for(let i=0;i<cols.length;i++) vals.push(cleaned[i] === undefined ? '' : cleaned[i]);
+      sh.getRange(row, cols[0], 1, cols.length).setValues([vals]);
+    } else {
+      cols.forEach(function(col,i){ sh.getRange(row,col).setValue(cleaned[i] === undefined ? '' : cleaned[i]); });
+    }
+  }
+  if (map['査定合計']) sh.getRange(row,map['査定合計']).setValue(hasPrice?total:'');
+  if (map['査定額']) sh.getRange(row,map['査定額']).setValue(hasPrice?total:'');
+  if (hasPrice && map['ステータス']) setReceptionStatusSafe_(sh,row,map,'🟡 査定中');
+  if (map['次にやること'] && hasPrice) sh.getRange(row,map['次にやること']).setValue(receptionNextAction_('🟡 査定中'));
+
+  // 重い「案件管理を全件更新」は保存ボタンでは実行しない。
+  // 回答文もメール送信時に最新内容から作れるため、ここでは省略して体感速度を優先。
+  SpreadsheetApp.flush();
+  return {total:hasPrice?total:''};
+}
+
+
+function saveQuickVisit(dateText, timeText) {
+  const c=getActiveCase_(), sh=c.sh, row=c.row, map=c.map;
+  if (!map['確定訪問日'] || !map['確定訪問時間']) throw new Error('確定訪問日の列または時間列がありません。');
+  const t=String(timeText||'').trim();
+  if (!t) throw new Error('確定時間を選択してください。');
+  let d='';
+  if (dateText) {
+    const m=String(dateText).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) throw new Error('日付を選択してください。');
+    d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  } else throw new Error('確定訪問日を選択してください。');
+  sh.getRange(row,map['確定訪問日']).setValue(d).setNumberFormat('m/d (ddd)');
+  sh.getRange(row,map['確定訪問時間']).setValue(t);
+  if(map['確定日時']) sh.getRange(row,map['確定日時']).setValue(receptionConfirmedSummary_(sh,row,map));
+  return {visitDate:Utilities.formatDate(d,Session.getScriptTimeZone()||'Asia/Tokyo','yyyy-MM-dd'),visitTime:t};
+}
+
+function saveQuickCustomer(name, phone, address) {
+  const c=getActiveCase_(), sh=c.sh, row=c.row, map=c.map;
+  const n=String(name||'').trim(), p=String(phone||'').trim(), a=String(address||'').trim();
+  if(!n) throw new Error('名前を入力してください。');
+  if(map['氏名']) sh.getRange(row,map['氏名']).setValue(n);
+  if(map['電話']) sh.getRange(row,map['電話']).setValue(p);
+  if(map['住所']) sh.getRange(row,map['住所']).setValue(a);
+  return {name:n,phone:p,address:a};
+}
+
+
+function mailLockKey_(kind, caseId){
+  return 'MAILLOCK_' + String(kind||'').toUpperCase() + '_' + String(caseId||'').trim().toUpperCase();
+}
+function isMailLocked_(kind, caseId){
+  return PropertiesService.getScriptProperties().getProperty(mailLockKey_(kind,caseId)) === '1';
+}
+function setMailLocked_(kind, caseId){
+  PropertiesService.getScriptProperties().setProperty(mailLockKey_(kind,caseId),'1');
+}
+function clearMailLocked_(kind, caseId){
+  PropertiesService.getScriptProperties().deleteProperty(mailLockKey_(kind,caseId));
+}
+function resetMailLockForCase(caseId){
+  clearMailLocked_('ESTIMATE',caseId);
+  clearMailLocked_('VISIT',caseId);
+  return {ok:true};
+}
+
+function ensureQuickTrackingColumns_(sh){
+  const wanted=['査定メール送信日時','訪問日時メール送信日時'];
+  let map=headerMap_(sh);
+  wanted.forEach(function(h){
+    if(!map[h]){
+      const c=sh.getLastColumn()+1;
+      sh.getRange(1,c).setValue(h);
+      sh.hideColumns(c);
+      map=headerMap_(sh);
+    }
+  });
+  return map;
+}
+
+function quickFindCase_(caseId) {
+  const id = String(caseId || '').trim().toUpperCase();
+  if (!id) throw new Error('受付番号を入力してください。例：KR-0HTD');
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) throw new Error('「受付」シートが見つかりません。');
+  const map = headerMap_(sh);
+  if (!map['受付番号']) throw new Error('受付番号列が見つかりません。');
+  const last = sh.getLastRow();
+  if (last < 2) throw new Error('受付データがありません。');
+  const ids = sh.getRange(2, map['受付番号'], last - 1, 1).getDisplayValues();
+  for (let i = 0; i < ids.length; i++) {
+    if (String(ids[i][0] || '').trim().toUpperCase() === id) {
+      return {sh:sh, row:i+2, map:map};
+    }
+  }
+  throw new Error('受付番号「' + id + '」が見つかりません。');
+}
+
+
+
+
+function syncHopeDatesForRow_(sh,row,map){
+  if(!map['希望日時（第1〜第3希望）']) return '';
+  let current=sh.getRange(row,map['希望日時（第1〜第3希望）']).getDisplayValue().trim();
+  if(current) return current;
+
+  const pairs=[
+    ['第1希望日','第1希望時間'],['第2希望日','第2希望時間'],['第3希望日','第3希望時間'],
+    ['希望日1','希望時間1'],['希望日2','希望時間2'],['希望日3','希望時間3']
+  ];
+  const lines=[];
+  const tz=Session.getScriptTimeZone()||'Asia/Tokyo';
+  let n=0;
+  pairs.forEach(function(p){
+    if(!map[p[0]] || !map[p[1]]) return;
+    const dv=sh.getRange(row,map[p[0]]).getValue();
+    const tv=sh.getRange(row,map[p[1]]).getDisplayValue().trim();
+    if(!dv && !tv) return;
+    n++;
+    let ds='';
+    if(dv instanceof Date && !isNaN(dv)) ds=Utilities.formatDate(dv,tz,'M/d (E)');
+    else ds=String(sh.getRange(row,map[p[0]]).getDisplayValue()||'').trim();
+    lines.push(['①','②','③'][n-1]+' '+ds+(tv?'　'+tv:''));
+  });
+  if(lines.length){
+    current=lines.slice(0,3).join('\n');
+    sh.getRange(row,map['希望日時（第1〜第3希望）']).setValue(current).setWrap(true);
+  }
+  return current;
+}
+
+// V7: 送信ボタンの無効化は「現在表示中の案件・現在の画面」だけで管理する。
+// 別案件を読み込んだ時点で必ずボタンを有効化する。
+function quickLoadSelectedCase(caseId){
+  const id=String(caseId||'').trim();
+  if(!id) throw new Error('案件を選択してください。');
+  PropertiesService.getUserProperties().setProperty('KAITORI_SELECTED_CASE',id);
+  return quickGetCase(id);
+}
+function quickGetSelectedCase(){
+  const props=PropertiesService.getUserProperties();
+  let id='';
+  try{
+    const ss=SpreadsheetApp.getActiveSpreadsheet();
+    const sh=ss && ss.getActiveSheet();
+    const range=ss && ss.getActiveRange();
+    if(sh && sh.getName()===SHEET_NAME && range && range.getRow()>=2){
+      const map=headerMap_(sh);
+      if(map['受付番号']){
+        id=String(sh.getRange(range.getRow(),map['受付番号']).getDisplayValue()||'').trim();
+        if(id) props.setProperty('KAITORI_SELECTED_CASE',id);
+      }
+    }
+  }catch(e){ console.log(e); }
+  if(!id) id=String(props.getProperty('KAITORI_SELECTED_CASE')||'').trim();
+  if(!id) throw new Error('受付シートで案件の行をクリックしてから、もう一度「シートで選択した行を読み込む」を押してください。');
+  return quickGetCase(id);
+}
+
+
+function quickRecentCases(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  const map=headerMap_(sh);
+  if(!map['受付番号']) throw new Error('受付番号列が見つかりません。');
+
+  const lastRow=sh.getLastRow();
+  const lastCol=sh.getLastColumn();
+  if(lastRow<2) return [];
+
+  const startRow=Math.max(2,lastRow-99);
+  const values=sh.getRange(startRow,1,lastRow-startRow+1,lastCol).getDisplayValues();
+  const result=[];
+
+  for(let i=values.length-1;i>=0;i--){
+    const r=values[i];
+    const id=String(r[map['受付番号']-1]||'').trim();
+    if(!id) continue;
+    const name=map['氏名'] ? String(r[map['氏名']-1]||'').trim() : '';
+    const status=map['ステータス'] ? normalizeReceptionStatus_(r[map['ステータス']-1]) : '';
+    result.push({id:id,name:name,status:status,row:startRow+i});
+  }
+  return result;
+}
+
+function quickLoadDiagnostic(caseId){
+  const id=String(caseId||'').trim();
+  if(!id) return {ok:false,step:'input',message:'受付番号が空です。'};
+  try{
+    const c=quickFindCase_(id);
+    return {ok:true,id:id,row:c.row,sheet:c.sh.getName(),message:'受付番号から案件を特定できました。'};
+  }catch(e){
+    return {ok:false,step:'find',message:String(e.message||e)};
+  }
+}
+
+function quickRememberedCase(){
+  const id=String(PropertiesService.getUserProperties().getProperty('KAITORI_SELECTED_CASE')||'').trim();
+  if(!id) return null;
+  try{
+    return quickGetCase(id);
+  }catch(e){
+    return null;
+  }
+}
+
+
+function quickGetCaseByRow(row){
+  row=Number(row);
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  if(!row || row<2 || row>sh.getLastRow()) throw new Error('案件行が正しくありません。');
+  const map=headerMap_(sh);
+  const id=map['受付番号'] ? String(sh.getRange(row,map['受付番号']).getDisplayValue()||'').trim() : '';
+  if(!id) throw new Error('この行には受付番号がありません。');
+  return quickGetCase(id);
+}
+
+function quickCaseRowsForSidebar_(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  const map=headerMap_(sh), last=sh.getLastRow(), result=[];
+  if(last<2) return result;
+  const vals=sh.getRange(2,1,last-1,sh.getLastColumn()).getDisplayValues();
+  for(let i=vals.length-1;i>=0;i--){
+    const r=vals[i], id=map['受付番号']?String(r[map['受付番号']-1]||'').trim():'';
+    if(!id) continue;
+    result.push({
+      row:i+2,
+      id:id,
+      name:map['氏名']?String(r[map['氏名']-1]||'').trim():'',
+      status:map['ステータス']?normalizeReceptionStatus_(r[map['ステータス']-1]):''
+    });
+    if(result.length>=100) break;
+  }
+  return result;
+}
+
+function quickListCases() {
+  return quickCaseRowsForSidebar_().map(function(x){
+    return {
+      id: String(x.id || ''),
+      name: String(x.name || ''),
+      status: String(x.status || '')
+    };
   });
 }
 
-async function buildInquiryPayload(){
-  const d=JSON.parse(JSON.stringify(inquiry));
-  d.photos=[];
-  for(const x of d.items||[]){
-    for(let p=0;p<3;p++){
-      const f=photoFiles[x.id+"_"+p];
-      if(f){
-        const photo=await fileToDataURL(f);
-        d.photos.push({
-          itemId:x.id,
-          itemType:x.type,
-          position:p+1,
-          originalName:f.name,
-          ...photo
-        });
-      }
+function quickGetActiveCaseId() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (!sh || sh.getName() !== SHEET_NAME) throw new Error('「受付」シートの案件行を選択してください。');
+  const range = ss.getActiveRange();
+  if (!range || range.getRow() <= 1) throw new Error('案件の行のセルを1つ選択してください。');
+  const map = headerMap_(sh);
+  const id = getDisplay_(sh, range.getRow(), map, '受付番号').trim();
+  if (!id) throw new Error('選択した行に受付番号がありません。');
+  return id;
+}
+
+function quickGetCase(caseId) {
+  const c = quickFindCase_(caseId), sh=c.sh, row=c.row;
+  ensureQuickTrackingColumns_(sh);
+  const map=headerMap_(sh);
+  // G列が空でも、保存済みの第1〜第3希望からその場で再構築
+  if(map['希望日時（第1〜第3希望）']) {
+    const prefSummary = receptionPrefSummary_(sh,row,map);
+    if(prefSummary) {
+      sh.getRange(row,map['希望日時（第1〜第3希望）']).setValue(prefSummary).setWrap(true);
     }
   }
-  return d;
-}
-function toggleVisit(){document.getElementById("visitCard").classList.toggle("hidden",document.querySelector('input[name="mode"]:checked').value!=="出張買取希望")}
-function searchAddress(){
-  const zip=document.getElementById("zip").value.replace(/\D/g,"");
-  if(zip.length!==7){alert("郵便番号7桁を入力してください。");return}
-  fetch("https://zipcloud.ibsnet.co.jp/api/search?zipcode="+zip).then(r=>r.json()).then(d=>{
-    if(d.results&&d.results[0]){
-      const a=d.results[0];document.getElementById("address").value=a.address1+a.address2+a.address3;
-    }else alert("住所が見つかりませんでした。");
-  }).catch(()=>alert("住所検索に失敗しました。"));
-}
-function val(id){
-  const el=document.getElementById(id);
-  return el ? (el.value || "") : "";
-}
-function getData(){
-  const mode=document.querySelector('input[name="mode"]:checked').value;
-  if(mode==="出張買取希望"){
-    for(let n=1;n<=3;n++){
-      const el=document.getElementById("date"+n);
-      if(el && el.value && isThursdayDate(el.value)){
-        alert("木曜日は休業日のため、第"+n+"希望日は別の日をお選びください。");
-        el.value="";
-        return null;
-      }
-    }
+  const lastCol=sh.getLastColumn();
+  const vals=sh.getRange(row,1,1,lastCol).getValues()[0];
+  const disp=sh.getRange(row,1,1,lastCol).getDisplayValues()[0];
+  const v=h=>map[h]?vals[map[h]-1]:'';
+  const d=h=>map[h]?disp[map[h]-1]:'';
+
+  const productText=d('商品');
+  const lines=String(productText||'').split('\n').map(x=>x.trim()).filter(Boolean).slice(0,6);
+  const items=lines.map((name,i)=>({no:i+1,name:name,amount:v('商品'+(i+1)+'査定額')}));
+  let total=0,has=false;
+  items.forEach(x=>{if(x.amount!==''&&!isNaN(Number(x.amount))){total+=Number(x.amount);has=true;}});
+
+  let visitDate='';
+  const rawDate=v('確定訪問日');
+  if(rawDate instanceof Date && !isNaN(rawDate)) visitDate=Utilities.formatDate(rawDate,Session.getScriptTimeZone()||'Asia/Tokyo','yyyy-MM-dd');
+  else {
+    const s=String(rawDate||'').trim();
+    const mm=s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if(mm) visitDate=mm[1]+'-'+String(mm[2]).padStart(2,'0')+'-'+String(mm[3]).padStart(2,'0');
   }
+
+  const status=normalizeReceptionStatus_(d('ステータス'));
+  let nextAction=receptionNextAction_(status);
+  const visitMailSent = !!d('訪問日時メール送信日時') || !!d('日時確定送信日時');
+  if(status==='🔵 買取確定' && visitMailSent) nextAction='お客様日時確認待ち';
+  if(map['次にやること'] && d('次にやること')!==nextAction){
+    sh.getRange(row,map['次にやること']).setValue(nextAction);
+  }
+  const hope = d('希望日時（第1〜第3希望）') || d('希望日時') || d('訪問希望日時');
   return {
-    inquiryId:"KR-"+Math.random().toString(36).slice(2,6).toUpperCase(),
-    createdAt:new Date().toISOString(),store:CONFIG.STORE_NAME,
-    name:document.getElementById("name").value.trim(),
-    tel:document.getElementById("tel").value.trim(),
-    email:document.getElementById("email").value.trim(),
-    zip:document.getElementById("zip").value.trim(),
-    address:document.getElementById("address").value.trim(),
-    mode,items:items.map(x=>({...x,maker:x.maker==='__custom__'?(x.makerCustom||''):x.maker,model:x.model==='__custom__'?(x.modelCustom||''):x.model})),
-    visit:mode==="出張買取希望"?{
-      date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
-      building:document.getElementById("building").value,floor:document.getElementById("floor").value,
-      elevator:document.getElementById("elevator").value,carry:[document.getElementById("carry").value.trim(),val("date2")?("第2希望: "+val("date2")+" "+(val("time2")||"おまかせ")):"",val("date3")?("第3希望: "+val("date3")+" "+(val("time3")||"おまかせ")):""].filter(Boolean).join(" / ")
-    }:null,
-    contact:document.getElementById("contact").value,note:document.getElementById("note").value.trim()
+    row:row,id:d('受付番号'),status:status,nextAction:nextAction,name:d('氏名'),phone:d('電話'),
+    email:d('メール'),address:d('住所'),productText:productText,items:items,total:has?total:'',
+    visitDate:visitDate,visitTime:d('確定訪問時間'),hope:hope,
+    estimateSent:false,
+    visitSent:false
   };
 }
-function safeShowPreview(){
-  try{
-    showPreview();
-  }catch(err){
-    console.error(err);
-    alert("確認画面を開けませんでした。入力内容を確認してください。\n" + (err && err.message ? err.message : err));
+
+function quickSaveAssessment(caseId, amounts) {
+  const c=quickFindCase_(caseId), sh=c.sh,row=c.row,map=c.map;
+  const a=(amounts||[]).slice(0,6).map((x,i)=>{
+    const s=String(x==null?'':x).replace(/[,，￥¥円\s]/g,'');
+    if(s==='')return '';
+    if(isNaN(Number(s)))throw new Error('商品'+(i+1)+'の査定額は数字で入力してください。');
+    return Number(s);
+  });
+  let total=0,has=false;
+  for(let i=1;i<=6;i++){
+    const col=map['商品'+i+'査定額'];
+    if(col) sh.getRange(row,col).setValue(a[i-1]===undefined?'':a[i-1]);
+    if(a[i-1]!==undefined && a[i-1]!==''){total+=Number(a[i-1]);has=true;}
+  }
+  if(map['査定合計']) sh.getRange(row,map['査定合計']).setValue(has?total:'');
+  if(map['査定額']) sh.getRange(row,map['査定額']).setValue(has?total:'');
+  if(map['ステータス']&&has) setReceptionStatusSafe_(sh,row,map,'🟡 査定中');
+  if(map['次にやること']&&has) sh.getRange(row,map['次にやること']).setValue(receptionNextAction_('🟡 査定中'));
+  SpreadsheetApp.flush();
+  logCaseAction_(caseId,'査定額保存','査定合計 '+(has?total:''));
+  return {ok:true,total:has?total:''};
+}
+
+function quickSaveFinal(caseId, data) {
+  const c=quickFindCase_(caseId),sh=c.sh,row=c.row,map=c.map;
+  data=data||{};
+  const name=String(data.name||'').trim();
+  const phone=String(data.phone||'').trim();
+  const address=String(data.address||'').trim();
+  if(!name) throw new Error('名前を入力してください。');
+  if(map['氏名']) sh.getRange(row,map['氏名']).setValue(name);
+  if(map['電話']) sh.getRange(row,map['電話']).setValue(phone);
+  if(map['住所']) sh.getRange(row,map['住所']).setValue(address);
+
+  const ds=String(data.visitDate||'').trim();
+  let tm=String(data.visitTime||'').trim();
+  if(tm==='その他') tm=String(data.customTime||'').trim();
+  if(ds){
+    const m=ds.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m) throw new Error('訪問日の形式が正しくありません。');
+    const date=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+    if(map['確定訪問日']) sh.getRange(row,map['確定訪問日']).setValue(date).setNumberFormat('M/d (ddd)');
+  }
+  if(tm && map['確定訪問時間']) sh.getRange(row,map['確定訪問時間']).setValue(tm);
+  if(map['確定日時']) sh.getRange(row,map['確定日時']).setValue(receptionConfirmedSummary_(sh,row,map));
+  SpreadsheetApp.flush();
+  logCaseAction_(caseId,'顧客情報・確定日時更新','名前/住所/電話/訪問日時を更新');
+  return quickGetCase(caseId);
+}
+
+function quickSetStatus(caseId,status){
+  const c=quickFindCase_(caseId);
+  const map=headerMap_(c.sh);
+  setWebCaseStatus_(c.sh,c.row,map,status);
+  logCaseAction_(caseId,'ステータス変更',normalizeReceptionStatus_(status));
+  try{ updateReceptionSummaryRow_(c.sh,c.row,map); }catch(e){ console.log(e); }
+  return quickGetCase(caseId);
+}
+
+function quickActivateCase_(caseId){
+  const c=quickFindCase_(caseId);
+  c.sh.activate();
+  c.sh.getRange(c.row,1).activate();
+  return c;
+}
+function quickSendEstimateEdited(caseId, extraMessage){
+  const id=String(caseId||'').trim().toUpperCase();
+  // サイドバーで読み込んだ受付番号を正本にする。
+  // シート上の現在選択セルには依存しない。
+  const c=quickFindCase_(id), sh=c.sh, row=c.row, map=c.map;
+  const email=getDisplay_(sh,row,map,'メール').trim();
+  // 査定保存時に確定した「査定合計」を送信の正本として使う。
+  // 商品別列が一部欠けていても、保存済み合計があればメール送信を止めない。
+  let amountRaw = map['査定合計'] ? sh.getRange(row,map['査定合計']).getValue() : '';
+  if(amountRaw==='' && map['査定額']) amountRaw = sh.getRange(row,map['査定額']).getValue();
+  let amount = amountRaw;
+  if(amount==='' || amount==null || isNaN(Number(amount))){
+    amount = updateAssessmentTotal_(sh,row,map);
+  }
+const lineUserIdForCheck = getDisplay_(sh, row, map, 'LINEユーザーID').trim();
+
+if (!email && !lineUserIdForCheck) {
+  throw new Error('この受付にはLINE連携もメールアドレスもありません。');
+}
+  if(amount==='' || amount==null || isNaN(Number(amount)) || Number(amount)<0) {
+    throw new Error('査定額が保存されていません。先に「査定額を保存」を押してください。');
+  }
+  createReplyText_(sh,row,map);
+  const body=getDisplay_(sh,row,map,'回答文');
+  const confirmUrl=WEB_APP_URL+'?action=confirm&id='+encodeURIComponent(id);
+  const cancelUrl=WEB_APP_URL+'?action=cancelConfirm&id='+encodeURIComponent(id);
+  const notice='今回の査定金額は、お伺いする前の「事前査定（概算）」となります。\n実物の状態・動作確認などにより、最終的な買取金額が変わる場合があります。';
+  const extra=String(extraMessage||'').trim();
+  const extraText=extra?'\n\n【ご案内】\n'+extra:'';
+  const extraHtml=extra?'<div style="margin:20px 0;padding:16px;background:#eef6ff;border-left:4px solid #1565c0;border-radius:10px"><b>ご案内</b><br>'+escapeHtml_(extra).replace(/\n/g,'<br>')+'</div>':'';
+  const htmlBody='<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;line-height:1.7;max-width:620px;margin:0 auto;color:#1f2937;font-size:16px">'+
+    '<div style="padding:22px 18px;background:#f8fafc;border-radius:14px">'+escapeHtml_(body).replace(/\n/g,'<br>')+'</div>'+
+    extraHtml+
+    '<div style="margin:25px 0;padding:18px;background:#fff7e6;border:2px solid #f0ad4e;border-radius:10px">'+escapeHtml_(notice).replace(/\\n/g,'<br>')+'</div>'+
+    '<div style="text-align:center;margin:30px 0"><div style="font-weight:700;margin-bottom:10px">↓↓ 出張買取をご希望の場合はこちら ↓↓</div><a href="'+escapeHtml_(confirmUrl)+'" style="display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:18px 28px;border-radius:10px;font-size:18px;font-weight:bold">この金額で出張買取を申し込む</a><div style="font-size:13px;color:#c62828;font-weight:700;margin-top:12px">※上のボタンを押して希望日時を送信すると、お申し込み完了です。</div></div>'+
+    '<div style="text-align:center;margin-top:25px"><a href="'+escapeHtml_(cancelUrl)+'" style="display:inline-block;padding:12px 20px;border:1px solid #999;border-radius:8px;color:#555;text-decoration:none">今回はやめておく</a></div>'+phoneHtml_()+'</div>';
+// LINE連携済みならLINE、未連携ならメール
+const lineUserId = getDisplay_(sh, row, map, 'LINEユーザーID').trim();
+
+if (lineUserId) {
+ const lineMessage =
+  '【買取レスキュー】査定結果\n\n' +
+  body
+    .replace('この度は買取査定をご依頼いただきありがとうございます。\n', '')
+    .replace('お送りいただいた内容・写真を確認しました。\n', '')
+    .replace('買取レスキュー', '')
+    .trim() +
+  '\n\n※こちらは事前査定（概算）です。\n' +
+  '実物の状態等により金額が変わる場合があります。';
+
+pushLineButtons_(
+  lineUserId,
+  lineMessage,
+  confirmUrl,
+  cancelUrl
+); 
+} else {
+  MailApp.sendEmail({
+    to: email,
+    subject: '【買取レスキュー】査定結果 ' + id,
+    body: body + extraText + '\n\n' + notice +
+      '\n\nこの金額で出張買取を申し込む：\n' + confirmUrl +
+      '\n\n今回はやめておく：\n' + cancelUrl +
+      '\n\n電話：' + STORE_PHONE,
+    htmlBody: htmlBody,
+    name: '買取レスキュー'
+  });
+}  setReceptionStatusSafe_(sh,row,map,'🟢 お客様回答待ち');
+  if(map['次にやること']) sh.getRange(row,map['次にやること']).setValue('スタンバイ');
+  if(map['回答日時']) sh.getRange(row,map['回答日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+  const track=ensureQuickTrackingColumns_(sh);
+  sh.getRange(row,track['査定メール送信日時']).setValue(new Date()).setNumberFormat('yyyy/MM/dd HH:mm');
+  updateReceptionSummaryRow_(sh,row,headerMap_(sh));
+  SpreadsheetApp.flush();
+  try{refreshDashboard();}catch(err){console.log(err);}
+  return {ok:true,message:'査定結果を送信しました。'};
+}
+
+// [LEGACY互換] 現行導線を壊さないため残置。新規処理からは使用しない。
+function quickSendEstimate(caseId){
+  const id=String(caseId||'').trim().toUpperCase();
+  quickActivateCase_(id);
+  const result=sendEstimateWithConfirm();
+  const c=quickFindCase_(id), map=ensureQuickTrackingColumns_(c.sh);
+  c.sh.getRange(c.row,map['査定メール送信日時']).setValue(new Date()).setNumberFormat('yyyy/MM/dd HH:mm');
+  SpreadsheetApp.flush();
+  return result;
+}
+function quickSendVisit(caseId){
+  const id=String(caseId||'').trim().toUpperCase();
+  const c=quickFindCase_(id), sh=c.sh, row=c.row, map=headerMap_(c.sh);
+  const email=getDisplay_(sh,row,map,'メール').trim();
+  const name=getDisplay_(sh,row,map,'氏名');
+  const status=normalizeReceptionStatus_(getDisplay_(sh,row,map,'ステータス'));
+  const vd=getDisplay_(sh,row,map,'確定訪問日');
+  const vt=getDisplay_(sh,row,map,'確定訪問時間').trim();
+const lineUserIdForCheck = getDisplay_(sh, row, map, 'LINEユーザーID').trim();
+
+if (!email && !lineUserIdForCheck) {
+  throw new Error('この受付にはLINE連携もメールアドレスもありません。');
+}
+  if(!vd) throw new Error('「確定訪問日」を選択してください。');
+  if(!vt) throw new Error('「確定訪問時間」を選択してください。');
+  if(status!=='🔵 買取確定') throw new Error('この案件はまだ「🔵 買取確定」になっていません。');
+
+  const approveUrl=WEB_APP_URL+'?action=approveVisit&id='+encodeURIComponent(id);
+  const body=name+' 様\n\n出張買取のお申し込みありがとうございます。\n\n【訪問日時】\n'+vd+' '+vt+
+    '\n\nまだ日時確定は完了していません。\n下のリンクから、お名前・電話番号・住所と訪問日時をご確認のうえ確定してください。\n\n内容を確認して訪問日時を確定する：\n'+approveUrl+
+    '\n\nお問い合わせ：'+STORE_PHONE+'\n\n買取レスキュー';
+
+  const htmlBody='<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;line-height:1.7;max-width:620px;margin:0 auto;color:#1f2937;font-size:16px">'+
+    '<p style="font-size:18px"><b>'+escapeHtml_(name)+' 様</b></p><p>出張買取のお申し込みありがとうございます。</p>'+
+    '<div style="background:#f8fafc;border-radius:14px;padding:20px;margin:20px 0"><div style="color:#64748b">受付番号</div><div style="font-weight:700;margin-bottom:14px">'+escapeHtml_(id)+'</div>'+
+    '<div style="color:#64748b">訪問日時</div><div style="font-size:22px;font-weight:700;margin-top:4px">📅 '+escapeHtml_(vd+' '+vt)+'</div></div>'+
+    '<div style="background:#fff7e6;border:1px solid #f0ad4e;border-radius:12px;padding:16px;margin:20px 0"><b>まだ日時確定は完了していません。</b><br>下のボタンから内容をご確認のうえ、確定してください。</div>'+
+    '<div style="text-align:center;margin:28px 0"><a href="'+escapeHtml_(approveUrl)+'" style="display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:18px 26px;border-radius:10px;font-size:18px;font-weight:bold">お客様情報を確認して訪問日時を確定する</a></div>'+
+    '<div style="font-size:13px;color:#64748b;text-align:center;line-height:1.6">ボタンを押しても、確認画面で確定するまでは予約確定になりません。</div>'+
+    phoneHtml_()+'</div>';
+
+notifyCustomerText_(sh, row, map, {
+  text: '【買取レスキュー】出張買取日時のご案内\n\n' + body,
+  subject: '【買取レスキュー】出張買取日時のご案内 ' + id,
+  htmlBody: htmlBody,
+  required: true
+});
+  if(map['日時確定送信日時']) sh.getRange(row,map['日時確定送信日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+  const track=ensureQuickTrackingColumns_(sh);
+  if(track['訪問日時メール送信日時']) sh.getRange(row,track['訪問日時メール送信日時']).setValue(new Date()).setNumberFormat('yyyy/MM/dd HH:mm');
+  setReceptionStatusSafe_(sh,row,map,'🔵 買取確定');
+  updateReceptionSummaryRow_(sh,row,headerMap_(sh));
+  if(map['次にやること']) sh.getRange(row,map['次にやること']).setValue('お客様日時確認待ち');
+  SpreadsheetApp.flush();
+  try{refreshDashboard();}catch(err){console.log(err);}
+  logCaseAction_(id,'訪問日時送信',vd+' '+vt);
+  return {ok:true,message:'訪問日時を送信しました。'};
+}
+
+function quickSaveAndOpenSlip(caseId){
+  const saved=saveSlipHistory(caseId);
+  quickActivateCase_(caseId);
+  openReceiptSlip();
+  return saved;
+}
+function quickOpenSlip(caseId){ quickActivateCase_(caseId); return openReceiptSlip(); }
+
+function quickSidebarSnapshot_(){
+  const rows=quickCaseRowsForSidebar_();
+  const cases={};
+  const errors=[];
+  rows.forEach(function(x){
+    try{ cases[x.id]=quickGetCase(x.id); }
+    catch(e){ errors.push(x.id+': '+String(e.message||e)); }
+  });
+  return {rows:rows,cases:cases,errors:errors};
+}
+
+function showQuickActions() {
+  let rows=[];
+  let bootError='';
+  try { rows=quickCaseRowsForSidebar_(); } catch(e) { bootError=String(e.message||e); }
+
+  const options=rows.map(function(x){
+    const label = [x.id, x.name, x.status].filter(Boolean).join('｜');
+    return '<option value="'+escapeHtml_(x.id)+'">'+escapeHtml_(label)+'</option>';
+  }).join('');
+
+  const tpl = HtmlService.createTemplateFromFile('Sidebar');
+  tpl.options = options;
+  tpl.bootError = bootError;
+
+  SpreadsheetApp.getUi().showSidebar(
+    tpl.evaluate()
+      .setTitle('受付ショートカット V21.9')
+  );
+}
+
+function setupReceptionWorkspace() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) throw new Error('「受付」シートが見つかりません。');
+
+  // 必要列を補完
+  let current = sh.getRange(1,1,1,Math.max(sh.getLastColumn(),1)).getValues()[0];
+  HEADERS.forEach(function(h) {
+    if (current.indexOf(h) === -1) {
+      sh.getRange(1, sh.getLastColumn() + 1).setValue(h);
+      current.push(h);
+    }
+  });
+
+  sh.setFrozenColumns(0);
+  sh.setFrozenRows(0);
+  try { sh.showColumns(1, sh.getMaxColumns()); } catch (e) {}
+
+  // ===== 受付完成版：普段触る順番 =====
+  const preferred = [
+    'ステータス','次にやること','受付番号','氏名',
+    '商品','商品1査定額','商品2査定額','商品3査定額','商品4査定額','商品5査定額','商品6査定額','査定合計',
+    '希望日時（第1〜第3希望）','確定訪問日','確定訪問時間','確定日時',
+    '📷1','📷2','📷3','📷4','📷5','📷6',
+    '電話','住所','連絡方法','メール',
+    '受付日時','依頼種別',
+    '郵便番号','建物','階数','EV','搬出メモ','備考',
+    '第1希望','第2希望','第3希望','確定訪問日','確定訪問時間',
+    '回答文','回答日時','日時確定送信日時','訪問日時承認日時','査定額','希望日','希望時間'
+  ];
+  // 何度 setupWorkspaces を実行しても安全に同じ配置へ戻せるようにする
+  const used = {};
+  let targetCol = 1;
+  preferred.forEach(function(h){
+    if (used[h]) return;
+    used[h] = true;
+    moveHeaderToPosition_(sh,h,targetCol);
+    targetCol++;
+  });
+
+  const map = headerMap_(sh);
+  const lastRow = Math.max(sh.getLastRow(),2);
+  const rows = Math.max(lastRow-1,1);
+
+  // 表示用まとめ列
+  if (map['次にやること'] && map['ステータス']) {
+    const statuses = sh.getRange(2,map['ステータス'],rows,1).getDisplayValues();
+    sh.getRange(2,map['次にやること'],rows,1)
+      .setValues(statuses.map(function(x){return [receptionNextAction_(x[0])];}));
+  }
+  if (map['希望日時（第1〜第3希望）']) {
+    const a=[];
+    for(let r=2;r<=lastRow;r++) a.push([receptionPrefSummary_(sh,r,map)]);
+    sh.getRange(2,map['希望日時（第1〜第3希望）'],rows,1).setValues(a);
+  }
+  if (map['確定日時']) {
+    const a=[];
+    for(let r=2;r<=lastRow;r++) a.push([receptionConfirmedSummary_(sh,r,map)]);
+    sh.getRange(2,map['確定日時'],rows,1).setValues(a);
+  }
+
+  // ヘッダー
+  sh.setFrozenRows(1);
+  sh.setFrozenColumns(4);
+  sh.setRowHeight(1,46);
+  sh.getRange(1,1,1,sh.getLastColumn())
+    .setBackground('#17365d')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold')
+    .setFontSize(11)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+
+  // 行
+  if (sh.getLastRow()>=2) {
+    sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn())
+      .setVerticalAlignment('middle').setWrap(true).setFontSize(10);
+    for(let r=2;r<=sh.getLastRow();r++) sh.setRowHeight(r,78);
+  }
+
+  // 受付画面で重要な列だけ十分な幅を確保
+  const widths = {
+    'ステータス':118,'次にやること':145,'受付番号':84,'氏名':105,
+    '商品':310,'査定合計':95,'希望日時（第1〜第3希望）':205,'確定訪問日':105,'確定訪問時間':120,'確定日時':125,
+    '📷1':44,'📷2':44,'📷3':44,'📷4':44,'📷5':44,'📷6':44,
+    '電話':112,'住所':230,'連絡方法':80,'メール':180,'受付日時':88,'依頼種別':100,
+    '商品1査定額':88,'商品2査定額':88,'商品3査定額':88,'商品4査定額':88,'商品5査定額':88,'商品6査定額':88,
+    '郵便番号':82,'建物':90,'階数':60,'EV':50,'搬出メモ':160,'備考':180
+  };
+  Object.keys(widths).forEach(function(h){if(map[h])sh.setColumnWidth(map[h],widths[h]);});
+
+  for(let i=1;i<=6;i++){
+    if(map['商品'+i+'査定額']) sh.getRange(2,map['商品'+i+'査定額'],rows,1).setNumberFormat('¥#,##0');
+  }
+  if(map['査定合計']) sh.getRange(2,map['査定合計'],rows,1).setNumberFormat('¥#,##0');
+
+  // 希望日時を画像のような見え方に
+  if(map['希望日時（第1〜第3希望）']){
+    sh.getRange(1,map['希望日時（第1〜第3希望）']).setValue('希望日時（第1〜第3希望）');
+    sh.getRange(2,map['希望日時（第1〜第3希望）'],rows,1)
+      .setHorizontalAlignment('left').setVerticalAlignment('middle').setWrap(true);
+  }
+  if(map['確定日時']){
+    sh.getRange(1,map['確定日時']).setValue('確定日時');
+    sh.getRange(2,map['確定日時'],rows,1)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true).setFontWeight('bold');
+  }
+
+  // 日常業務では不要な内部列を隠す
+  [
+    '受付日時','依頼種別',
+    '郵便番号','建物','階数','EV','搬出メモ','備考',
+    '第1希望','第2希望','第3希望',
+    '回答文','回答日時','日時確定送信日時','訪問日時承認日時','査定額','希望日','希望時間'
+  ].forEach(function(h){if(map[h])sh.hideColumns(map[h]);});
+
+  const oldFilter=sh.getFilter();
+  if(oldFilter) oldFilter.remove();
+  if(sh.getLastRow()>=2) sh.getRange(1,1,sh.getLastRow(),sh.getLastColumn()).createFilter();
+
+  applyReceptionRules_(sh);
+  SpreadsheetApp.flush();
+
+  // セットアップ直後に右側の操作パネルを開く
+  try { showQuickActions(); } catch(e) {}
+  SpreadsheetApp.getUi().alert(
+    '受付完成版に変更しました。\n\n' +
+    '左側：状態 → 次にやること → 受付番号 → お客様\n' +
+    '中央：商品 → 査定合計 → 希望日時 → 確定日時 → 写真\n' +
+    '右側：電話・住所などの詳細\n\n' +
+    '右側に受付ショートカットも表示します。'
+  );
+}
+
+function columnLetter_(col) {
+  let s = '';
+  while (col > 0) {
+    const m = (col - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    col = Math.floor((col - 1) / 26);
+  }
+  return s;
+}
+
+function updateReceptionSummaryRow_(sh,row,map) {
+  // 1行の表示用データを必ず再構築
+  if (map['次にやること'] && map['ステータス']) {
+    const pair=receptionStatusPair_(sh.getRange(row,map['ステータス']).getDisplayValue());
+    let next=pair.next;
+    const visitSent=(map['訪問日時メール送信日時'] && sh.getRange(row,map['訪問日時メール送信日時']).getDisplayValue()) ||
+                    (map['日時確定送信日時'] && sh.getRange(row,map['日時確定送信日時']).getDisplayValue());
+    if(pair.status==='🔵 買取確定' && visitSent) next='お客様日時確認待ち';
+    sh.getRange(row,map['ステータス']).setValue(pair.status);
+    sh.getRange(row,map['次にやること']).setValue(next);
+  }
+  if (map['希望日時（第1〜第3希望）']) {
+    sh.getRange(row,map['希望日時（第1〜第3希望）'])
+      .setValue(receptionPrefSummary_(sh,row,map))
+      .setWrap(true);
+  }
+  if (map['確定日時']) {
+    sh.getRange(row,map['確定日時'])
+      .setValue(receptionConfirmedSummary_(sh,row,map));
   }
 }
-function showPreview(){
-  isSubmitting=false;
-  const submitBtn=document.getElementById("submitInquiryBtn");
-  if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";}
-  const oldStatus=document.getElementById("sendStatus");
-  if(oldStatus){oldStatus.classList.add("hidden");oldStatus.innerHTML="";}
 
-  if(!items.length){alert("商品を1つ追加してください。");return}
-  const d=getData(); if(!d)return; if(!d.name||!d.tel||!d.address){alert("お名前・電話番号・住所を入力してください。");return}
-  inquiry=d;
-  const itemHtml=d.items.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px">
-    <b>${i+1}. ${esc(x.type)} × ${esc(x.qty)}台</b>
-    <div class="small">${esc(x.maker||"メーカー不明")} / ${esc(x.model||"型番不明")} / ${esc(x.year||"年式不明")}</div>
-    <div class="small">動作：${esc(x.operation||"不明")}　状態：${esc(x.condition||"不明")}</div>
-  </div>`).join("");
-  document.getElementById("previewBody").innerHTML=`
-    <div class="preview-row"><b>受付番号</b><span>${d.inquiryId}</span></div>
-    <div class="preview-row"><b>お名前</b><span>${esc(d.name)}</span></div>
-    <div class="preview-row"><b>電話</b><span>${esc(d.tel)}</span></div>
-    ${d.email?`<div class="preview-row"><b>メール</b><span>${esc(d.email)}</span></div>`:""}
-    <div class="preview-row"><b>住所</b><span>${esc(d.address)}</span></div>
-    <div class="preview-row"><b>依頼</b><span>${esc(d.mode)}</span></div>
-    <div style="margin-top:10px"><b>商品</b>${itemHtml}</div>
-    ${d.visit?`<div class="preview-row"><b>希望</b><span>${esc(d.visit.date||"おまかせ")} ${esc(d.visit.time||"")}${d.visit.date2?`<br>第2希望：${esc(d.visit.date2)} ${esc(d.visit.time2||"おまかせ")}`:""}${d.visit.date3?`<br>第3希望：${esc(d.visit.date3)} ${esc(d.visit.time3||"おまかせ")}`:""}</span></div><div class="preview-row"><b>搬出</b><span>${esc([d.visit.building,d.visit.floor,d.visit.elevator].filter(Boolean).join(" / "))}<br>${esc(d.visit.carry)}</span></div>`:""}
-    <div class="preview-row"><b>連絡</b><span>${esc(d.contact)} ${esc(d.note)}</span></div>`;
-  document.getElementById("sendStatus").classList.add("hidden");
-  isSubmitting=false;
-  const previewSendBtn=document.getElementById("submitInquiryBtn");
-  if(previewSendBtn){previewSendBtn.disabled=false;previewSendBtn.textContent="📨 見積もりを送信";previewSendBtn.style.opacity="1";}
-  document.getElementById("preview").style.display="block";
+function applyReceptionRules_(sh) {
+  const map = headerMap_(sh);
+  const count = Math.max(sh.getMaxRows()-1,1);
+  const range = sh.getRange(2,1,count,sh.getLastColumn());
+  const rules = [];
+
+  const statusCol = map['ステータス'];
+  if (!statusCol) return;
+  const statusLetter = columnLetter_(statusCol);
+
+  [
+    ['=$' + statusLetter + '2="🔴 新規"','#fce8e6','#a50e0e'],
+    ['=$' + statusLetter + '2="🟡 査定中"','#fff4cc','#7a4d00'],
+    ['=$' + statusLetter + '2="🟢 見積回答済"','#e6f4ea','#137333'],
+    ['=$' + statusLetter + '2="🟢 お客様回答待ち"','#e6f4ea','#137333'],
+    ['=$' + statusLetter + '2="🔵 買取確定"','#e8f0fe','#174ea6'],
+    ['=$' + statusLetter + '2="✅ 訪問日時確定"','#d2e3fc','#174ea6'],
+    ['=$' + statusLetter + '2="⚫ キャンセル"','#f1f3f4','#9aa0a6']
+  ].forEach(function(x){
+    rules.push(
+      SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(x[0])
+        .setBackground(x[1])
+        .setFontColor(x[2])
+        .setRanges([range])
+        .build()
+    );
+  });
+
+  sh.setConditionalFormatRules(rules);
 }
-let isSubmitting=false;
-async function submitInquiry(){
-  if(!inquiry || isSubmitting)return;
-  isSubmitting=true;
-  const submitBtn=document.getElementById("submitInquiryBtn");
-  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送信中…";submitBtn.style.opacity=".6";}
-  localStorage.setItem("lastInquiry",JSON.stringify(inquiry));
-  const status=document.getElementById("sendStatus");status.classList.remove("hidden");
-  if(!CONFIG.WEBHOOK_URL){
-    status.innerHTML="<b>受付データを端末に保存しました。</b><br>送信先URLが未設定です。";
-    isSubmitting=false;if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
+
+function showReceptionDetails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) return;
+  const map = headerMap_(sh);
+  ['回答文','回答日時','日時確定送信日時','訪問日時承認日時','査定額','希望日','希望時間']
+    .forEach(function(h){ if (map[h]) sh.showColumns(map[h]); });
+  ss.setActiveSheet(sh);
+}
+
+function hideReceptionDetails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) return;
+  const map = headerMap_(sh);
+  ['回答文','回答日時','日時確定送信日時','訪問日時承認日時','査定額','希望日','希望時間']
+    .forEach(function(h){ if (map[h]) sh.hideColumns(map[h]); });
+  ss.setActiveSheet(sh);
+}
+
+function headerMap_(sh) {
+  const headers = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+  const map = {};
+  headers.forEach(function(h,i){ if(h) map[String(h)] = i + 1; });
+  return map;
+}
+
+
+function phoneHtml_() {
+  return '<div style="margin-top:26px;padding-top:20px;border-top:1px solid #ddd">' +
+    '<div style="font-size:14px;color:#666;margin-bottom:8px">お問い合わせ</div>' +
+    '<a href="tel:' + STORE_PHONE_LINK + '" style="font-size:22px;font-weight:700;color:#1565c0;text-decoration:none">☎ ' + STORE_PHONE + '</a>' +
+    '<div style="font-size:12px;color:#777;margin-top:5px">電話番号をタップすると発信できます</div></div>';
+}
+
+function cancelButtonHtml_(inquiryId, label) {
+  const url = WEB_APP_URL + '?action=cancelConfirm&id=' + encodeURIComponent(inquiryId);
+  return '<div style="margin-top:22px"><a href="' + escapeHtml_(url) + '" style="display:inline-block;padding:13px 22px;border:1px solid #999;border-radius:9px;color:#555;text-decoration:none;background:#fff;font-weight:700">' + escapeHtml_(label || 'キャンセル') + '</a></div>';
+}
+
+function productSummaryHtml_(sh,row,map) {
+  return parseProducts_(sh,row,map).slice(0,6).map(function(p){
+    return '<div style="padding:8px 0;border-bottom:1px solid #eee">📦 ' + escapeHtml_([p.label,p.maker,p.model,p.year].filter(Boolean).join(' / ')) + '</div>';
+  }).join('');
+}
+
+// ============================================================
+// お客様通知共通処理
+// LINE連携済み → LINEのみ / 未連携 → メール
+// ============================================================
+function notifyCustomerText_(sh, row, map, options) {
+  options = options || {};
+  const lineUserId = getDisplay_(sh, row, map, 'LINEユーザーID').trim();
+  const email = getDisplay_(sh, row, map, 'メール').trim();
+  const text = String(options.text || '');
+
+  if (!lineUserId && !email) {
+    if (options.required) throw new Error('この受付にはLINE連携もメールアドレスもありません。');
+    return {ok:false, channel:''};
+  }
+
+  if (lineUserId) {
+    pushLineText_(lineUserId, text);
+    return {ok:true, channel:'LINE'};
+  }
+
+  const mail = {
+    to: email,
+    subject: String(options.subject || ''),
+    body: text,
+    name: '買取レスキュー'
+  };
+  if (options.htmlBody) mail.htmlBody = options.htmlBody;
+  MailApp.sendEmail(mail);
+  return {ok:true, channel:'EMAIL'};
+}
+
+function sendApprovedVisitMail_(sh,row,map) {
+  const name = getDisplay_(sh,row,map,'氏名');
+  const id = getDisplay_(sh,row,map,'受付番号');
+  const vd = getDisplay_(sh,row,map,'確定訪問日');
+  const vt = getDisplay_(sh,row,map,'確定訪問時間');
+  const cancelUrl = WEB_APP_URL + '?action=cancelConfirm&id=' + encodeURIComponent(id);
+  const products = parseProducts_(sh,row,map).slice(0,6).map(function(p){
+    return '・' + [p.label,p.maker,p.model,p.year].filter(Boolean).join(' / ');
+  }).join('\n');
+  const body = name + ' 様\n\n出張買取の訪問日時をご承認いただきありがとうございます。\n下記内容でご予約を承りました。\n\n【訪問日時】\n' + vd + ' ' + vt + '\n\n【買取予定の商品】\n' + products + '\n\n【受付番号】' + id + '\n\nお問い合わせ：' + STORE_PHONE + '\n\n予約をキャンセルする：\n' + cancelUrl + '\n\n買取レスキュー';
+  const htmlBody = '<div style="font-family:Arial,sans-serif;line-height:1.8;max-width:600px">' +
+    '<h2>出張買取のご予約が確定しました</h2><p>' + escapeHtml_(name) + ' 様</p>' +
+    '<p>訪問日時をご承認いただきありがとうございます。下記内容でご予約を承りました。</p>' +
+    '<div style="background:#f4f7fb;padding:18px;border-radius:10px"><b>📅 訪問日時</b><div style="font-size:20px;margin-top:8px"><b>' + escapeHtml_(vd + ' ' + vt) + '</b></div></div>' +
+    '<h3>📦 買取予定の商品</h3>' + productSummaryHtml_(sh,row,map) +
+    '<p><b>受付番号：</b>' + escapeHtml_(id) + '</p>' + phoneHtml_() +
+    '<div style="margin-top:24px"><a href="' + escapeHtml_(cancelUrl) + '" style="display:inline-block;padding:12px 20px;border:1px solid #999;border-radius:8px;color:#555;text-decoration:none">予約をキャンセルする</a></div>' +
+    '<p style="margin-top:28px">買取レスキュー</p></div>';
+notifyCustomerText_(sh, row, map, {
+  text: '【買取レスキュー】出張買取のご予約が確定しました\n\n' + body,
+  subject: '【買取レスキュー】出張買取のご予約が確定しました ' + id,
+  htmlBody: htmlBody,
+  required: false
+});}
+
+
+// ============================================================
+// Web画面からのステータス変更を確実に保存
+// ============================================================
+
+// ============================================================
+// お客様がWebからキャンセルした時の自動通知メール
+// ============================================================
+function sendCancellationMail_(sh, row, map) {
+  const email = getDisplay_(sh, row, map, 'メール').trim();
+const lineUserIdForCheck = getDisplay_(sh, row, map, 'LINEユーザーID').trim();
+
+if (!email && !lineUserIdForCheck) return;
+  const name = getDisplay_(sh, row, map, '氏名');
+  const id = getDisplay_(sh, row, map, '受付番号');
+  const vd = getDisplay_(sh, row, map, '確定訪問日');
+  const vt = getDisplay_(sh, row, map, '確定訪問時間');
+
+  const visitText = [vd, vt].filter(Boolean).join(' ');
+
+  const body =
+    (name ? name + ' 様\n\n' : '') +
+    '出張買取のキャンセルを受け付けました。\n\n' +
+    '【受付番号】' + id + '\n' +
+    (visitText ? '【キャンセルした訪問日時】' + visitText + '\n' : '') +
+    '\n今回の出張買取予約はキャンセルとなりました。\n' +
+    'またの機会がございましたら、よろしくお願いいたします。\n\n' +
+    'お問い合わせ：' + STORE_PHONE + '\n\n' +
+    '買取レスキュー';
+
+  const htmlBody =
+    '<div style="font-family:Arial,sans-serif;line-height:1.8;max-width:600px">' +
+    '<div style="font-size:44px;text-align:center">✅</div>' +
+    '<h2 style="text-align:center">キャンセルを受け付けました</h2>' +
+    '<p>' + escapeHtml_(name) + ' 様</p>' +
+    '<div style="background:#fff3f3;border:1px solid #ffcdd2;border-radius:10px;padding:18px;margin:18px 0">' +
+    '<div style="font-size:21px;font-weight:800;color:#c62828">⚫ キャンセル完了</div>' +
+    '<div style="margin-top:10px"><b>受付番号：</b>' + escapeHtml_(id) + '</div>' +
+    (visitText ? '<div><b>訪問日時：</b>' + escapeHtml_(visitText) + '</div>' : '') +
+    '</div>' +
+    '<p>今回の出張買取予約はキャンセルとなりました。</p>' +
+    '<p>またの機会がございましたら、よろしくお願いいたします。</p>' +
+    phoneHtml_() +
+    '<p style="margin-top:28px">買取レスキュー</p>' +
+    '</div>';
+
+notifyCustomerText_(sh, row, map, {
+  text: '【買取レスキュー】キャンセルを受け付けました\n\n' + body,
+  subject: '【買取レスキュー】キャンセルを受け付けました ' + id,
+  htmlBody: htmlBody,
+  required: false
+});}
+
+function setWebCaseStatus_(sh,row,map,status){
+  if(!map['ステータス']) throw new Error('ステータス列が見つかりません。');
+  if(!map['次にやること']) throw new Error('次にやること列が見つかりません。');
+
+  const pair=receptionStatusPair_(status);
+  const statusCell=sh.getRange(row,map['ステータス']);
+  const nextCell=sh.getRange(row,map['次にやること']);
+
+  // A列とB列を必ず1セットで書く。片方だけの更新は禁止。
+  statusCell.setValue(pair.status);
+  nextCell.setValue(pair.next);
+  SpreadsheetApp.flush();
+
+  // 念のため表示値も検証し、ズレたらその場で再固定。
+  if(statusCell.getDisplayValue().trim()!==pair.status ||
+     nextCell.getDisplayValue().trim()!==pair.next){
+    statusCell.setValue(pair.status);
+    nextCell.setValue(pair.next);
+    SpreadsheetApp.flush();
+  }
+}
+
+
+function customerLoadingUi_(){
+  return `
+<style>
+#customerBusyOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:99999;align-items:center;justify-content:center;padding:20px}
+#customerBusyOverlay.show{display:flex}
+.customerBusyCard{background:#fff;border-radius:20px;padding:28px 24px;text-align:center;max-width:360px;width:100%;box-shadow:0 15px 50px #0004}
+.customerSpinner{width:46px;height:46px;border:6px solid #dbe5f2;border-top-color:#1758aa;border-radius:50%;margin:0 auto 18px;animation:customerSpin .8s linear infinite}
+.customerBusyTitle{font-size:20px;font-weight:900;color:#172033}.customerBusySub{font-size:14px;font-weight:700;color:#64748b;margin-top:10px}
+@keyframes customerSpin{to{transform:rotate(360deg)}}
+.customerSending{opacity:.55!important;pointer-events:none!important}
+</style>
+<div id="customerBusyOverlay"><div class="customerBusyCard"><div class="customerSpinner"></div><div id="customerBusyTitle" class="customerBusyTitle">送信中です…</div><div class="customerBusySub">完了するまで画面を閉じないでください</div></div></div>
+<script>
+function customerBusy_(title){
+ var o=document.getElementById('customerBusyOverlay');
+ if(!o)return;
+ document.getElementById('customerBusyTitle').textContent=title||'送信中です…';
+ o.classList.add('show');
+ document.querySelectorAll('button,input[type="submit"],a.button,.btn').forEach(function(b){b.classList.add('customerSending');});
+}
+window.addEventListener('beforeunload',function(e){
+ var o=document.getElementById('customerBusyOverlay');
+ if(o&&o.classList.contains('show')){e.preventDefault();e.returnValue='処理中です';}
+});
+document.addEventListener('submit',function(e){customerBusy_('回答を送信中…');},true);
+document.addEventListener('click',function(e){
+ var el=e.target.closest('a,button');
+ if(!el)return;
+ var tx=(el.textContent||'').trim();
+ if(/承認|確定|キャンセル|修正|回答を送信|送信/.test(tx)){
+   setTimeout(function(){customerBusy_(tx.indexOf('キャンセル')>=0?'キャンセルを送信中…':'回答を送信中…');},30);
+ }
+},true);
+</script>`;
+}
+function injectCustomerLoadingUi_(html){
+  html=String(html||'');
+  const ui=customerLoadingUi_();
+  if(html.indexOf('</body>')>=0) return html.replace('</body>',ui+'</body>');
+  return html+ui;
+}
+
+
+function buildVisitCustomerConfirmForm_(id,name,address,phone,vd,vt){
+  const actionUrl = WEB_APP_URL;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:#172033}
+.wrap{max-width:620px;margin:0 auto;padding:18px 12px 42px}.card{background:#fff;border-radius:22px;padding:24px 18px;box-shadow:0 6px 24px #00000012}
+.badge{text-align:center;font-size:42px;margin:2px 0 6px}h1{font-size:24px;text-align:center;margin:0 0 8px}.lead{text-align:center;color:#52606d;line-height:1.65;margin:0 0 20px}
+.visit{background:#eef5ff;border:1px solid #cfe0f7;border-radius:16px;padding:17px;text-align:center;margin-bottom:22px;color:#52606d}.visit b{display:block;color:#172033;font-size:22px;margin-top:6px}
+.sectionTitle{font-size:17px;font-weight:900;margin:20px 0 5px}.hint{font-size:13px;color:#64748b;line-height:1.5;margin-bottom:12px}
+label{display:block;font-weight:800;margin:14px 0 6px}.required{color:#c62828;font-size:12px}
+input{width:100%;font-size:17px;padding:14px 13px;border:1.5px solid #cbd5e1;border-radius:11px;background:#fff}
+input:focus{outline:3px solid #dbeafe;border-color:#2563eb}
+.note{background:#fff8e1;border:1px solid #f4d88a;border-radius:12px;padding:13px;font-size:13px;line-height:1.65;margin:18px 0}
+button{width:100%;border:0;border-radius:13px;padding:18px 12px;background:#1769d2;color:#fff;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 8px #1769d233}
+button:active{transform:scale(.985)}button:disabled{opacity:.55}
+.safe{text-align:center;color:#64748b;font-size:12px;margin-top:12px;line-height:1.6}
+#busy{display:none;position:fixed;inset:0;background:#0009;z-index:9999;align-items:center;justify-content:center;padding:20px}#busy.show{display:flex}
+.busycard{width:min(360px,100%);background:#fff;border-radius:22px;padding:32px 22px;text-align:center}.spinner{width:52px;height:52px;border:7px solid #dbe5f2;border-top-color:#1758aa;border-radius:50%;margin:0 auto 20px;animation:spin .75s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.busytitle{font-size:21px;font-weight:900}.busysub{margin-top:10px;color:#64748b;font-weight:700}
+</style></head><body>
+<div class="wrap"><div class="card"><div class="badge">📅</div><h1>訪問日時・お客様情報の確認</h1>
+<p class="lead">下記の内容をご確認ください。<br>お名前・電話番号・住所に間違いがあれば、この画面でそのまま修正できます。</p>
+<div class="visit">訪問予定日時<b>${escapeHtml_(vd+' '+vt)}</b></div>
+<form method="get" action="${escapeHtml_(actionUrl)}" onsubmit="return submitCustomerConfirm_(this)">
+<input type="hidden" name="action" value="saveCustomerAndApprove"><input type="hidden" name="id" value="${escapeHtml_(id)}">
+<div class="sectionTitle">お客様情報</div><div class="hint">変更した内容は受付情報にも自動で反映されます。</div>
+<label>お名前 <span class="required">必須</span></label><input name="name" value="${escapeHtml_(name)}" required autocomplete="name">
+<label>電話番号 <span class="required">必須</span></label><input name="phone" value="${escapeHtml_(phone)}" required inputmode="tel" autocomplete="tel">
+<label>住所 <span class="required">必須</span></label><input name="address" value="${escapeHtml_(address)}" required autocomplete="street-address">
+<div class="note"><b>確定前にご確認ください</b><br>「確定する」を押すと、上記のお客様情報を保存し、この訪問日時で予約が確定します。</div>
+<button type="submit">この内容で訪問日時を確定する</button>
+<div class="safe">※この画面にはキャンセルボタンを設けていません。<br>内容を確定しない場合は、そのまま画面を閉じてください。<br><span style="color:#94a3b8">確認画面 V21.9</span></div>
+</form></div></div>
+<div id="busy"><div class="busycard"><div class="spinner"></div><div class="busytitle">お申し込み内容を確定中…</div><div class="busysub">少々お待ちください</div></div></div>
+<script>
+let sending=false;
+function submitCustomerConfirm_(f){
+ if(sending)return false;
+ const n=f.elements.name.value.trim(),a=f.elements.address.value.trim(),p=f.elements.phone.value.trim();
+ if(!n||!a||!p){alert('お名前・電話番号・住所をご確認ください。');return false}
+ sending=true;document.getElementById('busy').classList.add('show');
+ f.querySelector('button[type=submit]').disabled=true;
+ return true;
+}
+</script></body></html>`;
+}
+
+function doGet(e) {
+  try {
+
+    // ===== LINEログイン処理 =====
+    const lineAction = e && e.parameter
+      ? String(e.parameter.line_action || '')
+      : '';
+
+    if (lineAction === 'login') {
+      return startLineLogin_(e);
+    }
+
+    if (lineAction === 'callback') {
+      return handleLineLoginCallback_(e);
+    }
+    // ===== LINEログイン処理ここまで =====
+
+    const action = e && e.parameter ? String(e.parameter.action || '') : '';
+    const inquiryId = e && e.parameter ? String(e.parameter.id || '') : '';
+    if (!inquiryId) return htmlPage_('無効なアクセスです。');
+
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sh = ss.getSheetByName(SHEET_NAME);
+    const map = headerMap_(sh);
+    const finder = sh.getRange(2,map['受付番号'],Math.max(sh.getLastRow()-1,1),1).createTextFinder(inquiryId).matchEntireCell(true).findNext();
+    if (!finder) return htmlPage_('受付番号が見つかりません。');
+    const row = finder.getRow();
+    const name = getDisplay_(sh,row,map,'氏名');
+
+    if (action === 'confirm') {
+      const p1 = getDisplay_(sh,row,map,'第1希望');
+      const p2 = getDisplay_(sh,row,map,'第2希望');
+      const p3 = getDisplay_(sh,row,map,'第3希望');
+      if (p1 || p2 || p3) {
+        if(map['希望日時（第1〜第3希望）']) {
+          sh.getRange(row,map['希望日時（第1〜第3希望）'])
+            .setValue(receptionPrefSummary_(sh,row,map))
+            .setWrap(true);
+        }
+        setWebCaseStatus_(sh, row, map, '🔵 買取確定');
+        try { refreshDashboard(); } catch(err) { console.log(err); }
+        return htmlPage_('出張買取のお申し込みを受け付けました', escapeHtml_(name) + ' 様<br><br>登録済みの希望日時をもとに訪問日時を調整します。<br><br>' + preferenceHtml_(p1,p2,p3) + '<br><br>確定日時は改めてご案内いたします。' + phoneHtml_());
+      }
+      return HtmlService.createHtmlOutput(buildPreferenceForm_(inquiryId,name));
+    }
+
+    if (action === 'savePreferences') {
+      const prefs = [joinPreference_(e.parameter.d1,e.parameter.t1),joinPreference_(e.parameter.d2,e.parameter.t2),joinPreference_(e.parameter.d3,e.parameter.t3)];
+      if (!prefs[0]) return htmlPage_('第1希望日時を選択してください。');
+      sh.getRange(row,map['第1希望']).setValue(prefs[0]);
+      if(map['第2希望']) sh.getRange(row,map['第2希望']).setValue(prefs[1]||'');
+      if(map['第3希望']) sh.getRange(row,map['第3希望']).setValue(prefs[2]||'');
+
+      // お客様が送信した希望日時を受付のG列へ即時反映
+      if(map['希望日時（第1〜第3希望）']) {
+        sh.getRange(row,map['希望日時（第1〜第3希望）'])
+          .setValue(receptionPrefSummary_(sh,row,map))
+          .setWrap(true);
+      }
+
+      setWebCaseStatus_(sh, row, map, '🔵 買取確定');
+      try { refreshDashboard(); } catch(err) { console.log(err); }// 希望日時を入力して申し込んだ場合のお客様通知
+try {
+  const notifyText =
+    '【買取レスキュー】出張買取のお申し込みを受け付けました\n\n' +
+    name + ' 様\n\n' +
+    '出張買取のお申し込みありがとうございます。\n\n' +
+    '【ご希望日時】\n' +
+    [prefs[0], prefs[1], prefs[2]].filter(Boolean).join('\n') + '\n\n' +
+    '受付番号：' + inquiryId + '\n\n' +
+    'ご希望日時をもとに訪問日時を調整いたします。\n' +
+    '訪問日時が確定しましたら、改めてご案内いたします。';
+
+  notifyCustomerText_(sh, row, map, {
+    text: notifyText,
+    subject: '【買取レスキュー】出張買取のお申し込みを受け付けました ' + inquiryId,
+    required: false
+  });
+} catch (err) {
+  console.error('申込受付通知エラー：' + err);
+}
+      return htmlPage_('出張買取のお申し込みを受け付けました', escapeHtml_(name) + ' 様<br><br>登録済みの希望日時をもとに訪問日時を調整します。<br><br>' + preferenceHtml_(prefs[0],prefs[1],prefs[2]) + '<br><br><b>確定日時は改めてご案内いたします。</b>' + phoneHtml_());
+    }
+
+    if (action === 'approveVisit' || action === 'approveVisitForm') {
+      const vd = getDisplay_(sh,row,map,'確定訪問日');
+      const vt = getDisplay_(sh,row,map,'確定訪問時間');
+      if (!vd || !vt) return htmlPage_('確定訪問日時が設定されていません。');
+      const address = getDisplay_(sh,row,map,'住所');
+      const phone = getDisplay_(sh,row,map,'電話');
+      return HtmlService.createHtmlOutput(buildVisitCustomerConfirmForm_(inquiryId,name,address,phone,vd,vt))
+        .setTitle('訪問日時・お客様情報の確認 V21.8');
+    }
+
+    if (action === 'saveCustomerAndApprove') {
+      const newName = String(e.parameter.name || '').trim();
+      const newAddress = String(e.parameter.address || '').trim();
+      const newPhone = String(e.parameter.phone || '').trim();
+      if (!newName || !newAddress || !newPhone) return htmlPage_('お名前・住所・電話番号をすべて入力してください。');
+
+      const vd = getDisplay_(sh,row,map,'確定訪問日');
+      const vt = getDisplay_(sh,row,map,'確定訪問時間');
+      if (!vd || !vt) return htmlPage_('確定訪問日時が設定されていません。');
+
+      const oldName=getDisplay_(sh,row,map,'氏名');
+      const oldAddress=getDisplay_(sh,row,map,'住所');
+      const oldPhone=getDisplay_(sh,row,map,'電話');
+      const changes=[];
+      if(oldName!==newName) changes.push('氏名：'+oldName+' → '+newName);
+      if(oldPhone!==newPhone) changes.push('電話：'+oldPhone+' → '+newPhone);
+      if(oldAddress!==newAddress) changes.push('住所：'+oldAddress+' → '+newAddress);
+
+      if(map['氏名']) sh.getRange(row,map['氏名']).setValue(newName);
+      if(map['住所']) sh.getRange(row,map['住所']).setValue(newAddress);
+      if(map['電話']) sh.getRange(row,map['電話']).setValue(newPhone);
+      if(changes.length) logCaseAction_(inquiryId,'お客様情報変更',changes.join(' / '));
+
+      // 重要データを最優先で確定。ここは重い全件更新に依存させない。
+      setWebCaseStatus_(sh, row, map, '✅ 訪問日時確定');
+      if(map['次にやること']) sh.getRange(row,map['次にやること']).setValue('訪問待ち');
+      if(map['訪問日時承認日時']) sh.getRange(row,map['訪問日時承認日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+      if(map['確定日時']) sh.getRange(row,map['確定日時']).setValue([vd,vt].filter(Boolean).join('\n')).setWrap(true);
+      SpreadsheetApp.flush();
+
+      logCaseAction_(inquiryId,'訪問日時確定',vd+' '+vt+(changes.length?' / '+changes.join(' / '):''));
+
+      // メール送信は実行するが、案件管理の全件再構築はこの画面では行わない。
+      // これによりお客様画面が長時間「処理中」のままになるのを防ぐ。
+      let mailSent=true;
+      try { sendApprovedVisitMail_(sh,row,map); } catch(mailErr) { mailSent=false; console.log('予約確定メール送信エラー: '+mailErr); }
+
+      return customerDonePage_(newName,vd,vt,mailSent);
+    }
+
+    if (action === 'cancelConfirm' || action === 'cancelConfirmForm') {
+      const cancelUrl = WEB_APP_URL + '?action=cancel&id=' + encodeURIComponent(inquiryId);
+      return HtmlService.createHtmlOutput('<meta name="viewport" content="width=device-width,initial-scale=1"><div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:560px;margin:40px auto;padding:24px;text-align:center"><h2>出張買取をキャンセルしますか？</h2><p style="line-height:1.8">' + escapeHtml_(name) + ' 様<br>この操作を行うと今回の出張買取はキャンセルとなります。</p><a href="' + escapeHtml_(cancelUrl) + '" style="display:inline-block;margin-top:20px;background:#c62828;color:#fff;text-decoration:none;padding:15px 28px;border-radius:9px;font-weight:700">キャンセルする</a>' + phoneHtml_() + '</div>');
+    }
+
+    if (action === 'cancel') {
+      // キャンセル本体を最優先で受付シートへ保存
+      setWebCaseStatus_(sh, row, map, '⚫ キャンセル');
+      if (map['次にやること']) sh.getRange(row,map['次にやること']).setValue('対応終了');
+      if (map['キャンセル日時']) sh.getRange(row,map['キャンセル日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+      SpreadsheetApp.flush();
+      try { logCaseAction_(inquiryId,'予約キャンセル','お客様操作'); } catch(logErr) { console.log(logErr); }
+
+      let mailSent=true;
+      try { sendCancellationMail_(sh,row,map); } catch(mailErr) { mailSent=false; console.log('キャンセル完了メール送信エラー: '+mailErr); }
+
+      return cancellationDonePage_(name,mailSent);
+    }
+
+    return htmlPage_('無効なアクセスです。');
+  } catch(err) {
+    return htmlPage_('処理できませんでした。', escapeHtml_(String(err.message || err)));
+  }
+}
+
+function cancellationDonePage_(name,mailSent){
+  const mailText=mailSent===false ? 'キャンセルは完了しています。確認メッセージの送信のみ失敗しました。' : '📩 キャンセル完了のご案内をお送りしました。';
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<style>*{box-sizing:border-box}body{margin:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#172033;padding:18px}.card{max-width:560px;margin:18px auto;background:#fff;border-radius:22px;padding:30px 20px;text-align:center;box-shadow:0 6px 24px #0001}.ok{font-size:50px}.done{margin:22px 0;background:#fff3f3;border:1px solid #ffcdd2;border-radius:15px;padding:18px;color:#b91c1c;font-size:21px;font-weight:900}.mail{margin-top:20px;padding:14px;border-radius:12px;background:#f8fafc;font-weight:800}.ver{margin-top:18px;font-size:11px;color:#94a3b8}</style></head><body><div class="card">'+
+    '<div class="ok">✅</div><h2>キャンセルを受け付けました</h2><p><b>'+escapeHtml_(name)+' 様</b></p>'+
+    '<div class="done">予約キャンセル完了</div><p>今回の出張買取予約をキャンセルしました。</p>'+
+    '<div class="mail">'+escapeHtml_(mailText)+'</div>'+phoneHtml_()+'<div class="ver">受付画面 V21.9</div></div></body></html>').setTitle('キャンセル完了');
+}
+
+function customerDonePage_(name,vd,vt,mailSent){
+  const mailText = mailSent===false
+    ? '訪問日時の確定は完了しています。確認メッセージの送信のみ失敗しました。'
+    : '📩 予約確定のご案内をお送りしました。';
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<style>*{box-sizing:border-box}body{margin:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#172033;padding:18px}.card{max-width:560px;margin:18px auto;background:#fff;border-radius:22px;padding:30px 20px;text-align:center;box-shadow:0 6px 24px #0001}.ok{font-size:50px}.visit{margin:22px 0;background:#eef5ff;border-radius:15px;padding:18px}.visit b{font-size:22px}.msg{line-height:1.8;color:#475569}.mail{margin-top:20px;padding:14px;border-radius:12px;background:#f8fafc;font-weight:800}.ver{margin-top:18px;font-size:11px;color:#94a3b8}</style></head><body><div class="card">'+
+    '<div class="ok">✅</div><h2>訪問日時が確定しました</h2><p><b>'+escapeHtml_(name)+' 様</b></p>'+
+    '<div class="visit">📅 訪問日時<br><b>'+escapeHtml_(vd+' '+vt)+'</b></div>'+
+    '<div class="msg">ご確認ありがとうございます。<br>当日はよろしくお願いいたします。</div>'+
+    '<div class="mail">'+escapeHtml_(mailText)+'</div>'+phoneHtml_()+
+    '<div class="ver">受付画面 V21.9</div>'+
+    '</div></body></html>').setTitle('訪問日時確定');
+}
+
+function processingRedirectPage_(title, sub, nextUrl) {
+  const safeTitle=escapeHtml_(title), safeSub=escapeHtml_(sub);
+  const jsUrl=JSON.stringify(String(nextUrl||''));
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<style>*{box-sizing:border-box}body{margin:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#172033;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px}.card{width:min(390px,94vw);background:#fff;border-radius:22px;padding:34px 24px;text-align:center;box-shadow:0 8px 30px #0002}.spinner{width:58px;height:58px;border:7px solid #dbe5f2;border-top-color:#1758aa;border-radius:50%;margin:0 auto 22px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h2{font-size:22px;margin:0 0 10px}.sub{color:#64748b;font-weight:700}</style></head><body>'+
+    '<div class="card"><div class="spinner"></div><h2>'+safeTitle+'</h2><div class="sub">'+safeSub+'</div></div>'+
+    '<script>setTimeout(function(){location.replace('+jsUrl+');},150);<\/script></body></html>').setTitle('処理中');
+}
+
+function htmlPage_(title, body) {
+  return HtmlService.createHtmlOutput(
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:560px;margin:40px auto;padding:24px;text-align:center">' +
+    '<div style="font-size:48px">✅</div><h2>' + escapeHtml_(title) + '</h2><div style="line-height:1.8">' + (body || '') + '</div></div>'
+  );
+}
+
+function preferenceHtml_(a,b,c) {
+  return [a,b,c].filter(Boolean).map(function(x,i){
+    return '第' + (i+1) + '希望：<b>' + escapeHtml_(x) + '</b>';
+  }).join('<br>');
+}
+
+function joinPreference_(d,t) {
+  d = String(d || '').trim();
+  t = String(t || '').trim();
+  if (!d) return '';
+  return d + (t ? ' ' + t : '');
+}
+
+function buildPreferenceForm_(inquiryId, name) {
+  const tz = Session.getScriptTimeZone() || 'Asia/Tokyo';
+  const today = new Date(); today.setHours(0,0,0,0);
+  let opts = '<option value="">日付を選択</option>';
+  for (let i=0;i<30;i++) {
+    const d = new Date(today); d.setDate(today.getDate()+i);
+    if (d.getDay()===4) continue;
+    const md=Utilities.formatDate(d,tz,'M/d');
+    const week=['日','月','火','水','木','金','土'][d.getDay()];
+    const label=md+'（'+week+'）';
+    opts += '<option value="'+escapeHtml_(label)+'">'+escapeHtml_(label)+'</option>';
+  }
+  const times = ['10:00〜12:00','12:00〜14:00','14:00〜16:00','16:00〜18:00','18:00〜20:00'];
+  const timeOpts = '<option value="">時間を選択</option>' + times.map(function(t){
+    return '<option value="'+t+'">'+t+'</option>';
+  }).join('');
+
+  return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f7f9;margin:0;padding:18px}.card{max-width:560px;margin:auto;background:#fff;padding:22px;border-radius:14px}label{font-weight:700;display:block;margin:16px 0 6px}select{width:100%;padding:13px;border:1px solid #ccc;border-radius:9px;font-size:16px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{width:100%;margin-top:22px;padding:15px;border:0;border-radius:10px;background:#1565c0;color:white;font-size:16px;font-weight:700}</style></head><body><div class="card">' +
+    '<h2>出張買取の希望日時</h2><p>'+escapeHtml_(name)+' 様<br>査定金額でのお申し込みありがとうございます。最大第3希望まで選択できます。</p>' +
+    '<form method="get" action="'+escapeHtml_(WEB_APP_URL)+'"><input type="hidden" name="action" value="savePreferences"><input type="hidden" name="id" value="'+escapeHtml_(inquiryId)+'">' +
+    [1,2,3].map(function(n){return '<label>第'+n+'希望'+(n===1?'（必須）':'')+'</label><div class="row"><select name="d'+n+'" '+(n===1?'required':'')+'>'+opts+'</select><select name="t'+n+'">'+timeOpts+'</select></div>';}).join('') +
+    '<button class="btn" type="submit">希望日時を送信</button></form></div></body></html>';
+}
+
+
+function escapeHtml_(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) throw new Error('POSTデータがありません。');
+
+    const data = JSON.parse(e.postData.contents);
+
+    // LINE Messaging API Webhook は通常の見積フォームPOSTより先に判定する
+    if (data && Array.isArray(data.events)) {
+      return handleLineWebhook_(data);
+    }
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+
+    // 初回の空シート
+    if (sh.getLastRow() === 0) {
+      sh.getRange(1,1,1,HEADERS.length).setValues([HEADERS]);
+      formatCaseSheet_(sh);
+    }
+
+    const products = (data.items || []).map(function(x) {
+      return [
+        x.type + ' ' + (x.qty || 1) + '台',
+        x.maker || '',
+        x.model || '',
+        x.year || '',
+        x.operation || '',
+        x.condition || ''
+      ].join(' / ');
+    }).join('\n');
+
+    const root = getRootFolder_();
+    const caseFolder = root.createFolder(data.inquiryId || ('受付_' + Date.now()));
+    const photoLinks = [];
+
+    (data.photos || []).slice(0, MAX_PHOTOS).forEach(function(ph, index) {
+      if (!ph.data) return;
+      const bytes = Utilities.base64Decode(ph.data);
+      const name = (
+        '商品' + (ph.itemType || '') + '_' +
+        (ph.position || index + 1) + '_' +
+        (ph.originalName || 'photo.jpg')
+      ).replace(/[\\/:*?"<>|]/g, '_');
+
+      const blob = Utilities.newBlob(bytes, ph.type || 'image/jpeg', name);
+      photoLinks.push(caseFolder.createFile(blob).getUrl());
+    });
+
+    const v = data.visit || {};
+    const map = headerMap_(sh);
+    const rowValues = new Array(sh.getLastColumn()).fill('');
+
+    function put(header, value) {
+      if (map[header]) rowValues[map[header] - 1] = value == null ? '' : value;
+    }
+
+    put('受付日時', new Date());
+    put('受付番号', data.inquiryId || '');
+    put('氏名', data.name || '');
+    put('電話', data.tel || '');
+    put('メール', data.email || '');
+    put('郵便番号', data.zip || '');
+    put('住所', data.address || '');
+    put('依頼種別', data.mode || '');
+    put('商品', products);
+    put('希望日', v.date || '');
+    put('希望時間', v.time || '');
+    // Webフォームで選択済みの第1〜第3希望を案件管理列へ同期
+    const vp1 = joinPreference_(v.date || '', v.time || '');
+    const vp2 = joinPreference_(v.date2 || '', v.time2 || '');
+    const vp3 = joinPreference_(v.date3 || '', v.time3 || '');
+    put('第1希望', vp1);
+    put('第2希望', vp2);
+    put('第3希望', vp3);
+    put('建物', v.building || '');
+    put('階数', v.floor || '');
+    put('EV', v.elevator || '');
+    put('搬出メモ', v.carry || '');
+    put('連絡方法', data.contact || '');
+    put('備考', data.note || '');
+    put('ステータス', '🔴 新規');
+    put('次にやること', receptionNextAction_('🔴 新規'));
+
+    sh.appendRow(rowValues);
+    const row = sh.getLastRow();
+
+    // 新規受付でもコンパクト表示列を即時作成
+    updateReceptionSummaryRow_(sh,row,map);
+
+    // 写真リンク
+    for (let i = 0; i < MAX_PHOTOS; i++) {
+      const col = map['📷' + (i + 1)];
+      if (!col) continue;
+      const cell = sh.getRange(row, col);
+      if (photoLinks[i]) {
+        cell.setRichTextValue(
+          SpreadsheetApp.newRichTextValue()
+            .setText('📷' + (i + 1))
+            .setLinkUrl(photoLinks[i])
+            .build()
+        );
+      } else {
+        cell.clearContent();
+      }
+    }
+
+    // 新しい行にも表示形式・ステータス選択を設定
+    if (map['受付日時']) sh.getRange(row, map['受付日時']).setNumberFormat('M/d H:mm');
+    if (map['査定額']) sh.getRange(row, map['査定額']).setNumberFormat('¥#,##0');
+    if (map['ステータス']) {
+      const rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList([
+        '🔴 新規','🟡 査定中','🟢 見積回答済','🟢 お客様回答待ち',
+        '🔵 買取確定','⚫ キャンセル','✅ 訪問日時確定'
+      ], true)
+        .setAllowInvalid(false)
+        .build();
+      sh.getRange(row, map['ステータス']).setDataValidation(rule);
+    }
+
+    // 送信レスポンスを優先するため、重い案件管理の全件再構築はここでは行わない。
+    // 案件管理はメニューの「案件管理を更新」または必要時の更新処理で反映する。
+    SpreadsheetApp.flush();
+// 新規受付をLINEへ通知
+const lineUserId = PropertiesService.getScriptProperties().getProperty('LINE_TEST_USER_ID');
+console.log('★取得したLINE USER ID=' + lineUserId);
+if (lineUserId){
+
+  console.log('★これからLINEを送信します');
+
+  
+  pushLineText_(
+    lineUserId,
+    '🔴 新しい買取受付が入りました\n\n' +
+    '受付番号：' + (data.inquiryId || '') + '\n' +
+    'お名前：' + (data.name || '') + '\n' +
+    '電話：' + (data.tel || '') + '\n' +
+    '商品：' + products
+  );
+}
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        ok: true,
+        inquiryId: data.inquiryId,
+        photoCount: photoLinks.length
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        ok: false,
+        error: String(err.message || err)
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// スプレッドシートで査定額・状態などを変更した時に回答文を自動生成
+function parseProducts_(sh, row, map) {
+  const raw = map['商品'] ? sh.getRange(row, map['商品']).getDisplayValue() : '';
+  return String(raw || '').split('\n').filter(Boolean).map(function(line) {
+    const parts = line.split(' / ');
+    return {
+      label: parts[0] || '',
+      maker: parts[1] || '',
+      model: parts[2] || '',
+      year: parts[3] || ''
+    };
+  });
+}
+
+function updateAssessmentTotal_(sh, row, map) {
+  let total = 0;
+  let hasPrice = false;
+  for (let i = 1; i <= 6; i++) {
+    const col = map['商品' + i + '査定額'];
+    if (!col) continue;
+    const v = sh.getRange(row, col).getValue();
+    if (v !== '' && !isNaN(Number(v))) {
+      total += Number(v);
+      hasPrice = true;
+    }
+  }
+  if (map['査定合計']) sh.getRange(row, map['査定合計']).setValue(hasPrice ? total : '');
+  if (map['査定額']) sh.getRange(row, map['査定額']).setValue(hasPrice ? total : '');
+  return hasPrice ? total : '';
+}
+
+function onSelectionChange(e){
+  try{
+    if(!e || !e.range) return;
+    const sh=e.range.getSheet();
+    if(sh.getName()!==SHEET_NAME || e.range.getRow()<2) return;
+    const map=headerMap_(sh);
+    if(!map['受付番号']) return;
+    const id=String(sh.getRange(e.range.getRow(),map['受付番号']).getDisplayValue()||'').trim();
+    if(id){
+      const p=PropertiesService.getUserProperties();
+      p.setProperty('KAITORI_SELECTED_CASE',id);
+      p.setProperty('KAITORI_SELECTED_ROW',String(e.range.getRow()));
+    }
+  }catch(err){
+    console.log('選択行記憶エラー: '+err);
+  }
+}
+
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sh = e.range.getSheet();
+    if (sh.getName() !== SHEET_NAME || e.range.getRow() < 2) return;
+
+    const map = headerMap_(sh);
+    const row = e.range.getRow();
+    const editedCol = e.range.getColumn();
+
+    // ステータスと「次にやること」は必ず1セットで管理する。
+    if (map['ステータス'] && editedCol === map['ステータス']) {
+      const pair = receptionStatusPair_(e.range.getDisplayValue());
+      sh.getRange(row, map['ステータス']).setValue(pair.status);
+      if (map['次にやること']) sh.getRange(row, map['次にやること']).setValue(pair.next);
+      createReplyText_(sh, row, map);
+      updateReceptionSummaryRow_(sh, row, map);
+      return;
+    }
+
+    // 「次にやること」は手入力させず、現在のステータスから正しい値へ戻す。
+    if (map['次にやること'] && editedCol === map['次にやること']) {
+      const pair = receptionStatusPair_(sh.getRange(row, map['ステータス']).getDisplayValue());
+      sh.getRange(row, map['次にやること']).setValue(pair.next);
+      return;
+    }
+
+    // 商品1〜6の査定額を編集したら、合計・ステータス・回答文を更新する。
+    const priceCols = [];
+    for (let i = 1; i <= 6; i++) {
+      if (map['商品' + i + '査定額']) priceCols.push(map['商品' + i + '査定額']);
+    }
+    if (priceCols.indexOf(editedCol) !== -1) {
+      const amount = updateAssessmentTotal_(sh, row, map);
+      if (amount !== '') {
+        setReceptionStatusSafe_(sh, row, map, '🟡 査定中');
+        if (map['次にやること']) sh.getRange(row, map['次にやること']).setValue(receptionNextAction_('🟡 査定中'));
+        createReplyText_(sh, row, map);
+      }
+    }
+
+    updateReceptionSummaryRow_(sh, row, map);
+    // 案件管理の更新は installable trigger「syncDashboardOnEdit」に任せる。
+  } catch (err) {
+    console.log('onEdit統合処理エラー: ' + err);
+  }
+}
+
+function createReplyText_(sh, row, map) {
+  const name = map['氏名'] ? sh.getRange(row, map['氏名']).getDisplayValue() : '';
+  const inquiryId = map['受付番号'] ? sh.getRange(row, map['受付番号']).getDisplayValue() : '';
+  const products = parseProducts_(sh, row, map);
+  const total = updateAssessmentTotal_(sh, row, map);
+  if (total === '' || !map['回答文']) return;
+
+  let details = '';
+  products.slice(0, 6).forEach(function(p, i) {
+    const col = map['商品' + (i + 1) + '査定額'];
+    const amount = col ? sh.getRange(row, col).getValue() : '';
+    if (amount === '') return;
+    const desc = [p.label, p.maker, p.model, p.year].filter(Boolean).join(' / ');
+    details += '【' + desc + '】\n買取価格：' + Number(amount).toLocaleString('ja-JP') + '円\n\n';
+  });
+
+  const text =
+    (name ? name + ' 様\n\n' : '') +
+    'この度は買取査定をご依頼いただきありがとうございます。\n' +
+    'お送りいただいた内容・写真を確認しました。\n\n' +
+    '【受付番号】' + inquiryId + '\n\n' +
+    details +
+    '【査定合計】' + Number(total).toLocaleString('ja-JP') + '円\n\n' +
+    '※実物の状態・動作確認などにより、最終的な買取金額が変わる場合があります。\n' +
+    '出張買取をご希望の場合は、メール内の申込ボタンを押してください。\n\n' +
+    '買取レスキュー';
+
+  sh.getRange(row, map['回答文']).setValue(text).setWrap(true);
+}
+
+// 将来メールアドレス列を追加したら、この関数からメール自動送信へ拡張できます。
+// 現フォームにはメールアドレスそのものが保存されていないため、現段階では「回答文の自動生成」までにしています。
+
+
+// 初回に1回実行して、メール送信権限を許可してください。
+function authorizeMail() {
+  const email = Session.getActiveUser().getEmail();
+  if (!email) throw new Error('Googleアカウントのメールアドレスを取得できませんでした。');
+  MailApp.sendEmail(email, '買取レスキュー メール送信テスト', 'メール自動回答の権限設定が完了しました。');
+}
+
+// スプレッドシートで対象行を選択して、この関数を実行すると査定メールを送信します。
+// 誤送信防止のため、査定額とメールアドレスがある行だけ送信します。
+// [LEGACY互換] 現行導線を壊さないため残置。新規処理からは使用しない。
+function sendEstimateForActiveRow() {
+  const c = getActiveCase_(), sh=c.sh, row=c.row, map=c.map;
+  const email=getDisplay_(sh,row,map,'メール').trim();
+  const amount=updateAssessmentTotal_(sh,row,map);
+  if(!email) throw new Error('この受付にはメールアドレスがありません。');
+  if(amount==='' || Number(amount)<0) throw new Error('商品ごとの査定額を入力してください。');
+  createReplyText_(sh,row,map);
+  const body=getDisplay_(sh,row,map,'回答文');
+  const id=getDisplay_(sh,row,map,'受付番号');
+  const confirmUrl=WEB_APP_URL+'?action=confirm&id='+encodeURIComponent(id);
+  const cancelUrl=WEB_APP_URL+'?action=cancelConfirm&id='+encodeURIComponent(id);
+  const notice='今回の査定金額は、お伺いする前の「事前査定（概算）」となります。\n実物の状態・動作確認などにより、最終的な買取金額が変わる場合があります。\n出張買取をご希望の場合はボタンを押してください。';
+  const htmlBody='<div style="font-family:Arial,sans-serif;line-height:1.8;max-width:620px">'+escapeHtml_(body).replace(/\n/g,'<br>')+
+    '<div style="margin:25px 0;padding:18px;background:#fff7e6;border:2px solid #f0ad4e;border-radius:10px"><b>⚠️ お申し込みはまだ完了していません</b><br><br>'+escapeHtml_(notice).replace(/\n/g,'<br>')+'</div>'+
+    '<div style="text-align:center;margin:30px 0"><div style="font-weight:700;margin-bottom:10px">↓↓ 出張買取をご希望の場合はこちら ↓↓</div><a href="'+escapeHtml_(confirmUrl)+'" style="display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:18px 28px;border-radius:10px;font-size:18px;font-weight:bold">この金額で出張買取を申し込む</a><div style="font-size:13px;color:#c62828;font-weight:700;margin-top:12px">※上のボタンを押して希望日時を送信すると、お申し込み完了です。</div></div>'+
+    '<div style="text-align:center;margin-top:25px"><a href="'+escapeHtml_(cancelUrl)+'" style="display:inline-block;padding:12px 20px;border:1px solid #999;border-radius:8px;color:#555;text-decoration:none">今回はやめておく</a></div>'+phoneHtml_()+'</div>';
+  MailApp.sendEmail({to:email,subject:'【買取レスキュー】査定結果 '+id,body:body+'\n\n'+notice+'\n\nこの金額で出張買取を申し込む：\n'+confirmUrl+'\n\n今回はやめておく：\n'+cancelUrl+'\n\n電話：'+STORE_PHONE,htmlBody:htmlBody,name:'買取レスキュー'});
+  // LINE連携済みのお客様には査定結果をLINEでも送信
+try {
+  const lineUserId = getDisplay_(sh, row, map, 'LINEユーザーID').trim();
+
+  if (lineUserId) {
+    const lineMessage =
+      '【買取レスキュー】査定結果のお知らせ\n\n' +
+      body + '\n\n' +
+      notice + '\n\n' +
+      '▼ この金額で出張買取を申し込む\n' +
+      confirmUrl + '\n\n' +
+      '▼ 今回はやめておく\n' +
+      cancelUrl + '\n\n' +
+      '受付番号：' + id;
+
+    pushLineText_(lineUserId, lineMessage);
+  }
+} catch (err) {
+  console.error('査定結果LINE送信エラー：' + err);
+}
+  setReceptionStatusSafe_(sh,row,map,'🟢 お客様回答待ち');
+  sh.getRange(row,map['回答日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+  try{refreshDashboard();}catch(err){console.log(err);}
+}
+
+// スプレッドシートを開いた時に「買取レスキュー」メニューを追加
+// [LEGACY互換] 現行導線を壊さないため残置。新規処理からは使用しない。
+function oldOnOpen_() {
+  SpreadsheetApp.getUi()
+    .createMenu('📦 買取レスキュー')
+    .addItem('📩 選択中の査定結果を送信', 'sendEstimateWithConfirm')
+    .addItem('📱 査定SMSを作る', 'createEstimateSms')
+    .addItem('📅 訪問日時を確定して送信', 'sendVisitConfirmationWithConfirm')
+    .addItem('📱 訪問日時SMSを作る', 'createVisitSms')
+    .addSeparator()
+    .addItem('🟡 査定中にする', 'markAssessing')
+    .addItem('🔵 買取確定にする', 'markConfirmed')
+    .addItem('⚫ キャンセルにする', 'markCancelled')
+    .addToUi();
+}
+
+function getActiveCase_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (!sh || sh.getName() !== SHEET_NAME) {
+    throw new Error('「受付」シートを開いて、お客様の行のセルを1つクリックしてください。');
+  }
+  const range = ss.getActiveRange();
+  if (!range || range.getRow() <= 1) {
+    throw new Error('操作するお客様の行のセルを1つクリックしてください。');
+  }
+  return {sh: sh, row: range.getRow(), map: headerMap_(sh)};
+}
+
+// [LEGACY互換] 現行導線を壊さないため残置。新規処理からは使用しない。
+function sendEstimateWithConfirm() {
+  const ui=SpreadsheetApp.getUi();
+  try {
+    const c=getActiveCase_();
+    const email=getDisplay_(c.sh,c.row,c.map,'メール').trim();
+    const amount=updateAssessmentTotal_(c.sh,c.row,c.map);
+    const name=getDisplay_(c.sh,c.row,c.map,'氏名');
+    const id=getDisplay_(c.sh,c.row,c.map,'受付番号');
+    if(!email) throw new Error('この受付にはメールアドレスがありません。');
+    if(amount==='' || Number(amount)<0) throw new Error('商品ごとの査定額を入力してください。');
+    createReplyText_(c.sh,c.row,c.map);
+    const mailText=getDisplay_(c.sh,c.row,c.map,'回答文');
+    const preview=name+' 様\n受付番号：'+id+'\n査定額：'+Number(amount).toLocaleString('ja-JP')+'円\n送信先：'+email+'\n\n────────────\n【お客様へ送る内容】\n────────────\n'+mailText+'\n\n今回の査定金額は、お伺いする前の「事前査定（概算）」となります。\n実物の状態・動作確認などにより、最終的な買取金額が変わる場合があります。\n出張買取をご希望の場合はボタンを押してください。\n\n［この金額で出張買取を申し込む］\n［今回はやめておく］';
+    const result=ui.alert('査定結果を送信しますか？',preview,ui.ButtonSet.YES_NO);
+    if(result!==ui.Button.YES) return;
+    sendEstimateForActiveRow();
+    ui.alert('送信完了',name+' 様へ査定結果を送信しました。\nステータスを「🟢 見積回答済」に変更しました。',ui.ButtonSet.OK);
+  } catch(err) { ui.alert('送信できません',String(err.message||err),ui.ButtonSet.OK); }
+}
+
+function setActiveStatus_(status) {
+  const c = getActiveCase_();
+  c.sh.getRange(c.row, c.map['ステータス']).setValue(status);
+  try { refreshDashboard(); } catch (err) { console.log(err); }
+}
+
+function markAssessing() { setActiveStatus_('🟡 査定中'); }
+function markConfirmed() { setActiveStatus_('🔵 買取確定'); }
+function markCancelled() {
+  setActiveStatus_('⚫ キャンセル');
+}
+
+
+// [LEGACY互換] 現行導線を壊さないため残置。新規処理からは使用しない。
+function sendVisitConfirmationWithConfirm() {
+  const ui=SpreadsheetApp.getUi();
+  try {
+    const c=getActiveCase_(), sh=c.sh, row=c.row, map=c.map;
+    const email=getDisplay_(sh,row,map,'メール').trim(), name=getDisplay_(sh,row,map,'氏名'), id=getDisplay_(sh,row,map,'受付番号');
+    const status=getDisplay_(sh,row,map,'ステータス'), vd=getDisplay_(sh,row,map,'確定訪問日'), vt=getDisplay_(sh,row,map,'確定訪問時間').trim();
+    if(!email) throw new Error('この受付にはメールアドレスがありません。');
+    if(!vd) throw new Error('「確定訪問日」を選択してください。');
+    if(!vt) throw new Error('「確定訪問時間」を選択してください。');
+    if(status!=='🔵 買取確定') throw new Error('この案件はまだ「🔵 買取確定」になっていません。');
+    const result=ui.alert('訪問日時を送信しますか？',name+' 様\n受付番号：'+id+'\n訪問日時：'+vd+' '+vt+'\n送信先：'+email,ui.ButtonSet.YES_NO);
+    if(result!==ui.Button.YES) return;
+    const approveUrl=WEB_APP_URL+'?action=approveVisit&id='+encodeURIComponent(id);
+    const cancelUrl=WEB_APP_URL+'?action=cancelConfirm&id='+encodeURIComponent(id);
+    const body=name+' 様\n\n出張買取のお申し込みありがとうございます。\n\n⚠️ まだ日時確定は完了していません\n↓↓ 日時確定をしてください ↓↓\n\n【訪問日時】\n'+vd+' '+vt+'\n\nこの訪問日時で確定する：\n'+approveUrl+'\n\nキャンセル：\n'+cancelUrl+'\n\nお問い合わせ：'+STORE_PHONE+'\n\n買取レスキュー';
+    const htmlBody='<div style="font-family:Arial,sans-serif;line-height:1.8;max-width:600px"><p>'+escapeHtml_(name)+' 様</p><p>出張買取のお申し込みありがとうございます。</p>'+
+      '<div style="background:#fff3cd;border:2px solid #f0ad4e;border-radius:10px;padding:18px;text-align:center"><b style="font-size:18px">⚠️ まだ日時確定は完了していません</b><br><b>↓↓ 日時確定をしてください ↓↓</b></div>'+
+      '<div style="background:#f4f7fb;border-radius:10px;padding:20px;margin:18px 0"><div>受付番号：<b>'+escapeHtml_(id)+'</b></div><div style="font-size:21px;margin-top:10px">📅 <b>'+escapeHtml_(vd+' '+vt)+'</b></div></div>'+
+      '<div style="text-align:center;margin:28px 0"><a href="'+escapeHtml_(approveUrl)+'" style="display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:18px 30px;border-radius:10px;font-size:19px;font-weight:bold">この訪問日時で確定する</a><div style="color:#c62828;font-weight:700;font-size:13px;margin-top:10px">※このボタンを押すと日時確定が完了します。</div></div>'+
+      '<div style="text-align:center"><a href="'+escapeHtml_(cancelUrl)+'" style="display:inline-block;padding:12px 22px;border:1px solid #999;border-radius:8px;color:#555;text-decoration:none">キャンセル</a></div>'+phoneHtml_()+'<p style="margin-top:28px">買取レスキュー</p></div>';
+    MailApp.sendEmail({to:email,subject:'【買取レスキュー】出張買取日時のご案内 '+id,body:body,htmlBody:htmlBody,name:'買取レスキュー'});
+    if(map['日時確定送信日時']) sh.getRange(row,map['日時確定送信日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+
+    // 訪問日時メール送信時点では、まだお客様の最終確認前。
+    // ステータスは「買取確定」のまま。お客様が情報確認＋確定した時だけ「訪問日時確定」にする。
+    if(map['ステータス']) setReceptionStatusSafe_(sh,row,map,'🔵 買取確定');
+    if(map['次にやること']) sh.getRange(row,map['次にやること']).setValue('訪問日時メール送る');
+    updateReceptionSummaryRow_(sh,row,map);
+    applyReceptionRules_(sh);
+
+    try{refreshDashboard();}catch(err){console.log(err);}
+    ui.alert('送信完了',name+' 様へ訪問日時を送信しました。',ui.ButtonSet.OK);
+  } catch(err) { ui.alert('送信できません',String(err.message||err),ui.ButtonSet.OK); }
+}
+
+function normalizePhoneForSms_(tel) {
+  return String(tel || '').replace(/[^\d+]/g, '').trim();
+}
+
+function createEstimateSms() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const c = getActiveCase_();
+    const sh = c.sh;
+    const row = c.row;
+    const map = c.map;
+
+    const name = sh.getRange(row, map['氏名']).getDisplayValue();
+    const tel = normalizePhoneForSms_(sh.getRange(row, map['電話']).getDisplayValue());
+    const inquiryId = sh.getRange(row, map['受付番号']).getDisplayValue();
+    const amount = updateAssessmentTotal_(sh, row, map);
+
+    if (!tel) throw new Error('この受付には電話番号がありません。');
+    if (amount === '' || Number(amount) < 0) throw new Error('商品ごとの査定額を入力してください。');
+
+    const confirmUrl = WEB_APP_URL + '?action=confirm&id=' + encodeURIComponent(inquiryId);
+    const message =
+      (name ? name + ' 様\n\n' : '') +
+      '買取レスキューです。\n' +
+      '査定結果が出ました。\n\n' +
+      '査定合計：' + Number(amount).toLocaleString('ja-JP') + '円\n\n' +
+      '査定内容の確認・出張買取のお申し込みはこちら\n' +
+      confirmUrl + '\n\n' +
+      '※実物の状態・動作確認により最終金額が変わる場合があります。';
+
+    showSmsDialog_('査定結果SMS', tel, message);
+  } catch (err) {
+    ui.alert('SMSを作成できません', String(err.message || err), ui.ButtonSet.OK);
+  }
+}
+
+function createVisitSms() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const c = getActiveCase_();
+    const sh = c.sh;
+    const row = c.row;
+    const map = c.map;
+
+    const name = sh.getRange(row, map['氏名']).getDisplayValue();
+    const tel = normalizePhoneForSms_(sh.getRange(row, map['電話']).getDisplayValue());
+    const inquiryId = sh.getRange(row, map['受付番号']).getDisplayValue();
+    const visitDate = sh.getRange(row, map['確定訪問日']).getDisplayValue();
+    const visitTime = sh.getRange(row, map['確定訪問時間']).getDisplayValue();
+
+    if (!tel) throw new Error('この受付には電話番号がありません。');
+    if (!visitDate) throw new Error('「確定訪問日」を選択してください。');
+    if (!visitTime) throw new Error('「確定訪問時間」を選択してください。');
+
+    const approveUrl = WEB_APP_URL + '?action=approveVisit&id=' + encodeURIComponent(inquiryId);
+    const message =
+      (name ? name + ' 様\n\n' : '') +
+      '買取レスキューです。\n' +
+      '出張買取の訪問日時をご案内いたします。\n\n' +
+      '訪問日時：' + visitDate + ' ' + visitTime + '\n\n' +
+      '下記より日時をご確認・承認してください。\n' +
+      approveUrl + '\n\n' +
+      '当日はよろしくお願いいたします。';
+
+    showSmsDialog_('訪問日時SMS', tel, message);
+  } catch (err) {
+    ui.alert('SMSを作成できません', String(err.message || err), ui.ButtonSet.OK);
+  }
+}
+
+function showSmsDialog_(title, tel, message) {
+  const safeTitle = escapeHtml_(title);
+  const safeTel = escapeHtml_(tel);
+  const safeMessage = escapeHtml_(message);
+  const smsUrl = 'sms:' + tel;
+
+  const html = HtmlService.createHtmlOutput(
+    '<!doctype html><html><head>' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<style>' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px;background:#f6f7f9}' +
+    '.card{background:white;padding:18px;border-radius:14px}' +
+    'textarea{width:100%;height:230px;box-sizing:border-box;font-size:15px;padding:12px;border:1px solid #ccc;border-radius:8px}' +
+    '.btn{display:block;width:100%;box-sizing:border-box;padding:14px;margin-top:12px;border:0;border-radius:9px;font-size:16px;font-weight:bold;text-align:center;text-decoration:none;cursor:pointer}' +
+    '.copy{background:#1565c0;color:white}.sms{background:#2e7d32;color:white}.tel{font-size:18px;font-weight:bold;margin-bottom:12px}' +
+    '</style></head><body><div class="card">' +
+    '<h2>' + safeTitle + '</h2>' +
+    '<div>送信先</div><div class="tel">' + safeTel + '</div>' +
+    '<textarea id="smsText">' + safeMessage + '</textarea>' +
+    '<button class="btn copy" onclick="copySms()">① SMS文章をコピー</button>' +
+    '<a class="btn sms" href="' + smsUrl + '">② メッセージアプリを開く</a>' +
+    '<p style="font-size:13px;color:#666;line-height:1.6">①文章をコピー → ②メッセージアプリを開く → 本文欄へ貼り付け → 送信してください。</p>' +
+    '</div><script>' +
+    'function copySms(){' +
+    'var text=document.getElementById("smsText");text.select();text.setSelectionRange(0,99999);' +
+    'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text.value).then(function(){alert("SMS文章をコピーしました");}).catch(function(){document.execCommand("copy");alert("SMS文章をコピーしました");});}' +
+    'else{document.execCommand("copy");alert("SMS文章をコピーしました");}' +
+    '}' +
+    '</script></body></html>'
+  ).setWidth(420).setHeight(560);
+
+  SpreadsheetApp.getUi().showModalDialog(html, title);
+}
+
+
+
+// ============================================================
+// 案件管理：今日やることが一目で分かる業務画面
+// ============================================================
+const DASHBOARD_SHEET_NAME = '案件管理';
+const DASH_HEADER_ROW = 4;
+const DASH_DATA_START_ROW = 5;
+
+function setupDashboard() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let dash = ss.getSheetByName(DASHBOARD_SHEET_NAME);
+  if (!dash) dash = ss.insertSheet(DASHBOARD_SHEET_NAME);
+
+  dash.getRange(1,1,dash.getMaxRows(),dash.getMaxColumns()).breakApart();
+  dash.clear();
+  dash.clearConditionalFormatRules();
+
+  const headers = [
+    '状態','次にやること','受付番号','お客様','商品・内容',
+    '査定合計','希望日時','確定日時','写真'
+  ];
+
+  // 上部：件数カード（セル結合なし）
+  dash.getRange(1,1,1,9).setValues([[
+    '🔴 新規','🟡 査定中','🟢 お客様回答待ち','🔵 日時調整中',
+    '✅ 訪問予定','⚫ キャンセル','総案件数','🚚 本日訪問','📅 明日訪問'
+  ]]);
+  dash.getRange(2,1,1,9).setValues([[0,0,0,0,0,0,0,0,0]]);
+
+  dash.getRange(DASH_HEADER_ROW,1,1,headers.length).setValues([headers]);
+
+  dash.setFrozenRows(DASH_HEADER_ROW);
+  dash.setFrozenColumns(4);
+
+  dash.setRowHeight(1,30);
+  dash.setRowHeight(2,34);
+  dash.setRowHeight(3,10);
+  dash.setRowHeight(DASH_HEADER_ROW,40);
+
+  [120,150,85,110,300,95,205,160,80].forEach(function(w,i){
+    dash.setColumnWidth(i+1,w);
+  });
+
+  dash.getRange(1,1,1,9)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+
+  dash.getRange(2,1,1,9)
+    .setFontWeight('bold')
+    .setFontSize(16)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  // 件数カードは必ず整数表示。過去の通貨書式が残って「¥5」等になるのを防ぐ
+  dash.getRange(2,1,1,9).setNumberFormat('0');
+
+  // カード色
+  [
+    ['A1:A2','#fce8e6','#a50e0e'],
+    ['B1:B2','#fff4cc','#7a4d00'],
+    ['C1:C2','#e6f4ea','#137333'],
+    ['D1:D2','#e8f0fe','#174ea6'],
+    ['E1:E2','#d2e3fc','#174ea6'],
+    ['F1:F2','#f1f3f4','#80868b'],
+    ['G1:G2','#ffffff','#202124'],
+    ['H1:H2','#e8f0fe','#174ea6'],
+    ['I1:I2','#fef7e0','#7a4d00']
+  ].forEach(function(x){
+    dash.getRange(x[0]).setBackground(x[1]).setFontColor(x[2]);
+  });
+
+  dash.getRange(DASH_HEADER_ROW,1,1,headers.length)
+    .setFontWeight('bold')
+    .setFontSize(11)
+    .setBackground('#eef3f8')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+
+  refreshDashboard();
+}
+
+function nextActionForStatus_(status) {
+  return receptionNextAction_(status);
+}
+
+function statusPriority_(status) {
+  const order = {
+    '🔴 新規': 1,
+    '🟡 査定中': 2,
+    '🟢 見積回答済': 3,
+    '🔵 買取確定': 4,
+    '✅ 訪問日時確定': 5,
+    '⚫ キャンセル': 9
+  };
+  return order[status] || 8;
+}
+
+function visitDateKey_(value) {
+  const s = String(value || '').trim();
+  if (!s) return '';
+  // 2026-08-29 / 8/29（土） / 8/29 のいずれも M/d に寄せる
+  let m = s.match(/^\d{4}[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (m) return Number(m[1]) + '/' + Number(m[2]);
+  m = s.match(/(\d{1,2})\/(\d{1,2})/);
+  if (m) return Number(m[1]) + '/' + Number(m[2]);
+  return '';
+}
+
+function refreshDashboard() {
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(10000)) {
+    console.log('案件管理更新をスキップ：別の更新処理が実行中です。');
     return;
   }
-  status.textContent="送信中…写真を圧縮してアップロードしています。";
-  try{
-    const payload=await buildInquiryPayload();
-    const r=await fetch(CONFIG.WEBHOOK_URL,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify(payload)
+  try {
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const src = ss.getSheetByName(SHEET_NAME);
+  if (!src) return;
+
+  let dash = ss.getSheetByName(DASHBOARD_SHEET_NAME);
+  if (!dash) {
+    setupDashboard();
+    return;
+  }
+
+  const headers = [
+    '状態','次にやること','受付番号','お客様','商品・内容',
+    '査定合計','希望日時','確定日時','写真'
+  ];
+
+  // レイアウトを毎回安全に維持
+  dash.getRange(1,1,dash.getMaxRows(),dash.getMaxColumns()).breakApart();
+
+  // 旧版の残骸が3行目に残る問題を解消。3行目は必ず空白スペーサー。
+  if (dash.getMaxRows() >= 3) {
+    dash.getRange(3,1,1,Math.min(dash.getMaxColumns(),headers.length))
+      .clearContent().clearFormat();
+    dash.setRowHeight(3,10);
+  }
+
+  dash.getRange(DASH_HEADER_ROW,1,1,headers.length).setValues([headers]);
+  dash.setFrozenRows(DASH_HEADER_ROW);
+  dash.setFrozenColumns(4);
+
+  [120,150,85,110,300,95,205,160,80].forEach(function(w,i){
+    dash.setColumnWidth(i+1,w);
+  });
+
+  dash.getRange(DASH_HEADER_ROW,1,1,headers.length)
+    .setFontWeight('bold').setFontSize(11).setBackground('#eef3f8')
+    .setHorizontalAlignment('center').setVerticalAlignment('middle');
+  dash.getRange(1,1,2,9).setHorizontalAlignment('center').setVerticalAlignment('middle');
+  dash.getRange(2,1,1,9).setNumberFormat('0').setFontWeight('bold').setFontSize(16);
+
+  const map = headerMap_(src);
+  const lastRow = src.getLastRow();
+
+  if (dash.getMaxRows() >= DASH_DATA_START_ROW) {
+    dash.getRange(
+      DASH_DATA_START_ROW,1,
+      dash.getMaxRows()-DASH_DATA_START_ROW+1,
+      headers.length
+    ).clearContent().clearFormat();
+  }
+  dash.clearConditionalFormatRules();
+
+  const records = [];
+  const counts = {
+    '🔴 新規':0,'🟡 査定中':0,'🟢 見積回答済':0,
+    '🔵 買取確定':0,'✅ 訪問日時確定':0,'⚫ キャンセル':0
+  };
+
+  const tz = Session.getScriptTimeZone() || 'Asia/Tokyo';
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate()+1);
+  const todayKey = Utilities.formatDate(today,tz,'M/d').replace(/^0/,'').replace('/0','/');
+  const tomorrowKey = Utilities.formatDate(tomorrow,tz,'M/d').replace(/^0/,'').replace('/0','/');
+  let todayVisits = 0;
+  let tomorrowVisits = 0;
+
+  for (let r=2; r<=lastRow; r++) {
+    const id = getDisplay_(src,r,map,'受付番号');
+    if (!id) continue;
+
+    const status = getDisplay_(src,r,map,'ステータス') || '🔴 新規';
+    if (counts.hasOwnProperty(status)) counts[status]++;
+
+    const name = getDisplay_(src,r,map,'氏名');
+    const products = parseProducts_(src,r,map);
+    let productText = '';
+
+    products.slice(0,6).forEach(function(p,i){
+      const priceCol = map['商品'+(i+1)+'査定額'];
+      const price = priceCol ? src.getRange(r,priceCol).getValue() : '';
+      let desc = [p.label,p.maker,p.model,p.year].filter(Boolean).join(' / ');
+      if (price !== '' && !isNaN(Number(price))) {
+        desc += '　¥' + Number(price).toLocaleString('ja-JP');
+      }
+      if (desc) productText += (productText ? '\n' : '') + desc;
     });
-    if(!r.ok)throw new Error("HTTP "+r.status);
-    const result=await r.json().catch(()=>({ok:true}));
-    status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
-      (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
-    if(submitBtn){submitBtn.textContent="✓ 送信済み";}
-    showSuccessAndReset(inquiry.inquiryId);
-  }catch(e){
-    console.error(e);
-    status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
-    isSubmitting=false;
-    if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
+
+    const total = map['査定合計'] ? src.getRange(r,map['査定合計']).getValue() : '';
+
+    const prefs = [
+      getDisplay_(src,r,map,'第1希望'),
+      getDisplay_(src,r,map,'第2希望'),
+      getDisplay_(src,r,map,'第3希望')
+    ].filter(Boolean);
+    const prefText = prefs.map(function(x,i){
+      return ['①','②','③'][i] + ' ' + x;
+    }).join('\n');
+
+    const vd = getDisplay_(src,r,map,'確定訪問日');
+    const vt = getDisplay_(src,r,map,'確定訪問時間');
+    const confirmed = [vd,vt].filter(Boolean).join('\n');
+
+    if (status === '✅ 訪問日時確定') {
+      const key = visitDateKey_(vd);
+      if (key === todayKey) todayVisits++;
+      if (key === tomorrowKey) tomorrowVisits++;
+    }
+
+    const labels = [];
+    const urls = [];
+    for (let i=1; i<=6; i++) {
+      const col = map['📷'+i];
+      if (!col) continue;
+      const rich = src.getRange(r,col).getRichTextValue();
+      if (rich && rich.getText()) {
+        const url = rich.getLinkUrl();
+        if (url) {
+          labels.push('📷'+i);
+          urls.push(url);
+        }
+      }
+    }
+
+    records.push({
+      priority: statusPriority_(status),
+      sourceRow: r,
+      labels: labels,
+      urls: urls,
+      row: [
+        status,
+        nextActionForStatus_(status),
+        id,
+        name,
+        productText,
+        total,
+        prefText,
+        confirmed,
+        labels.length ? ('📷 ' + labels.length) : ''
+      ]
+    });
+  }
+
+  records.sort(function(a,b){
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return b.sourceRow - a.sourceRow;
+  });
+
+  // サマリー
+  dash.getRange(2,1,1,9).setValues([[
+    counts['🔴 新規'],
+    counts['🟡 査定中'],
+    counts['🟢 見積回答済'],
+    counts['🔵 買取確定'],
+    counts['✅ 訪問日時確定'],
+    counts['⚫ キャンセル'],
+    records.length,
+    todayVisits,
+    tomorrowVisits
+  ]]);
+
+  if (!records.length) {
+    SpreadsheetApp.flush();
+    return;
+  }
+
+  if (dash.getMaxRows() < records.length + DASH_DATA_START_ROW - 1) {
+    dash.insertRowsAfter(
+      dash.getMaxRows(),
+      records.length + DASH_DATA_START_ROW - 1 - dash.getMaxRows()
+    );
+  }
+
+  const output = records.map(function(x){ return x.row; });
+  dash.getRange(DASH_DATA_START_ROW,1,output.length,headers.length).setValues(output);
+  dash.getRange(DASH_DATA_START_ROW,1,output.length,headers.length)
+    .setVerticalAlignment('middle')
+    .setWrap(true)
+    .setFontColor('#202124')
+    .setBackground('#ffffff');
+  dash.getRange(DASH_DATA_START_ROW,6,output.length,1).setNumberFormat('¥#,##0');
+
+  records.forEach(function(rec,idx){
+    if (!rec.labels.length) return;
+    const cell = dash.getRange(DASH_DATA_START_ROW+idx,9);
+    const txt = '📷 ' + rec.labels.length;
+    const builder = SpreadsheetApp.newRichTextValue().setText(txt);
+    // 最初の写真を代表リンクにする
+    builder.setLinkUrl(0,txt.length,rec.urls[0]);
+    cell.setRichTextValue(builder.build());
+  });
+
+  for (let r=DASH_DATA_START_ROW; r<DASH_DATA_START_ROW+output.length; r++) {
+    dash.setRowHeight(r,72);
+  }
+
+  applyDashboardRules_(dash,output.length);
+  SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
   }
 }
-function showSuccessAndReset(inquiryId){
-  document.getElementById("successInquiryId").textContent=inquiryId||"";
-  document.getElementById("preview").style.display="none";
-  document.getElementById("successPreview").style.display="block";
 
-  // 送信成功後、入力内容を初期化。完了画面は残す。
-  document.getElementById("quoteForm").reset();
-  items=[{id:crypto.randomUUID(),type:"冷蔵庫",qty:1,photos:[]}];
-  Object.keys(photoFiles).forEach(k=>delete photoFiles[k]);
-  inquiry=null;
-  visitPreferenceCount=1;
-  const extra=document.getElementById("extraVisitDates");
-  if(extra)extra.innerHTML="";
-  const addBtn=document.getElementById("addVisitDateBtn");
-  if(addBtn)addBtn.style.display="";
-  localStorage.removeItem("quoteDraft");
-  renderItems();
-  toggleVisit();
-  isSubmitting=false;
+
+function applyDashboardRules_(dash,count) {
+  const range = dash.getRange(DASH_DATA_START_ROW,1,Math.max(count,1),9);
+  const rules = [];
+
+  [
+    ['=$A5="🔴 新規"','#fce8e6','#a50e0e'],
+    ['=$A5="🟡 査定中"','#fff4cc','#7a4d00'],
+    ['=$A5="🟢 見積回答済"','#e6f4ea','#137333'],
+    ['=$A5="🟢 お客様回答待ち"','#e6f4ea','#137333'],
+    ['=$A5="🔵 買取確定"','#e8f0fe','#174ea6'],
+    // 濃すぎない青：訪問日時確定
+    ['=$A5="✅ 訪問日時確定"','#a8c7fa','#174ea6'],
+    // キャンセル：以前の薄グレー背景＋薄文字
+    ['=$A5="⚫ キャンセル"','#f1f3f4','#9aa0a6']
+  ].forEach(function(x){
+    rules.push(
+      SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(x[0])
+        .setBackground(x[1])
+        .setFontColor(x[2])
+        .setRanges([range])
+        .build()
+    );
+  });
+
+  dash.setConditionalFormatRules(rules);
 }
-function finishAndReset(){
-  document.getElementById("successPreview").style.display="none";
-  window.scrollTo({top:0,behavior:"smooth"});
+
+function openSelectedCaseInSource() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dash = ss.getActiveSheet();
+
+  if (!dash || dash.getName() !== DASHBOARD_SHEET_NAME) {
+    SpreadsheetApp.getUi().alert('「案件管理」シートで案件を選択してください。');
+    return;
+  }
+
+  const active = dash.getActiveRange();
+  if (!active || active.getRow() < DASH_DATA_START_ROW) return;
+
+  const id = dash.getRange(active.getRow(),3).getDisplayValue();
+  if (!id) return;
+
+  const src = ss.getSheetByName(SHEET_NAME);
+  const map = headerMap_(src);
+  const found = src.getRange(2,map['受付番号'],Math.max(src.getLastRow()-1,1),1)
+    .createTextFinder(id).matchEntireCell(true).findNext();
+
+  if (!found) {
+    SpreadsheetApp.getUi().alert('元の受付データが見つかりません。');
+    return;
+  }
+
+  ss.setActiveSheet(src);
+  src.setActiveRange(src.getRange(found.getRow(),1,1,src.getLastColumn()));
 }
-function closePreview(){
-  document.getElementById("preview").style.display="none";
-  const btn=document.getElementById("submitInquiryBtn");
-  if(btn){btn.disabled=false;btn.textContent="📨 見積もりを送信";btn.style.opacity="1";}
-  isSubmitting=false;
-  const status=document.getElementById("sendStatus");
-  if(status){status.classList.add("hidden");status.innerHTML="";}
+
+function showReplyColumn() {
+  showReceptionDetails();
 }
-function clearAll(){if(!confirm("入力内容をすべて消しますか？"))return;document.getElementById("quoteForm").reset();items=[];addItem();toggleVisit();localStorage.removeItem("quoteDraft")}
-function saveDraft(){try{localStorage.setItem("quoteDraft",JSON.stringify({items}))}catch(e){}}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function escAttr(v){return esc(v)}
-document.getElementById("quoteForm").addEventListener("input",()=>saveDraft());
-(function(){
-  // 起動時は必ず1商品だけ表示。商品追加はユーザー操作でのみ行う。
-  items=[{id:crypto.randomUUID(),type:"冷蔵庫",qty:1,photos:[]}];
-  renderItems();
-  toggleVisit();
-})();
-</script>
-</body>
-</html>
+
+function hideReplyColumn() {
+  hideReceptionDetails();
+}
+
+function syncDashboardOnEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sh = e.range.getSheet();
+    if (sh.getName() !== SHEET_NAME || e.range.getRow() <= 1) return;
+
+    // 複数セル貼り付けにも対応して、影響した全行の表示用列を更新
+    const map = headerMap_(sh);
+    const firstRow = Math.max(2, e.range.getRow());
+    const lastRow = e.range.getLastRow();
+    for (let r = firstRow; r <= lastRow; r++) {
+      updateReceptionSummaryRow_(sh, r, map);
+    }
+    // 軽量化：編集のたびに案件管理全件を再構築しない。
+    // 案件管理はメニュー/ショートカットの「案件更新」で必要時に更新する。
+  } catch(err) {
+    console.log('案件管理同期エラー: ' + err);
+  }
+}
+
+function setupDashboardAutoSync(silent) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+
+  ScriptApp.getProjectTriggers().forEach(function(t){
+    if (t.getHandlerFunction() === 'syncDashboardOnEdit') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('syncDashboardOnEdit')
+    .forSpreadsheet(ss)
+    .onEdit()
+    .create();
+
+  refreshDashboard();
+  if (!silent) SpreadsheetApp.getUi().alert('案件管理の自動同期を設定しました。');
+}
+
+function checkReceptionSystem() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  const dash = ss.getSheetByName(DASHBOARD_SHEET_NAME);
+  const problems = [];
+
+  if (!sh) problems.push('受付シートがありません');
+  if (!dash) problems.push('案件管理シートがありません');
+
+  if (sh) {
+    const map = headerMap_(sh);
+    ['受付番号','氏名','ステータス','商品','査定合計','第1希望','確定訪問日','確定訪問時間']
+      .forEach(function(h){ if (!map[h]) problems.push('受付に「'+h+'」列がありません'); });
+  }
+
+  const triggers = ScriptApp.getProjectTriggers()
+    .filter(function(t){ return t.getHandlerFunction() === 'syncDashboardOnEdit'; });
+  if (triggers.length === 0) problems.push('受付→案件管理の自動同期トリガーがありません');
+  if (triggers.length > 1) problems.push('自動同期トリガーが重複しています（'+triggers.length+'個）');
+
+  if (dash && dash.getRange(3,1,1,9).getDisplayValues()[0].some(Boolean)) {
+    problems.push('案件管理の3行目に不要データが残っています');
+  }
+
+  SpreadsheetApp.getUi().alert(
+    problems.length ? '確認結果：要修復' : '確認結果：正常',
+    problems.length ? problems.map(function(x){return '・'+x;}).join('\n') :
+      '主要な列・同期トリガー・案件管理レイアウトに問題は見つかりませんでした。',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+function repairReceptionDashboardSync() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) throw new Error('「受付」シートが見つかりません。');
+
+  // 受付の全行を再計算
+  const map = headerMap_(sh);
+  for (let r=2; r<=sh.getLastRow(); r++) {
+    if (map['受付番号'] && sh.getRange(r,map['受付番号']).getDisplayValue()) {
+      updateReceptionSummaryRow_(sh,r,map);
+    }
+  }
+
+  // 受付の色・案件管理を再構築
+  applyReceptionRules_(sh);
+  setupDashboard();
+  const dash = ss.getSheetByName(DASHBOARD_SHEET_NAME);
+  if (dash) {
+    dash.getRange(2,1,1,9).setNumberFormat('0');
+    dash.getRange(3,1,1,9).clearContent().clearFormat();
+    dash.setRowHeight(3,10);
+  }
+
+  // 同期トリガーを作り直す
+  ScriptApp.getProjectTriggers().forEach(function(t){
+    if (t.getHandlerFunction() === 'syncDashboardOnEdit') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('syncDashboardOnEdit').forSpreadsheet(ss).onEdit().create();
+
+  refreshDashboard();
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert(
+    '修復完了しました。\\n\\n' +
+    '・受付と案件管理の同期トリガーを再設定\\n' +
+    '・案件管理3行目の残骸を削除\\n' +
+    '・希望日時／確定日時を再生成\\n' +
+    '・ステータス色を正しい列に修正'
+  );
+}
+
+function setupWorkspaces() {
+  setupReceptionWorkspace();
+  setupDashboard();
+  setupDashboardAutoSync(true);
+  refreshDashboard();
+}
+
+
+
+// ============================================================
+// スプレッドシートを開いた時のメニュー
+// ============================================================
+
+function repairStatusValidation() {
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  const map=headerMap_(sh);
+  if(!map['ステータス']) throw new Error('ステータス列が見つかりません。');
+  const allowed=[
+    '🔴 新規','🟡 査定中','🟢 見積回答済','🟢 お客様回答待ち',
+    '🔵 買取確定','⚫ キャンセル','✅ 訪問日時確定'
+  ];
+  const rule=SpreadsheetApp.newDataValidation().requireValueInList(allowed,true).setAllowInvalid(false).build();
+  sh.getRange(2,map['ステータス'],Math.max(sh.getMaxRows()-1,1),1).setDataValidation(rule);
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('ステータスの入力規則を修復しました。');
+}
+
+
+function repairHopeDatesAndMailTracking(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  let map=ensureQuickTrackingColumns_(sh);
+  const last=sh.getLastRow();
+  let filled=0;
+  for(let row=2;row<=last;row++){
+    const before=map['希望日時（第1〜第3希望）']?sh.getRange(row,map['希望日時（第1〜第3希望）']).getDisplayValue().trim():'';
+    const after=syncHopeDatesForRow_(sh,row,map);
+    if(!before && after) filled++;
+  }
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('修復完了','希望日時を '+filled+' 件補完しました。メール送信済み状態は今後、案件ごとに個別管理します。',SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+
+function initializeIndependentMailLocks(){
+  const props=PropertiesService.getScriptProperties();
+  const all=props.getProperties();
+  Object.keys(all).forEach(function(k){ if(k.indexOf('MAILLOCK_')===0) props.deleteProperty(k); });
+  SpreadsheetApp.getUi().alert(
+    '独立送信管理を初期化しました',
+    'これ以降、送信済みボタンは受付番号ごとに完全に独立して管理されます。Aさんの送信状態がBさんに影響することはありません。',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+
+function syncAllNextActions(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  const map=headerMap_(sh);
+  if(!map['ステータス'] || !map['次にやること']) throw new Error('ステータス列または次にやること列が見つかりません。');
+  const last=sh.getLastRow();
+  if(last<2) return;
+  const statuses=sh.getRange(2,map['ステータス'],last-1,1).getDisplayValues();
+  const next=statuses.map(r=>[receptionNextAction_(r[0])]);
+  sh.getRange(2,map['次にやること'],next.length,1).setValues(next);
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('連動表示を更新しました。');
+}
+
+
+function repairAllWorkflowDisplay(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  const map=headerMap_(sh);
+  if(!map['ステータス']||!map['次にやること']) throw new Error('ステータス列または次にやること列が見つかりません。');
+  const last=sh.getLastRow();
+  for(let row=2;row<=last;row++){
+    const pair=receptionStatusPair_(sh.getRange(row,map['ステータス']).getDisplayValue());
+    sh.getRange(row,map['ステータス']).setValue(pair.status);
+    sh.getRange(row,map['次にやること']).setValue(pair.next);
+    try{ updateReceptionSummaryRow_(sh,row,map); }catch(e){ console.log(e); }
+  }
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('完全固定しました','ステータスと「次にやること」を全案件でセットに揃えました。今後A列を変更するとB列も自動で連動し、B列だけ変更しても正しい値へ戻ります。',SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+
+// [整理済み] 重複していた旧 onEdit は上の統合版へ一本化しました。
+
+
+function quickRefreshCase(caseId){
+  // サイドバーの「最新に更新」用。シートの現在値から再読込。
+  return quickGetCase(caseId);
+}
+
+
+function ensureTransactionLog_(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  let sh=ss.getSheetByName('操作履歴');
+  if(!sh){
+    sh=ss.insertSheet('操作履歴');
+    sh.appendRow(['日時','受付番号','操作','ステータス','次にやること','内容']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function logCaseAction_(caseId,action,detail){
+  try{
+    const c=quickFindCase_(caseId),map=headerMap_(c.sh);
+    const status=map['ステータス']?normalizeReceptionStatus_(c.sh.getRange(c.row,map['ステータス']).getDisplayValue()):'';
+    ensureTransactionLog_().appendRow([new Date(),caseId,action,status,receptionNextAction_(status),String(detail||'')]);
+  }catch(e){ console.log('履歴保存エラー:'+e); }
+}
+
+function ensureSlipHistorySheet_(){
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  let sh=ss.getSheetByName('承り伝票履歴');
+  if(!sh){
+    sh=ss.insertSheet('承り伝票履歴');
+    sh.getRange(1,1,1,15).setValues([[
+      '保存日時','受付番号','氏名','電話番号','住所','商品','査定合計',
+      '希望日時','確定訪問日','確定日時','搬出メモ','ステータス',
+      '次にやること','メール','記録内容'
+    ]]);
+    sh.setFrozenRows(1);
+    sh.getRange(1,1,1,15).setFontWeight('bold');
+  }
+  return sh;
+}
+
+function saveSlipHistory(caseId){
+  const c=quickFindCase_(caseId);
+  const sh=c.sh,row=c.row,map=headerMap_(sh);
+  const currentStatus=normalizeReceptionStatus_(map['ステータス']?sh.getRange(row,map['ステータス']).getDisplayValue():'');
+  if(currentStatus!=='✅ 訪問日時確定'){
+    throw new Error('買取伝票は「✅ 訪問日時確定」になってから保存できます。');
+  }
+  const get=(name)=>map[name] ? sh.getRange(row,map[name]).getDisplayValue() : '';
+  const status=normalizeReceptionStatus_(get('ステータス'));
+  const next=receptionNextAction_(status);
+  const history=ensureSlipHistorySheet_();
+
+  // その時点の内容を「値」として永久保存。元の受付を後から変更しても履歴は変わらない。
+  const record=[
+    new Date(), get('受付番号'), get('氏名'), get('電話番号'), get('住所'),
+    get('商品'), get('査定合計'), get('希望日時（第1〜第3希望）'),
+    get('確定訪問日'), get('確定日時'), get('搬出メモ'),
+    status, next, get('メール'),
+    '買取伝票ボタンから保存'
+  ];
+  history.appendRow(record);
+  logCaseAction_(caseId,'買取伝票保存','確定内容を買取伝票履歴へ保存');
+  SpreadsheetApp.flush();
+  return {ok:true,message:'買取伝票履歴に保存しました。',caseId:get('受付番号')};
+}
+
+
+function menuRefreshSelectedCase_(){
+  const sh=SpreadsheetApp.getActiveSheet();
+  if(sh.getName()!==SHEET_NAME) throw new Error('受付シートで案件行を選択してください。');
+  const row=sh.getActiveRange().getRow(),map=headerMap_(sh);
+  updateReceptionSummaryRow_(sh,row,map);
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('最新情報に更新しました。');
+}
+function menuSaveSelectedSlip_(){
+  const sh=SpreadsheetApp.getActiveSheet();
+  if(sh.getName()!==SHEET_NAME) throw new Error('受付シートで案件行を選択してください。');
+  const row=sh.getActiveRange().getRow(),map=headerMap_(sh);
+  const id=map['受付番号']?sh.getRange(row,map['受付番号']).getDisplayValue():'';
+  if(!id) throw new Error('受付番号がありません。');
+  const r=saveSlipHistory(id);
+  SpreadsheetApp.getUi().alert(r.message);
+}
+
+
+function v13RepairAll(){
+  const ss=SpreadsheetApp.openById(SHEET_ID),sh=ss.getSheetByName(SHEET_NAME),map=headerMap_(sh);
+  for(let r=2;r<=sh.getLastRow();r++){
+    if(!map['受付番号']||!sh.getRange(r,map['受付番号']).getDisplayValue()) continue;
+    const pair=receptionStatusPair_(sh.getRange(r,map['ステータス']).getDisplayValue());
+    sh.getRange(r,map['ステータス']).setValue(pair.status);
+    sh.getRange(r,map['次にやること']).setValue(pair.next);
+    updateReceptionSummaryRow_(sh,r,map);
+  }
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('V13 初期整合処理が完了しました。');
+}
+
+function menuSendEstimateCurrent_(){
+  const ui=SpreadsheetApp.getUi();
+  try{
+    const id=quickGetActiveCaseId();
+    const c=quickFindCase_(id), map=headerMap_(c.sh);
+    const name=getDisplay_(c.sh,c.row,map,'氏名');
+    const result=ui.alert('査定結果を送信しますか？', name+' 様\n受付番号：'+id+'\n\nLINE連携済みならLINE、未連携ならメールで送信します。', ui.ButtonSet.YES_NO);
+    if(result!==ui.Button.YES) return;
+    const r=quickSendEstimateEdited(id,'');
+    ui.alert('送信完了',r.message,ui.ButtonSet.OK);
+  }catch(err){ ui.alert('送信できません',String(err.message||err),ui.ButtonSet.OK); }
+}
+
+function menuSendVisitCurrent_(){
+  const ui=SpreadsheetApp.getUi();
+  try{
+    const id=quickGetActiveCaseId();
+    const c=quickFindCase_(id), map=headerMap_(c.sh);
+    const name=getDisplay_(c.sh,c.row,map,'氏名');
+    const vd=getDisplay_(c.sh,c.row,map,'確定訪問日');
+    const vt=getDisplay_(c.sh,c.row,map,'確定訪問時間');
+    const result=ui.alert('訪問日時を送信しますか？', name+' 様\n受付番号：'+id+'\n訪問日時：'+vd+' '+vt+'\n\nLINE連携済みならLINE、未連携ならメールで送信します。', ui.ButtonSet.YES_NO);
+    if(result!==ui.Button.YES) return;
+    const r=quickSendVisit(id);
+    ui.alert('送信完了',r.message,ui.ButtonSet.OK);
+  }catch(err){ ui.alert('送信できません',String(err.message||err),ui.ButtonSet.OK); }
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('📦 買取レスキュー')
+    .addItem('⚡ 受付ショートカットを開く', 'showQuickActions')
+    .addItem('🔄 ステータス連動表示を更新', 'syncAllNextActions')
+    .addItem('🧹 表示連動を一括修復', 'repairAllWorkflowDisplay')
+    .addItem('🛠 V13 初期整合処理', 'v13RepairAll')
+    .addItem('🔄 選択案件を最新に更新', 'menuRefreshSelectedCase_')
+    .addItem('🧾 選択案件を買取伝票履歴へ保存', 'menuSaveSelectedSlip_')
+    .addItem('🔧 ステータス入力規則を修復', 'repairStatusValidation')
+    .addItem('🛠 希望日時・送信状態を修復', 'repairHopeDatesAndMailTracking')
+    .addItem('🔐 案件別送信管理を初期化', 'initializeIndependentMailLocks')
+    .addItem('🏠 案件管理を更新', 'refreshDashboard')
+    .addSeparator()
+    .addItem('📩 査定結果を送信', 'menuSendEstimateCurrent_')
+    .addItem('📅 訪問日時を送信', 'menuSendVisitCurrent_')
+    .addItem('🖨️ 買取伝票（印刷）', 'openReceiptSlip')
+    .addSeparator()
+    .addItem('✨ 初期設定・画面を整える', 'setupWorkspaces')
+    .addItem('🩺 システム状態を確認', 'checkReceptionSystem')
+    .addToUi();
+}
+
+
+// ============================================================
+// V21.9 前日予約確認メール
+// ============================================================
+function sendTomorrowVisitReminders() {
+  const ss=SpreadsheetApp.openById(SHEET_ID);
+  const sh=ss.getSheetByName(SHEET_NAME);
+  if(!sh) throw new Error('受付シートが見つかりません。');
+  ensureHeaders_(sh);
+  let map=headerMap_(sh);
+  if(!map['前日確認メール送信日時']){
+    sh.getRange(1,sh.getLastColumn()+1).setValue('前日確認メール送信日時');
+    map=headerMap_(sh);
+  }
+
+  const tz=Session.getScriptTimeZone() || 'Asia/Tokyo';
+  const now=new Date();
+  const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  const target=Utilities.formatDate(tomorrow,tz,'yyyy-MM-dd');
+  let sent=0, skipped=0;
+
+  for(let row=2;row<=sh.getLastRow();row++){
+    const status=normalizeReceptionStatus_(getDisplay_(sh,row,map,'ステータス'));
+    if(status!=='✅ 訪問日時確定'){skipped++;continue;}
+    if(getDisplay_(sh,row,map,'前日確認メール送信日時')){skipped++;continue;}
+
+    const rawDate=sh.getRange(row,map['確定訪問日']).getValue();
+    if(!rawDate){skipped++;continue;}
+    let key='';
+    if(rawDate instanceof Date && !isNaN(rawDate)) key=Utilities.formatDate(rawDate,tz,'yyyy-MM-dd');
+    else {
+      const txt=getDisplay_(sh,row,map,'確定訪問日');
+      const md=txt.match(/(\d{1,2})\/(\d{1,2})/);
+      if(md){
+        let y=tomorrow.getFullYear();
+        const d=new Date(y,Number(md[1])-1,Number(md[2]));
+        key=Utilities.formatDate(d,tz,'yyyy-MM-dd');
+      }
+    }
+    if(key!==target){skipped++;continue;}
+
+    const email=getDisplay_(sh,row,map,'メール').trim();
+    if(!email){skipped++;continue;}
+    sendTomorrowReminderMail_(sh,row,map);
+    sh.getRange(row,map['前日確認メール送信日時']).setValue(new Date()).setNumberFormat('M/d H:mm');
+    sent++;
+  }
+  SpreadsheetApp.flush();
+  return '前日確認メール送信：'+sent+'件';
+}
+
+function sendTomorrowReminderMail_(sh,row,map){
+  const email=getDisplay_(sh,row,map,'メール').trim();
+  const name=getDisplay_(sh,row,map,'氏名');
+  const id=getDisplay_(sh,row,map,'受付番号');
+  const vd=getDisplay_(sh,row,map,'確定訪問日');
+  const vt=getDisplay_(sh,row,map,'確定訪問時間');
+  const products=parseProducts_(sh,row,map).slice(0,6);
+  const productText=products.map(function(p){return '・'+[p.label,p.maker,p.model,p.year].filter(Boolean).join(' / ');}).join('\n');
+  const body=(name?name+' 様\n\n':'')+'明日は出張買取の訪問予定日です。\n\n【訪問日時】\n'+vd+' '+vt+
+    '\n\n【買取予定の商品】\n'+productText+'\n\n【受付番号】'+id+
+    '\n\n当日はよろしくお願いいたします。\nご不明点がございましたら下記までご連絡ください。\n'+STORE_PHONE+'\n\n買取レスキュー';
+  const html='<div style="font-family:Arial,sans-serif;line-height:1.8;max-width:600px">'+
+    '<h2>明日は出張買取の訪問予定日です</h2><p>'+escapeHtml_(name)+' 様</p>'+
+    '<p>ご予約いただいている訪問日時をお知らせいたします。</p>'+
+    '<div style="background:#eef5ff;padding:18px;border-radius:12px"><b>📅 訪問日時</b><div style="font-size:21px;margin-top:8px"><b>'+escapeHtml_(vd+' '+vt)+'</b></div></div>'+
+    '<h3>📦 買取予定の商品</h3>'+productSummaryHtml_(sh,row,map)+
+    '<p><b>受付番号：</b>'+escapeHtml_(id)+'</p><p>当日はよろしくお願いいたします。</p>'+phoneHtml_()+
+    '<p style="margin-top:28px">買取レスキュー</p></div>';
+  MailApp.sendEmail({to:email,subject:'【買取レスキュー】明日の出張買取のご確認 '+id,body:body,htmlBody:html,name:'買取レスキュー'});
+}
+
+// 初回だけ実行してください。毎日18時台に前日確認メールを自動チェックします。
+function setupTomorrowReminderTrigger() {
+  const fn='sendTomorrowVisitReminders';
+  ScriptApp.getProjectTriggers().forEach(function(t){
+    if(t.getHandlerFunction()===fn) ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger(fn).timeBased().everyDays(1).atHour(18).create();
+  return '前日確認メール：毎日18時台の自動送信を設定しました。';
+}
+
+
+// ============================================================
+// V21.9 + LINE Messaging API 疎通テスト
+// ============================================================
+// スクリプトプロパティに LINE_CHANNEL_ACCESS_TOKEN を保存して使用します。
+// LINE Developers の Webhook URL には、このApps Script Webアプリの /exec URL を設定してください。
+
+function getLineAccessToken_() {
+  const token = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (!token) throw new Error('スクリプトプロパティ LINE_CHANNEL_ACCESS_TOKEN が未設定です。');
+  return token.trim();
+}
+
+function handleLineWebhook_(data) {
+  const events = (data && data.events) || [];
+  events.forEach(function(event) {
+    try {
+      const source = event.source || {};
+      const userId = String(source.userId || '').trim();
+      if (userId) {
+        // 最後にWebhookを送ってきたユーザーをテスト送信先として保存
+        PropertiesService.getScriptProperties().setProperty('LINE_TEST_USER_ID', userId);
+      }
+
+      // 友だち追加時
+      if (event.type === 'follow' && event.replyToken) {
+        replyLineText_(event.replyToken,
+          '買取レスキューです。\nLINE連携の準備ができました。\nこのトークに「テスト」と送ってください。');
+        return;
+      }
+
+      // テキストメッセージ受信時
+      if (event.type === 'message' && event.message && event.message.type === 'text' && event.replyToken) {
+        const text = String(event.message.text || '').trim();
+        if (text === 'テスト' || text.toLowerCase() === 'test') {
+          replyLineText_(event.replyToken,
+            '✅ LINE連携テスト成功\n\n買取レスキューの受付システムとLINEが接続できています。');
+        } else {
+          replyLineText_(event.replyToken,
+            'メッセージを受信しました。\nLINE連携テスト中です。');
+        }
+      }
+    } catch (err) {
+      console.log('LINE Webhook event error: ' + err);
+    }
+  });
+
+  return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
+}
+
+function replyLineText_(replyToken, text) {
+  const token = getLineAccessToken_();
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({
+      replyToken: replyToken,
+      messages: [{ type: 'text', text: String(text || '') }]
+    }),
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    throw new Error('LINE返信エラー HTTP ' + code + ': ' + res.getContentText());
+  }
+}
+
+function pushLineText_(userId, text) {
+  const token = getLineAccessToken_();
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({
+      to: userId,
+      messages: [{ type: 'text', text: String(text || '') }]
+    }),
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    throw new Error('LINE送信エラー HTTP ' + code + ': ' + res.getContentText());
+  }
+  return 'LINE送信成功';
+}
+function pushLineButtons_(userId, text, confirmUrl, cancelUrl) {
+  const token = getLineAccessToken_();
+
+  const message = {
+    type: 'flex',
+    altText: '【買取レスキュー】査定結果のお知らせ',
+    contents: {
+      type: 'bubble',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: String(text || ''),
+            wrap: true,
+            size: 'md',
+            color: '#222222'
+          }
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            height: 'sm',
+            action: {
+              type: 'uri',
+              label: '出張買取を申し込む',
+              uri: confirmUrl
+            }
+          },
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'uri',
+              label: '今回は申し込まない',
+              uri: cancelUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+
+  const res = UrlFetchApp.fetch(
+    'https://api.line.me/v2/bot/message/push',
+    {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + token
+      },
+      payload: JSON.stringify({
+        to: userId,
+        messages: [message]
+      }),
+      muteHttpExceptions: true
+    }
+  );
+
+  const code = res.getResponseCode();
+
+  if (code < 200 || code >= 300) {
+    throw new Error(
+      'LINEボタン送信エラー HTTP ' +
+      code +
+      ': ' +
+      res.getContentText()
+    );
+  }
+
+  return 'LINEボタン送信成功';
+}
+// LINE公式アカウントに一度メッセージを送った後、Apps Scriptからこの関数を実行します。
+function testLinePush() {
+  const userId = PropertiesService.getScriptProperties().getProperty('LINE_TEST_USER_ID');
+  if (!userId) {
+    throw new Error('LINE_TEST_USER_ID がありません。先にLINE公式アカウントを友だち追加し、「テスト」と送信してください。');
+  }
+  return pushLineText_(userId,
+    '✅ Apps Script → LINE の送信テスト成功\n\n次は査定結果・訪問日時などをLINEで送れるようにします。');
+}
+// =====================================================
+// お客様LINE連携：LINEログイン開始
+// =====================================================
+function startLineLogin_(e) {
+  const props = PropertiesService.getScriptProperties();
+
+  const channelId = props.getProperty('LINE_LOGIN_CHANNEL_ID');
+
+  if (!channelId) {
+    throw new Error('LINE_LOGIN_CHANNEL_ID が設定されていません。');
+  }
+
+  // どの受付のお客様かを保持
+  const inquiryId =
+    e && e.parameter
+      ? String(e.parameter.id || '')
+      : '';
+
+  if (!inquiryId) {
+    return htmlPage_('受付番号がありません。');
+  }
+
+  // 現在のWebアプリURL
+  const webAppUrl = ScriptApp.getService().getUrl();
+
+  // LINE Developersに登録するコールバックURL
+  const redirectUri =
+    webAppUrl + '?line_action=callback';
+
+  // CSRF対策用state
+  const state = Utilities.getUuid();
+
+  CacheService.getScriptCache().put(
+    'LINE_LOGIN_STATE_' + state,
+    inquiryId,
+    600
+  );
+
+  const authUrl =
+    'https://access.line.me/oauth2/v2.1/authorize' +
+    '?response_type=code' +
+    '&client_id=' + encodeURIComponent(channelId) +
+    '&redirect_uri=' + encodeURIComponent(redirectUri) +
+    '&state=' + encodeURIComponent(state) +
+    '&scope=' + encodeURIComponent('openid profile');
+
+    return HtmlService
+    .createHtmlOutput(
+      '<!doctype html>' +
+      '<html><head>' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<base target="_top">' +
+      '</head><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;' +
+      'padding:40px 20px;text-align:center;">' +
+
+      '<h2>LINE連携</h2>' +
+      '<p>下のボタンを押してLINEと連携してください。</p>' +
+
+      '<p style="margin-top:30px;">' +
+      '<a href="' + authUrl + '" target="_top" ' +
+      'style="display:inline-block;background:#06C755;color:white;' +
+      'text-decoration:none;font-weight:bold;padding:16px 30px;' +
+      'border-radius:8px;">' +
+      'LINEでログイン' +
+      '</a>' +
+      '</p>' +
+
+      '</body></html>'
+    )
+    .setTitle('LINE連携');
+}
+// =====================================================
+// お客様LINE連携：LINEログイン コールバック
+// =====================================================
+function handleLineLoginCallback_(e) {
+  try {
+    const code = e && e.parameter
+      ? String(e.parameter.code || '').trim()
+      : '';
+
+    const state = e && e.parameter
+      ? String(e.parameter.state || '').trim()
+      : '';
+
+    if (!code || !state) {
+      return htmlPage_('LINEログイン情報が不足しています。');
+    }
+
+    // stateから受付番号を取得
+    const cache = CacheService.getScriptCache();
+    const cacheKey = 'LINE_LOGIN_STATE_' + state;
+    const inquiryId = cache.get(cacheKey);
+
+    if (!inquiryId) {
+      return htmlPage_(
+        'LINEログインの有効期限が切れました。もう一度お試しください。'
+      );
+    }
+
+    // 一度使用したstateは削除
+    cache.remove(cacheKey);
+
+    const props = PropertiesService.getScriptProperties();
+
+    const channelId =
+      props.getProperty('LINE_LOGIN_CHANNEL_ID');
+
+    const channelSecret =
+      props.getProperty('LINE_LOGIN_CHANNEL_SECRET');
+
+    if (!channelId || !channelSecret) {
+      return htmlPage_('LINEログイン設定が不足しています。');
+    }
+
+    const redirectUri =
+      ScriptApp.getService().getUrl() +
+      '?line_action=callback';
+
+    // LINEからアクセストークンを取得
+    const tokenResponse = UrlFetchApp.fetch(
+      'https://api.line.me/oauth2/v2.1/token',
+      {
+        method: 'post',
+        contentType: 'application/x-www-form-urlencoded',
+        payload: {
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: redirectUri,
+          client_id: channelId,
+          client_secret: channelSecret
+        },
+        muteHttpExceptions: true
+      }
+    );
+
+    if (tokenResponse.getResponseCode() !== 200) {
+      console.log(tokenResponse.getContentText());
+      return htmlPage_('LINEログインに失敗しました。');
+    }
+
+    const tokenData =
+      JSON.parse(tokenResponse.getContentText());
+
+    // LINEプロフィール取得
+    const profileResponse = UrlFetchApp.fetch(
+      'https://api.line.me/v2/profile',
+      {
+        method: 'get',
+        headers: {
+          Authorization:
+            'Bearer ' + tokenData.access_token
+        },
+        muteHttpExceptions: true
+      }
+    );
+
+    if (profileResponse.getResponseCode() !== 200) {
+      console.log(profileResponse.getContentText());
+      return htmlPage_(
+        'LINEプロフィールを取得できませんでした。'
+      );
+    }
+
+    const profile =
+      JSON.parse(profileResponse.getContentText());
+
+    const lineUserId =
+      String(profile.userId || '');
+
+    const displayName =
+      String(profile.displayName || '');
+
+    if (!lineUserId) {
+      return htmlPage_(
+        'LINEユーザーIDを取得できませんでした。'
+      );
+    }
+
+    // 受付シートを取得
+    const ss =
+  SpreadsheetApp.openById(SHEET_ID);
+
+    const sh =
+      ss.getSheetByName(SHEET_NAME);
+
+    if (!sh) {
+      return htmlPage_('受付シートが見つかりません。');
+    }
+
+    // 必要なLINE列を作成
+    const lineCols = ensureLineLinkColumns_(sh);
+
+    // 受付番号の行を検索
+    const headerMap = headerMap_(sh);
+
+    const idCol = headerMap['受付番号'];
+
+    if (!idCol) {
+      return htmlPage_(
+        '受付番号列が見つかりません。'
+      );
+    }
+
+    const lastRow = sh.getLastRow();
+
+    const values = sh
+      .getRange(2, idCol, Math.max(lastRow - 1, 1), 1)
+      .getDisplayValues();
+
+    let targetRow = 0;
+
+    for (let i = 0; i < values.length; i++) {
+      if (
+        String(values[i][0]).trim() ===
+        String(inquiryId).trim()
+      ) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+
+    if (!targetRow) {
+      return htmlPage_(
+        '対象の受付データが見つかりません。'
+      );
+    }
+
+    // LINE情報を受付データへ保存
+    sh.getRange(
+      targetRow,
+      lineCols['LINEユーザーID']
+    ).setValue(lineUserId);
+
+    sh.getRange(
+      targetRow,
+      lineCols['LINE表示名']
+    ).setValue(displayName);
+
+    sh.getRange(
+      targetRow,
+      lineCols['LINE連携日時']
+    )
+      .setValue(new Date())
+      .setNumberFormat('yyyy/MM/dd HH:mm');
+
+    SpreadsheetApp.flush();
+
+    return HtmlService.createHtmlOutput(
+      '<!doctype html>' +
+      '<html><head>' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '</head>' +
+      '<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;' +
+      'padding:40px 20px;text-align:center;">' +
+
+      '<div style="font-size:52px;">✅</div>' +
+
+      '<h2>LINE連携が完了しました</h2>' +
+
+      '<p>受付番号：' +
+      escapeHtml_(inquiryId) +
+      '</p>' +
+
+      '<p>今後、査定結果や訪問日時などを<br>' +
+      'LINEで受け取ることができます。</p>' +
+
+      '<p style="margin-top:30px;color:#666;">' +
+      'この画面を閉じてLINEへ戻ってください。' +
+      '</p>' +
+
+      '</body></html>'
+    ).setTitle('LINE連携完了');
+
+    } catch (err) {
+    console.error(err);
+
+    return htmlPage_(
+      'LINE連携エラー：' +
+      String(err && err.message ? err.message : err)
+    );
+  }
+}
+
+
+// =====================================================
+// 受付シートにLINE連携用の列を用意
+// =====================================================
+function ensureLineLinkColumns_(sh) {
+
+  const requiredHeaders = [
+    'LINEユーザーID',
+    'LINE表示名',
+    'LINE連携日時'
+  ];
+
+  let map = headerMap_(sh);
+
+  requiredHeaders.forEach(function(header) {
+
+    if (!map[header]) {
+
+      const newCol = sh.getLastColumn() + 1;
+
+      sh.getRange(1, newCol)
+        .setValue(header);
+
+      map = headerMap_(sh);
+    }
+  });
+
+  return map;
+}
