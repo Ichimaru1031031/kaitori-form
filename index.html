@@ -19,6 +19,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.photo-box{border:1px dashed #94a3b8;border-radius:8px;padding:8px;text-align:center;font-size:11px;background:#f8fafc}.photo-box input{font-size:11px;padding:5px}
 .preview{display:none;position:fixed;inset:0;background:#0008;z-index:20;padding:14px;overflow:auto}.preview-card{max-width:720px;margin:auto;background:white;border-radius:14px;padding:16px}.preview-row{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid #e2e8f0;padding:6px 0;font-size:13px}.preview-row b{color:#475569}.photo-preview{display:flex;gap:7px;overflow:auto;margin-top:8px}.photo-preview img{width:90px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #ddd}
 .hidden{display:none!important}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.foot{font-size:11px;color:var(--muted);text-align:center;padding:12px}
+.line-link-box{margin:16px 0 10px;padding:15px;border:1px solid #b7e4d3;border-radius:12px;background:#f0fdf8}.line-link-title{font-weight:800;font-size:16px;margin-bottom:6px}.line-btn{display:block;width:100%;border:0;border-radius:10px;padding:14px 16px;background:#06c755;color:#fff;text-decoration:none;font-weight:800;font-size:16px;cursor:pointer}.line-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
 @media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}.choice{grid-template-columns:1fr 1fr}.photo-grid{grid-template-columns:1fr 1fr}.preview-row{grid-template-columns:95px 1fr}}
 
 /* スマホ向け写真欄：常に横3列でコンパクト表示 */
@@ -127,7 +128,13 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       <b id="successInquiryId" style="font-size:22px;letter-spacing:.5px"></b>
     </div>
     <p style="line-height:1.7">内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。</p>
-    <button type="button" class="btn full" onclick="finishAndReset()">入力画面に戻る</button>
+    <div class="line-link-box">
+      <div class="line-link-title">LINEで査定結果を受け取る</div>
+      <div class="small" style="margin-bottom:10px">LINE連携すると、この受付の査定結果や訪問日時のご案内をLINEで受け取れます。</div>
+      <a id="lineLinkBtn" class="line-btn" href="#">LINEと連携する</a>
+      <div class="line-note">※LINE連携は任意です。連携しない場合は、入力したメールアドレスがあればメールでご案内します。</div>
+    </div>
+    <button type="button" class="btn gray full" onclick="finishAndReset()">入力画面に戻る</button>
   </div>
 </div>
 
@@ -135,8 +142,9 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
 const CONFIG={
   // Google Apps Script等の受信URLをここに入れると自動送信できます。
   // 例: "https://script.google.com/macros/s/XXXXXXXX/exec"
-WEBHOOK_URL:"https://script.google.com/macros/s/AKfycbyrJHy5jATp_IFGZicrfsYS6c-4IgNACBCWs0XGydkfJvPmNWERuHtulCdSDZUTI-xX/exec",
-  STORE_NAME:"買取レスキュー"
+WEBHOOK_URL:"https://script.google.com/macros/s/AKfycbyG-wfpBGOHtE2fCaWucjwkRr0b_leUZoHEOiOF_GZJvOhHpfbYp0XfYIZcZFeDsYod/exec",
+  STORE_NAME:"買取レスキュー",
+  LINE_LOGIN_URL:"https://script.google.com/macros/s/AKfycbyG-wfpBGOHtE2fCaWucjwkRr0b_leUZoHEOiOF_GZJvOhHpfbYp0XfYIZcZFeDsYod/exec?line_action=login&id="
 };
 
   // 日本国内シェア上位順のメーカー、および各メーカーの主要機種（型番）
@@ -586,6 +594,10 @@ async function submitInquiry(){
 }
 function showSuccessAndReset(inquiryId){
   document.getElementById("successInquiryId").textContent=inquiryId||"";
+  const lineBtn=document.getElementById("lineLinkBtn");
+  if(lineBtn){
+    lineBtn.href=CONFIG.LINE_LOGIN_URL+encodeURIComponent(inquiryId||"");
+  }
   document.getElementById("preview").style.display="none";
   document.getElementById("successPreview").style.display="block";
 
