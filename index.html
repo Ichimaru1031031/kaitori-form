@@ -140,7 +140,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
         <div><label>お名前 *</label><input id="name" autocomplete="name" placeholder="山田 太郎" required></div>
         <div><label>電話番号 *</label><input id="tel" type="tel" autocomplete="tel" placeholder="090-0000-0000" required></div>
       </div>
-      <div id="emailField" style="margin-top:10px;display:none"><label>メールアドレス * <span class="small">（査定結果をメールで受け取る場合）</span></label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com"></div>
+      <div id="emailField" style="margin-top:10px"><label>メールアドレス <span class="small">（LINEが利用できない場合の予備連絡先）</span></label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com"><div class="small" style="margin-top:5px;color:#64748b">LINEまたはメールを選ぶ場合は必須です。LINE連携が途中で完了しなかった場合にも査定結果をお届けできます。</div></div>
       <div style="margin-top:10px"><label>郵便番号</label><div class="zip-search-row"><input id="zip" inputmode="numeric" maxlength="7" placeholder="2700175"><button type="button" class="btn" onclick="searchAddress()">住所検索</button></div></div>
       <div style="margin-top:10px"><label>住所 *</label><input id="address" autocomplete="street-address" placeholder="千葉県流山市..." required></div>
     </div>
@@ -591,11 +591,11 @@ function toggleNotificationMethod(){
   const emailField=document.getElementById("emailField");
   const email=document.getElementById("email");
   const help=document.getElementById("contactHelp");
-  if(emailField) emailField.style.display=method==="メール"?"block":"none";
-  if(email) email.required=(method==="メール");
+  if(emailField) emailField.style.display="block";
+  if(email) email.required=(method==="メール" || method==="LINE");
   if(help){
     help.textContent=!method?"いずれか1つ選択してください。":
-      method==="LINE"?"受付完了後にLINE連携へ進みます。":
+      method==="LINE"?"受付完了後にLINE連携へ進みます。連携できない場合はメールへご連絡します。":
       method==="メール"?"査定結果や日程調整をメールでご連絡します。":
       "査定結果や日程調整をスタッフからお電話します。";
   }
@@ -661,7 +661,7 @@ function showPreview(){
   if(!items.length){alert("商品を1つ追加してください。");return}
   const d=getData(); if(!d)return; if(!d.name||!d.tel||!d.address){alert("お名前・電話番号・住所を入力してください。");return}
   if(!d.contact){alert("査定結果の通知方法を選択してください。");return}
-  if(d.contact==="メール" && !d.email){alert("メールで受け取る場合は、メールアドレスを入力してください。");document.getElementById("email").focus();return}
+  if((d.contact==="メール" || d.contact==="LINE") && !d.email){alert("LINEまたはメールで受け取る場合は、予備連絡先としてメールアドレスを入力してください。");document.getElementById("email").focus();return}
   inquiry=d;
   const itemHtml=d.items.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px">
     <b>${i+1}. ${esc(x.type)} × ${esc(x.qty)}台</b>
