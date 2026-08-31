@@ -223,10 +223,10 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       <div class="notice" style="margin:12px 0;text-align:left;line-height:1.7">
         <b>LINEで査定結果を受け取る</b><br>
         下のボタンを押すと「もちまる」のトークが開きます。<br>
-        <b>入力済みのメッセージをそのまま送信するだけで連携完了です。</b>
+        <b>LINEの案内に沿って進むだけで連携できます。コード入力は不要です。</b>
       </div>
-      <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">LINEで連携する</button>
-      <div class="small" style="margin-top:8px">コードのコピー・貼り付けは不要です。</div>
+      <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">LINEで査定結果を受け取る</button>
+      <div class="small" style="margin-top:8px">連携コードの入力やメッセージ送信は不要です。</div>
     </div>
     <button type="button" class="btn gray full" onclick="finishAndReset()">入力画面に戻る</button>
   </div>
@@ -774,7 +774,7 @@ function showSuccessAndReset(inquiryId, contact, linePairChatUrl){
     if(successMessage) successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
     if(lineBtn){
       lineBtn.disabled=!linePairChatUrl;
-      lineBtn.textContent=linePairChatUrl?"LINEで連携する":"LINE連携URLを取得できませんでした";
+      lineBtn.textContent=linePairChatUrl?"LINEで査定結果を受け取る":"LINE連携URLを取得できませんでした";
       lineBtn.onclick=function(){
         if(!linePairChatUrl){
           alert("LINE連携URLを取得できませんでした。受付番号を控えて店舗へご連絡ください。");
