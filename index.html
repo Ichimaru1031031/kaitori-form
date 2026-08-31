@@ -241,7 +241,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
 </div>
 
 <script>
-const EXPECTED_BUILD='KAITORI-LINE-AUTOCHAT-v11.1';
+const EXPECTED_BUILD='KAITORI-LINE-AUTOCHAT-v11.2';
 const CONFIG={
   // Google Apps Script等の受信URLをここに入れると自動送信できます。
   // 例: "https://script.google.com/macros/s/XXXXXXXX/exec"
@@ -766,7 +766,7 @@ function showSuccessAndReset(inquiryId, contact, linePairChatUrl){
   }else{
     if(successMessage) successMessage.innerHTML="内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。";
   }
-  if(success) success.classList.add("show");
+  if(success) success.style.display="flex";
 }
 function finishAndReset(){
   document.getElementById("successPreview").style.display="none";
