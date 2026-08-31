@@ -226,10 +226,10 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
           style="width:100%;font-size:22px;font-weight:800;letter-spacing:2px;text-align:center;padding:14px 8px;margin:8px 0;border:2px solid #9db9dc;border-radius:10px;background:#fff;color:#182238"
           value="">
         <button type="button" id="copyLinePairBtn" class="btn gray" style="padding:10px 14px">コードをコピー</button>
-        <div class="small" style="margin-top:8px">① コードをコピー → ②「LINE連携へ進む」→ ③ もちまるのトークにコードを送信してください。</div>
+        <div class="small" style="margin-top:8px">① コードをコピー → ②「もちまるを開いて連携する」→ ③ もちまるのトークにコードを送信してください。</div>
       </div>
-      <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">LINE連携へ進む</button>
-      <div class="small" style="margin-top:8px">査定結果をLINEで受け取るために必要です。</div>
+      <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">もちまるを開いて連携する</button>
+      <div class="small" style="margin-top:8px">※このボタンを押しただけでは連携完了になりません。もちまるのトークに上のコードを送信してください。</div>
     </div>
     <button type="button" class="btn gray full" onclick="finishAndReset()">入力画面に戻る</button>
   </div>
@@ -750,7 +750,7 @@ function showSuccessAndReset(inquiryId, contact, linePairCode){
   const successMessage=document.getElementById("successMessage");
   if(contact==="LINE"){
     lineArea.classList.remove("hidden");
-    successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
+    successMessage.innerHTML="受付が完了しました。<br><b>LINE連携はまだ完了していません。</b><br>もちまるのトークに連携コードを送信してください。";
     const codeEl=document.getElementById("linePairCode");
     if(codeEl) codeEl.value=linePairCode||"";
     const copyBtn=document.getElementById("copyLinePairBtn");
