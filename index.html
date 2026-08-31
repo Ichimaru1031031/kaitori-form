@@ -222,7 +222,9 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
     <div id="lineLinkArea" class="hidden" style="margin:18px 0">
       <div id="linePairGuide" class="notice" style="margin:12px 0;text-align:left">
         <b>LINE連携コード</b><br>
-        <span id="linePairCode" style="display:inline-block;font-size:22px;font-weight:800;letter-spacing:2px;margin:8px 0"></span><br>
+        <input id="linePairCode" type="text" readonly
+          style="width:100%;font-size:22px;font-weight:800;letter-spacing:2px;text-align:center;padding:14px 8px;margin:8px 0;border:2px solid #9db9dc;border-radius:10px;background:#fff;color:#182238"
+          value="">
         <button type="button" id="copyLinePairBtn" class="btn gray" style="padding:10px 14px">コードをコピー</button>
         <div class="small" style="margin-top:8px">① コードをコピー → ②「LINE連携へ進む」→ ③ もちまるのトークにコードを送信してください。</div>
       </div>
@@ -691,6 +693,20 @@ function showPreview(){
   document.getElementById("preview").style.display="block";
 }
 let isSubmitting=false;
+
+function generateLinePairCodeClient_(){
+  const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes=new Uint8Array(12);
+  if(window.crypto && window.crypto.getRandomValues){
+    window.crypto.getRandomValues(bytes);
+  }else{
+    for(let i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
+  }
+  let s="";
+  for(let i=0;i<12;i++) s+=alphabet[bytes[i]%alphabet.length];
+  return s.slice(0,6)+"-"+s.slice(6);
+}
+
 async function submitInquiry(){
   if(!inquiry || isSubmitting)return;
   isSubmitting=true;
@@ -706,6 +722,9 @@ async function submitInquiry(){
   status.textContent="送信中…写真を圧縮してアップロードしています。";
   try{
     const payload=await buildInquiryPayload();
+    if(inquiry.contact==="LINE" && !payload.linePairCode){
+      payload.linePairCode=generateLinePairCodeClient_();
+    }
     const r=await fetch(CONFIG.WEBHOOK_URL,{
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
@@ -716,7 +735,7 @@ async function submitInquiry(){
     status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
       (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
     if(submitBtn){submitBtn.textContent="✓ 送信済み";}
-    showSuccessAndReset(inquiry.inquiryId, inquiry.contact, result.linePairCode||'');
+    showSuccessAndReset(inquiry.inquiryId, inquiry.contact, result.linePairCode||payload.linePairCode||'');
   }catch(e){
     console.error(e);
     status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
@@ -733,12 +752,34 @@ function showSuccessAndReset(inquiryId, contact, linePairCode){
     lineArea.classList.remove("hidden");
     successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
     const codeEl=document.getElementById("linePairCode");
-    if(codeEl) codeEl.textContent=linePairCode||"";
+    if(codeEl) codeEl.value=linePairCode||"";
     const copyBtn=document.getElementById("copyLinePairBtn");
-    if(copyBtn) copyBtn.onclick=async function(){
-      try{ await navigator.clipboard.writeText(linePairCode||""); copyBtn.textContent="✓ コピーしました"; }
-      catch(_e){ if(codeEl){ const r=document.createRange();r.selectNodeContents(codeEl);const s=window.getSelection();s.removeAllRanges();s.addRange(r); } }
-    };
+    if(copyBtn){
+      copyBtn.disabled=!linePairCode;
+      copyBtn.textContent=linePairCode?"コードをコピー":"コードを取得できませんでした";
+      copyBtn.onclick=async function(){
+        if(!linePairCode){ alert("LINE連携コードを取得できませんでした。ページを閉じずにもう一度受付してください。"); return; }
+        let copied=false;
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            await navigator.clipboard.writeText(linePairCode);
+            copied=true;
+          }
+        }catch(_e){}
+        if(!copied && codeEl){
+          try{
+            codeEl.focus();
+            codeEl.select();
+            codeEl.setSelectionRange(0,99999);
+            copied=document.execCommand("copy");
+          }catch(_e){}
+        }
+        copyBtn.textContent=copied?"✓ コピーしました":"コードを長押ししてコピー";
+        if(!copied && codeEl){
+          codeEl.focus(); codeEl.select(); codeEl.setSelectionRange(0,99999);
+        }
+      };
+    }
     lineBtn.onclick=function(){
       location.href=CONFIG.WEBHOOK_URL+"?line_action=login&id="+encodeURIComponent(inquiryId||"");
     };
