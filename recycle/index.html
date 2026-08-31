@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b2f61">
-<title>買取レスキュー｜家電リサイクル料金計算 v2.3</title>
+<title>買取レスキュー｜家電リサイクル料金計算 v2.3 v2.6</title>
 <style>
 :root{
   --navy:#0b2f61; --blue:#1d67d8; --green:#169b62;
@@ -51,7 +51,7 @@ button,select,input{font:inherit} button{cursor:pointer}
 .sheethead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.sheethead h2{font-size:20px;margin:0}.close{border:0;background:#f2f4f7;border-radius:10px;width:36px;height:36px;font-size:20px}
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:10px 0}.field label{display:block;font-size:12px;font-weight:900;margin-bottom:6px}
 select,input{width:100%;height:48px;border:1.5px solid #d0d5dd;border-radius:11px;padding:0 11px;background:#fff;font-size:16px}
-.maker-wrap{position:relative}.maker-list{position:absolute;left:0;right:0;top:54px;z-index:120;background:#fff;border:1px solid #d0d5dd;border-radius:12px;box-shadow:0 12px 30px rgba(16,24,40,.16);max-height:240px;overflow:auto;-webkit-overflow-scrolling:touch}.maker-option{width:100%;border:0;border-bottom:1px solid #eef1f5;background:#fff;text-align:left;padding:13px 14px;font-size:16px;color:#172033}.maker-option:last-child{border-bottom:0}.maker-option:active{background:#eff6ff}.maker-empty{padding:14px;color:#667085;font-size:14px}.maker-selected{margin-top:7px;font-size:12px;color:#087443;font-weight:800}.maker-hint{font-size:12px;color:#667085;margin-top:6px}.maker-section-title{padding:9px 14px 6px;font-size:12px;font-weight:800;color:#667085;background:#f8fafc;position:sticky;top:0}.maker-option small{display:block;color:#667085;font-size:11px;margin-top:2px}
+.maker-wrap{position:relative}.maker-list{position:absolute;left:0;right:0;top:54px;z-index:120;background:#fff;border:1px solid #d0d5dd;border-radius:12px;box-shadow:0 12px 30px rgba(16,24,40,.16);max-height:min(46vh,360px);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}.maker-option{width:100%;border:0;border-bottom:1px solid #eef1f5;background:#fff;text-align:left;padding:14px 14px;font-size:16px;color:#172033;touch-action:pan-y;-webkit-user-select:none;user-select:none}.maker-option:last-child{border-bottom:0}.maker-option:active{background:#eff6ff}.maker-empty{padding:14px;color:#667085;font-size:14px}.maker-selected{margin-top:7px;font-size:12px;color:#087443;font-weight:800}.maker-hint{font-size:12px;color:#667085;margin-top:6px}.maker-section-title{padding:9px 14px 6px;font-size:12px;font-weight:800;color:#667085;background:#f8fafc;position:sticky;top:0}.maker-option small{display:block;color:#667085;font-size:11px;margin-top:2px}
 .choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice button{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:11px 8px;font-weight:800}.choice button.on{border-color:var(--blue);background:#eff6ff;color:#174ea6}
 .preview{background:#f8fafc;border-radius:12px;padding:12px;margin:12px 0}.preview .r{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}.preview .r.total{border-top:1px solid var(--line);margin-top:6px;padding-top:9px;font-weight:900;font-size:17px}
 .codebox{background:#fff7ed;border:1px solid #fed7aa;border-radius:11px;padding:10px 11px;font-size:12px;color:#9a3412;margin-top:10px}
@@ -63,6 +63,17 @@ select,input{width:100%;height:48px;border:1.5px solid #d0d5dd;border-radius:11p
 .done{text-align:center;max-width:580px;margin:80px auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:32px 20px}.done .big{font-size:55px}.hidden{display:none!important}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.right{position:static}.tiles{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.topbar{padding:12px 14px}.brand h1{font-size:16px}.master{font-size:11px}.shell{padding:14px 12px 90px}.left{padding:14px}.right{padding:14px}.title{font-size:20px}.tiles{gap:9px}.tile{min-height:126px;padding:10px 7px}.icon{width:48px;height:48px}.tile b{font-size:14px}.formgrid{grid-template-columns:1fr}.sheet{padding:16px;border-radius:20px 20px 14px 14px}.step span:last-child{display:none}}
+
+@media (max-width:700px){
+  .maker-list{
+    max-height:48vh;
+    padding-bottom:max(8px, env(safe-area-inset-bottom));
+  }
+  .maker-option{
+    min-height:52px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -251,7 +262,7 @@ function showMakerCandidates(query){
       b.className="maker-option";
       const fee=RKC_FEES[rec.code] && RKC_FEES[rec.code][itemCodeFor(editing.type,editing.size)];
       b.innerHTML='<b>'+rec.name+'</b><small>メーカーコード '+rec.code+(typeof fee==="number"?' ／ RKC料金登録済み':'')+'</small>';
-      b.addEventListener("pointerdown",function(e){e.preventDefault();chooseMaker(rec.name);});
+      // iPhone対策：pointerdownでは確定しない。スクロール後の通常clickだけで選択する。
       b.addEventListener("click",function(e){e.preventDefault();chooseMaker(rec.name);});
       box.appendChild(b);
     });
