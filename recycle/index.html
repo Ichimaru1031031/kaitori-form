@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b2f61">
+<title>家電リサイクル料金計算｜買取レスキュー</title>
+
+<style>
+:root{
+  --navy:#0b2f61;
+  --blue:#2563eb;
+  --green:#16a05d;
+  --bg:#f5f7fa;
+  --line:#dfe4ea;
+  --text:#172033;
+  --muted:#667085;
+}
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
+}
+
+button,select{
+  font:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+button{
+  cursor:pointer;
+  touch-action:manipulation;
+}
+
+header{
+  background:var(--navy);
+  color:#fff;
+  padding:15px 16px;
+}
+.head{
+  max-width:1050px;
+  margin:auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+header small{
+  display:block;
+  opacity:.8;
+  font-weight:700;
+}
+header h1{
+  font-size:19px;
+  margin:2px 0 0;
+}
+.badge{
+  font-size:11px;
+  border:1px solid #ffffff55;
+  border-radius:999px;
+  padding:7px 9px;
+}
+
+main{
+  max-width:1050px;
+  margin:auto;
+  padding:18px 14px 90px;
+}
+
+.steps{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:18px;
+  font-size:12px;
+  font-weight:800;
+  color:#7b8494;
+}
+.step{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.num{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#e7ebf0;
+}
+.step.active{color:#172033}
+.step.active .num{
+  background:#16a05d;
+  color:#fff;
+}
+.line{
+  height:2px;
+  flex:1;
+  background:#e1e5ea;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1.45fr .85fr;
+  gap:16px;
+}
+
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:17px;
+  padding:18px;
+  box-shadow:0 5px 18px #1018280a;
+}
+
+h2{
+  font-size:20px;
+  margin:0 0 5px;
+}
+.lead{
+  font-size:13px;
+  color:var(--muted);
+  margin:0 0 15px;
+}
+
+.appliances{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.appliance{
+  background:#fff;
+  border:1.5px solid var(--line);
+  border-radius:15px;
+  min-height:145px;
+  padding:13px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  color:var(--text);
+  font-weight:900;
+}
+
+.appliance:active{
+  background:#f0f6ff;
+  border-color:#8bb4f7;
+  transform:scale(.985);
+}
+
+.ico{
+  width:52px;
+  height:52px;
+  margin-bottom:8px;
+  color:var(--navy);
+}
+.ico svg{
+  width:100%;
+  height:100%;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+}
+
+.appliance span{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:500;
+  margin-top:4px;
+  text-align:center;
+}
+
+.info{
+  margin-top:14px;
+  background:#eef6ff;
+  border:1px solid #c7ddfb;
+  border-radius:12px;
+  padding:11px 12px;
+  font-size:12px;
+  line-height:1.6;
+  color:#24496e;
+}
+
+.summary h3{
+  font-size:16px;
+  margin:0 0 11px;
+}
+
+.empty{
+  text-align:center;
+  border:1px dashed #ccd3dc;
+  border-radius:12px;
+  padding:30px 10px;
+  color:#7b8494;
+  font-size:12px;
+}
+
+.item{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:11px;
+  margin-bottom:9px;
+}
+.itemtop{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+}
+.item b{font-size:13px}
+
+.meta{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.5;
+  margin-top:3px;
+}
+
+.del{
+  border:0;
+  background:#fff0ef;
+  color:#c43128;
+  border-radius:8px;
+  padding:6px 8px;
+  font-size:11px;
+  font-weight:800;
+}
+
+.subtotal{
+  display:flex;
+  justify-content:space-between;
+  border-top:1px solid #edf0f3;
+  margin-top:8px;
+  padding-top:8px;
+  font-size:12px;
+}
+
+.total{
+  margin-top:12px;
+  background:#ecfdf3;
+  border:1px solid #b8e8cb;
+  border-radius:13px;
+  padding:12px;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  padding:4px 0;
+}
+
+.grand{
+  border-top:1px solid #b8e8cb;
+  margin-top:5px;
+  padding-top:9px;
+  color:#087443;
+  font-weight:900;
+}
+.grand b{font-size:22px}
+
+.customerBtn{
+  width:100%;
+  border:0;
+  background:var(--green);
+  color:#fff;
+  border-radius:11px;
+  height:48px;
+  margin-top:10px;
+  font-weight:900;
+}
+
+.hidden{display:none!important}
+
+/* 詳細入力 */
+.overlay{
+  position:fixed;
+  inset:0;
+  background:#10182888;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  z-index:50;
+  padding:12px;
+}
+.overlay.open{display:flex}
+
+.sheet{
+  background:#fff;
+  width:min(620px,100%);
+  border-radius:20px;
+  padding:17px;
+  max-height:90vh;
+  overflow:auto;
+}
+
+.sheetHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.sheetHead h2{font-size:19px}
+
+.x{
+  width:36px;
+  height:36px;
+  border:0;
+  border-radius:9px;
+  background:#f0f2f5;
+  font-size:21px;
+}
+
+.fields{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+
+.field label{
+  display:block;
+  font-size:11px;
+  font-weight:900;
+  margin-bottom:5px;
+}
+
+.field select{
+  width:100%;
+  height:47px;
+  border:1.5px solid #cfd5dd;
+  border-radius:10px;
+  background:#fff;
+  padding:0 10px;
+}
+
+.choice{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.choice button{
+  height:44px;
+  border:1.5px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  font-size:12px;
+  font-weight:800;
+}
+.choice button.active{
+  border-color:#4382e8;
+  background:#eff6ff;
+  color:#174ea6;
+}
+
+.calc{
+  background:#f7f9fb;
+  border-radius:11px;
+  padding:10px;
+  margin-top:12px;
+}
+
+.calc .last{
+  border-top:1px solid var(--line);
+  padding-top:8px;
+  margin-top:4px;
+  font-weight:900;
+  font-size:15px;
+}
+
+.codes{
+  margin-top:10px;
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+  border-radius:10px;
+  padding:10px;
+  font-size:11px;
+  line-height:1.6;
+  color:#9a3412;
+}
+
+.sheetActions{
+  display:grid;
+  grid-template-columns:1fr 1.4fr;
+  gap:8px;
+  margin-top:12px;
+}
+
+.secondary,.primary{
+  height:48px;
+  border-radius:11px;
+  font-weight:900;
+}
+.secondary{
+  background:#fff;
+  border:1px solid var(--line);
+}
+.primary{
+  background:var(--blue);
+  border:0;
+  color:#fff;
+}
+
+/* お客様確認 */
+.customer{
+  max-width:650px;
+  margin:auto;
+  padding:22px 14px 100px;
+}
+
+.confirmHead{text-align:center}
+
+.check{
+  width:52px;
+  height:52px;
+  background:#eafbf1;
+  color:#078044;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  margin:auto;
+  font-size:25px;
+  font-weight:900;
+}
+
+.ccard{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:13px;
+  margin-top:10px;
+}
+
+.ctotal{
+  background:var(--navy);
+  color:#fff;
+  text-align:center;
+  border-radius:16px;
+  padding:16px;
+  margin-top:14px;
+}
+.ctotal small{
+  display:block;
+  opacity:.8;
+}
+.ctotal b{font-size:34px}
+
+.bottom{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#fff;
+  border-top:1px solid var(--line);
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+  z-index:20;
+}
+
+.bottomin{
+  max-width:650px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:1fr 1.5fr;
+  gap:8px;
+}
+
+.done{
+  max-width:520px;
+  margin:60px auto;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  text-align:center;
+  padding:30px 18px;
+}
+
+@media(max-width:760px){
+  .grid{grid-template-columns:1fr}
+  .card{padding:14px}
+  .appliance{min-height:126px}
+  .fields{grid-template-columns:1fr}
+  .badge{display:none}
+  header h1{font-size:16px}
+}
+</style>
+</head>
+
+<body>
+
+<div id="staff">
+
+<header>
+<div class="head">
+  <div>
+    <small>買取レスキュー流山</small>
+    <h1>家電リサイクル料金計算</h1>
+  </div>
+  <div class="badge">料金マスタ 2026年7月版</div>
+</div>
+</header>
+
+<main>
+
+<div class="steps">
+  <div class="step active"><div class="num">1</div>家電選択</div>
+  <div class="line"></div>
+  <div class="step"><div class="num">2</div>詳細</div>
+  <div class="line"></div>
+  <div class="step"><div class="num">3</div>確認</div>
+</div>
+
+<div class="grid">
+
+<section class="card">
+
+<h2>家電を選択</h2>
+<p class="lead">追加したい家電をタップしてください。</p>
+
+<div class="appliances">
+
+<button type="button" class="appliance" data-type="tv">
+<div class="ico">
+<svg viewBox="0 0 64 64">
+<rect x="8" y="11" width="48" height="35" rx="3"/>
+<path d="M23 54h18M32 46v8"/>
+</svg>
+</div>
+テレビ
+<span>液晶・有機EL・プラズマ / ブラウン管</span>
+</button>
+
+<button type="button" class="appliance" data-type="fridge">
+<div class="ico">
+<svg viewBox="0 0 64 64">
+<rect x="18" y="5" width="28" height="54" rx="3"/>
+<path d="M18 27h28M23 13v8M23 34v9"/>
+</svg>
+</div>
+冷蔵庫・冷凍庫
+<span>170L以下 / 171L以上</span>
+</button>
+
+<button type="button" class="appliance" data-type="washer">
+<div class="ico">
+<svg viewBox="0 0 64 64">
+<rect x="13" y="7" width="38" height="50" rx="4"/>
+<circle cx="32" cy="36" r="13"/>
+<path d="M18 14h3M26 14h3M43 14h2"/>
+</svg>
+</div>
+洗濯機・衣類乾燥機
+<span>縦型 / ドラム式 / 乾燥機</span>
+</button>
+
+<button type="button" class="appliance" data-type="aircon">
+<div class="ico">
+<svg viewBox="0 0 64 64">
+<rect x="7" y="15" width="50" height="26" rx="4"/>
+<path d="M12 33h40M18 41c0 6-5 5-5 10M31 41c0 7-5 7-5 12M44 41c0 6 5 5 5 10"/>
+</svg>
+</div>
+エアコン
+<span>ルーム / 窓用 / 片側のみ</span>
+</button>
+
+</div>
+
+<div class="info">
+<b>家電リサイクル法の対象は4品目</b><br>
+エアコン、テレビ、冷蔵庫・冷凍庫、洗濯機・衣類乾燥機です。
+</div>
+
+</section>
+
+<aside class="card summary">
+
+<h3>選択中の家電</h3>
+
+<div id="list"></div>
+
+<div id="empty" class="empty">
+まだ家電が選択されていません
+</div>
+
+<div id="totalBox" class="total hidden">
+
+<div class="row">
+<span>リサイクル料金</span>
+<b id="rSum">0円</b>
+</div>
+
+<div class="row">
+<span>収集運搬料金</span>
+<b id="tSum">0円</b>
+</div>
+
+<div class="row grand">
+<span>合計（税込）</span>
+<b id="gSum">0円</b>
+</div>
+
+<button type="button" id="customerBtn" class="customerBtn">
+お客様確認画面へ
+</button>
+
+</div>
+
+</aside>
+
+</div>
+</main>
+</div>
+
+
+<!-- 詳細入力 -->
+<div id="overlay" class="overlay">
+
+<div class="sheet">
+
+<div class="sheetHead">
+<h2 id="sheetTitle">家電を追加</h2>
+<button type="button" id="closeBtn" class="x">×</button>
+</div>
+
+<div class="fields">
+
+<div class="field">
+<label>種類・サイズ</label>
+<select id="size"></select>
+</div>
+
+<div class="field">
+<label>メーカー</label>
+<select id="maker"></select>
+</div>
+
+</div>
+
+<div class="field" style="margin-top:10px">
+
+<label>受付区分</label>
+
+<div class="choice">
+
+<button type="button" id="normal" class="active">
+配送・買取・持込
+</button>
+
+<button type="button" id="dispose">
+処分のみ
+</button>
+
+</div>
+
+</div>
+
+<div class="calc">
+
+<div class="row">
+<span>リサイクル料金</span>
+<b id="pR">—</b>
+</div>
+
+<div class="row">
+<span>収集運搬料金</span>
+<b id="pT">—</b>
+</div>
+
+<div class="row last">
+<span>小計</span>
+<b id="pG">—</b>
+</div>
+
+</div>
+
+<div class="codes">
+<b>リサイクル券用</b><br>
+メーカーコード：
+<span id="makerCode">公式マスタ連携予定</span>
+<br>
+品目・料金区分コード：
+<span id="itemCode">—</span>
+</div>
+
+<div class="sheetActions">
+
+<button type="button" id="cancelBtn" class="secondary">
+キャンセル
+</button>
+
+<button type="button" id="addBtn" class="primary">
+この家電を追加
+</button>
+
+</div>
+
+</div>
+</div>
+
+
+<!-- お客様確認 -->
+<div id="customer" class="hidden">
+
+<div class="customer">
+
+<div class="confirmHead">
+
+<div class="check">✓</div>
+
+<h2>料金をご確認ください</h2>
+
+<p class="lead">
+内容と金額にお間違いがないかご確認ください。
+</p>
+
+</div>
+
+<div id="customerList"></div>
+
+<div class="ctotal">
+<small>合計金額（税込）</small>
+<b id="customerTotal">0円</b>
+</div>
+
+</div>
+
+<div class="bottom">
+
+<div class="bottomin">
+
+<button type="button" id="backBtn" class="secondary">
+修正する
+</button>
+
+<button type="button" id="confirmBtn" class="primary">
+内容を確認しました
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- 完了 -->
+<div id="done" class="hidden">
+
+<div class="done">
+
+<div style="font-size:50px">✅</div>
+
+<h2>お客様確認済み</h2>
+
+<p id="doneTime"></p>
+
+<button type="button" id="restartBtn" class="secondary">
+新しい計算を始める
+</button>
+
+</div>
+
+</div>
+
+
+<script>
+(function(){
+
+"use strict";
+
+function el(id){
+  return document.getElementById(id);
+}
+
+
+/* ===============================
+   家電種類
+================================ */
+
+var TYPES={
+
+tv:{
+  name:"テレビ",
+  sizes:[
+    ["flat_s","液晶・有機EL・プラズマ 15V型以下","51"],
+    ["flat_l","液晶・有機EL・プラズマ 16V型以上","52"],
+    ["crt_s","ブラウン管 15型以下","21"],
+    ["crt_l","ブラウン管 16型以上","22"]
+  ]
+},
+
+fridge:{
+  name:"冷蔵庫・冷凍庫",
+  sizes:[
+    ["s","170L以下","31"],
+    ["l","171L以上","32"]
+  ]
+},
+
+washer:{
+  name:"洗濯機・衣類乾燥機",
+  sizes:[
+    ["washer","洗濯機","40"],
+    ["drum","ドラム式洗濯乾燥機","40"],
+    ["dryer","衣類乾燥機","40"]
+  ]
+},
+
+aircon:{
+  name:"エアコン",
+  sizes:[
+    ["room","ルームエアコン","10"],
+    ["window","窓用","10"],
+    ["one","片側のみ","10"]
+  ]
+}
+
+};
+
+
+/* ===============================
+   試作用料金マスタ
+================================ */
+
+var MAKERS={
+
+"パナソニック":{
+ aircon:550,
+ tv_flat_s:1870,
+ tv_flat_l:2970,
+ tv_crt_s:1320,
+ tv_crt_l:2420,
+ fridge_s:3740,
+ fridge_l:4730,
+ washer:2530
+},
+
+"シャープ":{
+ aircon:990,
+ tv_flat_s:1870,
+ tv_flat_l:2970,
+ tv_crt_s:1870,
+ tv_crt_l:2970,
+ fridge_s:3740,
+ fridge_l:4730,
+ washer:2530
+},
+
+"日立":{
+ aircon:990,
+ tv_flat_s:1870,
+ tv_flat_l:2970,
+ fridge_s:3740,
+ fridge_l:4730,
+ washer:2530
+},
+
+"三菱電機":{
+ aircon:990,
+ tv_flat_s:1870,
+ tv_flat_l:2970,
+ fridge_s:3740,
+ fridge_l:4730,
+ washer:2530
+},
+
+"東芝":{
+ aircon:550,
+ fridge_s:3740,
+ fridge_l:4730,
+ washer:2530
+},
+
+"TVS REGZA":{
+ tv_flat_s:1870,
+ tv_flat_l:2970
+},
+
+"ソニー":{
+ tv_flat_s:1870,
+ tv_flat_l:2970,
+ tv_crt_s:1870,
+ tv_crt_l:2970
+},
+
+"ダイキン":{
+ aircon:550
+},
+
+"AQUA":{
+ fridge_s:3784,
+ fridge_l:4774,
+ washer:2574
+}
+
+};
+
+
+var items=[];
+
+var edit={
+ type:"",
+ size:"",
+ maker:"",
+ mode:"normal"
+};
+
+
+function yen(n){
+ return Number(n||0).toLocaleString("ja-JP")+"円";
+}
+
+
+function rkey(type,size){
+
+ if(type==="tv"){
+  return "tv_"+size;
+ }
+
+ if(type==="fridge"){
+  return "fridge_"+size;
+ }
+
+ if(type==="washer"){
+  return "washer";
+ }
+
+ if(type==="aircon"){
+  return "aircon";
+ }
+
+ return "";
+}
+
+
+function transport(type,size,mode){
+
+ var d=mode==="dispose";
+
+ if(type==="tv"){
+  return size.slice(-1)==="s"
+   ? (d?5500:2200)
+   : (d?6600:3300);
+ }
+
+ if(type==="fridge"){
+  return size==="s"
+   ? (d?6600:3300)
+   : (d?7700:4400);
+ }
+
+ if(type==="washer"){
+
+  if(size==="drum"){
+   return d?8800:5500;
+  }
+
+  if(size==="dryer"){
+   return d?6600:3300;
+  }
+
+  return d?7700:4400;
+ }
+
+ if(type==="aircon"){
+
+  return size==="room"
+   ? (d?7700:4400)
+   : (d?5500:2200);
+ }
+
+ return 0;
+}
+
+
+function calc(o){
+
+ var m=MAKERS[o.maker]||{};
+
+ var r=m[rkey(o.type,o.size)];
+
+ var t=transport(
+  o.type,
+  o.size,
+  o.mode
+ );
+
+ return{
+  r:typeof r==="number"?r:null,
+  t:t,
+  g:typeof r==="number"?r+t:null
+ };
+
+}
+
+
+function selectedSize(o){
+
+ var a=TYPES[o.type].sizes;
+
+ for(var i=0;i<a.length;i++){
+
+  if(a[i][0]===o.size){
+   return a[i];
+  }
+
+ }
+
+ return a[0];
+}
+
+
+function openSheet(type){
+
+ edit={
+  type:type,
+  size:TYPES[type].sizes[0][0],
+  maker:"",
+  mode:"normal"
+ };
+
+ el("sheetTitle").textContent=
+ TYPES[type].name+"を追加";
+
+ el("size").innerHTML=
+ TYPES[type].sizes.map(function(x){
+
+  return '<option value="'+x[0]+'">'+
+  x[1]+
+  '</option>';
+
+ }).join("");
+
+
+ el("maker").innerHTML=
+ '<option value="">メーカーを選択</option>'+
+ Object.keys(MAKERS).map(function(x){
+
+  return '<option value="'+x+'">'+
+  x+
+  '</option>';
+
+ }).join("");
+
+
+ el("normal").classList.add("active");
+
+ el("dispose").classList.remove("active");
+
+ el("overlay").classList.add("open");
+
+ updatePreview();
+
+}
+
+
+function closeSheet(){
+
+ el("overlay").classList.remove("open");
+
+}
+
+
+function updatePreview(){
+
+ var c=calc(edit);
+
+ var s=selectedSize(edit);
+
+ el("pR").textContent=
+ edit.maker
+ ? (c.r===null ? "料金未登録" : yen(c.r))
+ : "—";
+
+
+ el("pT").textContent=
+ yen(c.t);
+
+
+ el("pG").textContent=
+ (edit.maker && c.g!==null)
+ ? yen(c.g)
+ : "—";
+
+
+ el("itemCode").textContent=
+ s[2];
+
+
+ el("makerCode").textContent=
+ "公式マスタ連携予定";
+
+}
+
+
+function render(){
+
+ var list=el("list");
+
+ var rs=0;
+ var ts=0;
+ var gs=0;
+
+ list.innerHTML="";
+
+
+ for(var i=0;i<items.length;i++){
+
+  (function(it,index){
+
+   var c=calc(it);
+
+   var s=selectedSize(it);
+
+   rs+=c.r||0;
+   ts+=c.t||0;
+   gs+=c.g||0;
+
+
+   var d=document.createElement("div");
+
+   d.className="item";
+
+
+   d.innerHTML=
+
+   '<div class="itemtop">'+
+
+   '<div>'+
+
+   '<b>'+
+   (index+1)+
+   '. '+
+   TYPES[it.type].name+
+   '</b>'+
+
+   '<div class="meta">'+
+   it.maker+
+   '<br>'+
+   s[1]+
+   '<br>'+
+   (it.mode==="dispose"
+   ? "処分のみ"
+   : "配送・買取・持込")+
+   '</div>'+
+
+   '</div>'+
+
+   '<button type="button" class="del">'+
+   '削除'+
+   '</button>'+
+
+   '</div>'+
+
+   '<div class="subtotal">'+
+   '<span>小計</span>'+
+   '<b>'+yen(c.g)+'</b>'+
+   '</div>';
+
+
+   d.querySelector(".del")
+   .addEventListener(
+   "click",
+   function(){
+
+    items=
+    items.filter(function(x){
+
+     return x.id!==it.id;
+
+    });
+
+    render();
+
+   });
+
+
+   list.appendChild(d);
+
+
+  })(items[i],i);
+
+ }
+
+
+ el("empty")
+ .classList
+ .toggle(
+ "hidden",
+ items.length>0
+ );
+
+
+ el("totalBox")
+ .classList
+ .toggle(
+ "hidden",
+ items.length===0
+ );
+
+
+ el("rSum").textContent=
+ yen(rs);
+
+ el("tSum").textContent=
+ yen(ts);
+
+ el("gSum").textContent=
+ yen(gs);
+
+}
+
+
+/* ===============================
+   家電ボタン
+================================ */
+
+var aps=
+document.querySelectorAll(".appliance");
+
+
+for(var i=0;i<aps.length;i++){
+
+ aps[i].addEventListener(
+ "click",
+ function(){
+
+  openSheet(
+   this.getAttribute("data-type")
+  );
+
+ });
+
+}
+
+
+/* 閉じる */
+
+el("closeBtn")
+.addEventListener(
+"click",
+closeSheet
+);
+
+
+el("cancelBtn")
+.addEventListener(
+"click",
+closeSheet
+);
+
+
+/* サイズ */
+
+el("size")
+.addEventListener(
+"change",
+function(){
+
+ edit.size=this.value;
+
+ updatePreview();
+
+});
+
+
+/* メーカー */
+
+el("maker")
+.addEventListener(
+"change",
+function(){
+
+ edit.maker=this.value;
+
+ updatePreview();
+
+});
+
+
+/* 受付区分 */
+
+el("normal")
+.addEventListener(
+"click",
+function(){
+
+ edit.mode="normal";
+
+ this.classList.add("active");
+
+ el("dispose")
+ .classList
+ .remove("active");
+
+ updatePreview();
+
+});
+
+
+el("dispose")
+.addEventListener(
+"click",
+function(){
+
+ edit.mode="dispose";
+
+ this.classList.add("active");
+
+ el("normal")
+ .classList
+ .remove("active");
+
+ updatePreview();
+
+});
+
+
+/* 家電追加 */
+
+el("addBtn")
+.addEventListener(
+"click",
+function(){
+
+ var c=calc(edit);
+
+
+ if(!edit.maker){
+
+  alert(
+  "メーカーを選択してください"
+  );
+
+  return;
+
+ }
+
+
+ if(c.r===null){
+
+  alert(
+  "このメーカーと品目の料金はまだ登録されていません"
+  );
+
+  return;
+
+ }
+
+
+ items.push({
+
+  type:edit.type,
+
+  size:edit.size,
+
+  maker:edit.maker,
+
+  mode:edit.mode,
+
+  id:Date.now()+
+  "_"+
+  Math.random()
+
+ });
+
+
+ closeSheet();
+
+ render();
+
+});
+
+
+/* ===============================
+   お客様確認
+================================ */
+
+el("customerBtn")
+.addEventListener(
+"click",
+function(){
+
+ var wrap=
+ el("customerList");
+
+ var g=0;
+
+ wrap.innerHTML="";
+
+
+ for(var i=0;i<items.length;i++){
+
+  var it=items[i];
+
+  var c=calc(it);
+
+  var s=selectedSize(it);
+
+  g+=c.g||0;
+
+
+  var d=
+  document.createElement("div");
+
+  d.className="ccard";
+
+
+  d.innerHTML=
+
+  '<b>'+
+  (i+1)+
+  '. '+
+  TYPES[it.type].name+
+  '</b>'+
+
+  '<div class="meta">'+
+  it.maker+
+  ' ／ '+
+  s[1]+
+  '</div>'+
+
+  '<div class="row" style="margin-top:8px">'+
+  '<span>リサイクル料金</span>'+
+  '<b>'+yen(c.r)+'</b>'+
+  '</div>'+
+
+  '<div class="row">'+
+  '<span>収集運搬料金</span>'+
+  '<b>'+yen(c.t)+'</b>'+
+  '</div>'+
+
+  '<div class="row grand">'+
+  '<span>小計</span>'+
+  '<b>'+yen(c.g)+'</b>'+
+  '</div>';
+
+
+  wrap.appendChild(d);
+
+ }
+
+
+ el("customerTotal")
+ .textContent=
+ yen(g);
+
+
+ el("staff")
+ .classList
+ .add("hidden");
+
+
+ el("customer")
+ .classList
+ .remove("hidden");
+
+
+ window.scrollTo(0,0);
+
+});
+
+
+/* 修正 */
+
+el("backBtn")
+.addEventListener(
+"click",
+function(){
+
+ el("customer")
+ .classList
+ .add("hidden");
+
+ el("staff")
+ .classList
+ .remove("hidden");
+
+ window.scrollTo(0,0);
+
+});
+
+
+/* 確認 */
+
+el("confirmBtn")
+.addEventListener(
+"click",
+function(){
+
+ el("doneTime")
+ .textContent=
+ new Date()
+ .toLocaleString("ja-JP");
+
+
+ el("customer")
+ .classList
+ .add("hidden");
+
+
+ el("done")
+ .classList
+ .remove("hidden");
+
+
+ window.scrollTo(0,0);
+
+});
+
+
+/* 最初から */
+
+el("restartBtn")
+.addEventListener(
+"click",
+function(){
+
+ location.reload();
+
+});
+
+
+render();
+
+})();
+</script>
+
+</body>
+</html>
