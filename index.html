@@ -112,6 +112,16 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
     .preview-toolbar { display: none !important; }
     @page { size: A4 portrait; margin: 12mm; }
   }
+
+/* v13 送信中表示 */
+#submitBusyV13{display:none;position:fixed;inset:0;background:#f6f7f9;z-index:10050;align-items:center;justify-content:center;padding:22px}
+#submitBusyV13.show{display:flex}
+#submitBusyV13 .busy-card{width:min(390px,100%);background:#fff;border-radius:22px;padding:34px 24px;text-align:center;box-shadow:0 8px 28px #0002}
+#submitBusyV13 .busy-road{position:relative;height:72px;overflow:hidden;margin:4px 0 16px;border-bottom:4px solid #cbd5e1}
+#submitBusyV13 .busy-truck{position:absolute;left:-60px;bottom:5px;font-size:48px;animation:driveV13 1.8s ease-in-out infinite}
+@keyframes driveV13{0%{left:-60px}70%{left:calc(100% - 50px)}100%{left:calc(100% + 65px)}}
+#submitBusyV13 .busy-title{font-size:21px;font-weight:900}
+#submitBusyV13 .busy-sub{margin-top:9px;color:#64748b;line-height:1.6}
 </style>
 </head>
 <body>
@@ -708,12 +718,15 @@ function generateLinePairCodeClient_(){
 async function submitInquiry(){
   if(!inquiry || isSubmitting)return;
   isSubmitting=true;
+  const busyV13=document.getElementById("submitBusyV13");
+  if(busyV13)busyV13.classList.add("show");
   const submitBtn=document.getElementById("submitInquiryBtn");
   if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="送信中…";submitBtn.style.opacity=".6";}
   localStorage.setItem("lastInquiry",JSON.stringify(inquiry));
   const status=document.getElementById("sendStatus");status.classList.remove("hidden");
   if(!CONFIG.WEBHOOK_URL){
     status.innerHTML="<b>受付データを端末に保存しました。</b><br>送信先URLが未設定です。";
+    if(busyV13)busyV13.classList.remove("show");
     isSubmitting=false;if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
     return;
   }
@@ -733,15 +746,23 @@ async function submitInquiry(){
     if(!result || result.ok!==true){
       throw new Error(String((result&&result.error)||"受付サーバーでエラーが発生しました。"));
     }
-    status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
-      (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
-    if(submitBtn){submitBtn.textContent="✓ 送信済み";}
+    if(inquiry.contact==="LINE"){
+      status.innerHTML="<b>受付内容を保存しました。</b><br>続けてLINE連携を完了してください。";
+      if(submitBtn){submitBtn.textContent="LINE連携へ";}
+    }else{
+      status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
+        (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
+      if(submitBtn){submitBtn.textContent="✓ 送信済み";}
+    }
     // LINE選択時：URLが取れた時だけLINEへ移動。
     // URL生成だけ失敗しても受付自体は成功扱いにし、再送による二重受付を防ぐ。
     if(inquiry.contact==="LINE"){
       const chatUrl=String(result.linePairChatUrl||"").trim();
       document.getElementById("preview").style.display="none";
       if(chatUrl){
+        const bt=document.getElementById("submitBusyTitleV13"),bs=document.getElementById("submitBusySubV13");
+        if(bt)bt.textContent="LINE連携へ進みます…";
+        if(bs)bs.innerHTML="LINEの案内に沿って連携してください。<br><b>LINE連携が完了すると受付完了です。</b>";
         window.location.assign(chatUrl);
       }else{
         showSuccessAndReset(inquiry.inquiryId, inquiry.contact, "");
@@ -752,9 +773,11 @@ async function submitInquiry(){
       }
       return;
     }
+    if(busyV13)busyV13.classList.remove("show");
     document.getElementById("preview").style.display="none";
     showSuccessAndReset(inquiry.inquiryId, inquiry.contact, "");
   }catch(e){
+    if(busyV13)busyV13.classList.remove("show");
     console.error(e);
     status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
     isSubmitting=false;
@@ -837,5 +860,5 @@ if(addApplianceBtn){
 })();
 
 </script>
-</body>
+<div id="submitBusyV13"><div class="busy-card"><div class="busy-road"><div class="busy-truck">🚛</div></div><div class="busy-title" id="submitBusyTitleV13">お申し込みを送信中です…</div><div class="busy-sub" id="submitBusySubV13">写真と受付内容を安全に保存しています。<br>完了するまで、この画面を閉じずにお待ちください。</div></div></div></body>
 </html>
