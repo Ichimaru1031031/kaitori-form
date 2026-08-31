@@ -220,6 +220,12 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
     </div>
     <p id="successMessage" style="line-height:1.7">内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。</p>
     <div id="lineLinkArea" class="hidden" style="margin:18px 0">
+      <div id="linePairGuide" class="notice" style="margin:12px 0;text-align:left">
+        <b>LINE連携コード</b><br>
+        <span id="linePairCode" style="display:inline-block;font-size:22px;font-weight:800;letter-spacing:2px;margin:8px 0"></span><br>
+        <button type="button" id="copyLinePairBtn" class="btn gray" style="padding:10px 14px">コードをコピー</button>
+        <div class="small" style="margin-top:8px">① コードをコピー → ②「LINE連携へ進む」→ ③ もちまるのトークにコードを送信してください。</div>
+      </div>
       <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">LINE連携へ進む</button>
       <div class="small" style="margin-top:8px">査定結果をLINEで受け取るために必要です。</div>
     </div>
@@ -710,7 +716,7 @@ async function submitInquiry(){
     status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
       (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
     if(submitBtn){submitBtn.textContent="✓ 送信済み";}
-    showSuccessAndReset(inquiry.inquiryId, inquiry.contact);
+    showSuccessAndReset(inquiry.inquiryId, inquiry.contact, result.linePairCode||'');
   }catch(e){
     console.error(e);
     status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
@@ -718,7 +724,7 @@ async function submitInquiry(){
     if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
   }
 }
-function showSuccessAndReset(inquiryId, contact){
+function showSuccessAndReset(inquiryId, contact, linePairCode){
   document.getElementById("successInquiryId").textContent=inquiryId||"";
   const lineArea=document.getElementById("lineLinkArea");
   const lineBtn=document.getElementById("lineLinkBtn");
@@ -726,6 +732,13 @@ function showSuccessAndReset(inquiryId, contact){
   if(contact==="LINE"){
     lineArea.classList.remove("hidden");
     successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
+    const codeEl=document.getElementById("linePairCode");
+    if(codeEl) codeEl.textContent=linePairCode||"";
+    const copyBtn=document.getElementById("copyLinePairBtn");
+    if(copyBtn) copyBtn.onclick=async function(){
+      try{ await navigator.clipboard.writeText(linePairCode||""); copyBtn.textContent="✓ コピーしました"; }
+      catch(_e){ if(codeEl){ const r=document.createRange();r.selectNodeContents(codeEl);const s=window.getSelection();s.removeAllRanges();s.addRange(r); } }
+    };
     lineBtn.onclick=function(){
       location.href=CONFIG.WEBHOOK_URL+"?line_action=login&id="+encodeURIComponent(inquiryId||"");
     };
