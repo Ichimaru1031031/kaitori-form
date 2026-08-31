@@ -220,16 +220,13 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
     </div>
     <p id="successMessage" style="line-height:1.7">内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。</p>
     <div id="lineLinkArea" class="hidden" style="margin:18px 0">
-      <div id="linePairGuide" class="notice" style="margin:12px 0;text-align:left">
-        <b>LINE連携コード</b><br>
-        <input id="linePairCode" type="text" readonly
-          style="width:100%;font-size:22px;font-weight:800;letter-spacing:2px;text-align:center;padding:14px 8px;margin:8px 0;border:2px solid #9db9dc;border-radius:10px;background:#fff;color:#182238"
-          value="">
-        <button type="button" id="copyLinePairBtn" class="btn gray" style="padding:10px 14px">コードをコピー</button>
-        <div class="small" style="margin-top:8px">① コードをコピー → ②「もちまるを開いて連携する」→ ③ もちまるのトークにコードを送信してください。</div>
+      <div class="notice" style="margin:12px 0;text-align:left;line-height:1.7">
+        <b>LINEで査定結果を受け取る</b><br>
+        下のボタンを押すと「もちまる」のトークが開きます。<br>
+        <b>入力済みのメッセージをそのまま送信するだけで連携完了です。</b>
       </div>
-      <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">もちまるを開いて連携する</button>
-      <div class="small" style="margin-top:8px">※このボタンを押しただけでは連携完了になりません。もちまるのトークに上のコードを送信してください。</div>
+      <button type="button" id="lineLinkBtn" class="btn green full" style="font-size:16px;padding:14px 18px">LINEで連携する</button>
+      <div class="small" style="margin-top:8px">コードのコピー・貼り付けは不要です。</div>
     </div>
     <button type="button" class="btn gray full" onclick="finishAndReset()">入力画面に戻る</button>
   </div>
@@ -244,7 +241,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
 </div>
 
 <script>
-const EXPECTED_BUILD='KAITORI-LINE-FINAL-CLEAN-v10';
+const EXPECTED_BUILD='KAITORI-LINE-AUTOCHAT-v11';
 const CONFIG={
   // Google Apps Script等の受信URLをここに入れると自動送信できます。
   // 例: "https://script.google.com/macros/s/XXXXXXXX/exec"
@@ -736,7 +733,7 @@ async function submitInquiry(){
     status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
       (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
     if(submitBtn){submitBtn.textContent="✓ 送信済み";}
-    showSuccessAndReset(inquiry.inquiryId, inquiry.contact, result.linePairCode||payload.linePairCode||'');
+    showSuccessAndReset(inquiry.inquiryId, inquiry.contact, result.linePairChatUrl||'');
   }catch(e){
     console.error(e);
     status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
@@ -744,45 +741,24 @@ async function submitInquiry(){
     if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
   }
 }
-function showSuccessAndReset(inquiryId, contact, linePairCode){
+function showSuccessAndReset(inquiryId, contact, linePairChatUrl){
   document.getElementById("successInquiryId").textContent=inquiryId||"";
   const lineArea=document.getElementById("lineLinkArea");
   const lineBtn=document.getElementById("lineLinkBtn");
   const successMessage=document.getElementById("successMessage");
   if(contact==="LINE"){
     lineArea.classList.remove("hidden");
-    successMessage.innerHTML="受付が完了しました。<br><b>LINE連携はまだ完了していません。</b><br>もちまるのトークに連携コードを送信してください。";
-    const codeEl=document.getElementById("linePairCode");
-    if(codeEl) codeEl.value=linePairCode||"";
-    const copyBtn=document.getElementById("copyLinePairBtn");
-    if(copyBtn){
-      copyBtn.disabled=!linePairCode;
-      copyBtn.textContent=linePairCode?"コードをコピー":"コードを取得できませんでした";
-      copyBtn.onclick=async function(){
-        if(!linePairCode){ alert("LINE連携コードを取得できませんでした。ページを閉じずにもう一度受付してください。"); return; }
-        let copied=false;
-        try{
-          if(navigator.clipboard && navigator.clipboard.writeText){
-            await navigator.clipboard.writeText(linePairCode);
-            copied=true;
-          }
-        }catch(_e){}
-        if(!copied && codeEl){
-          try{
-            codeEl.focus();
-            codeEl.select();
-            codeEl.setSelectionRange(0,99999);
-            copied=document.execCommand("copy");
-          }catch(_e){}
-        }
-        copyBtn.textContent=copied?"✓ コピーしました":"コードを長押ししてコピー";
-        if(!copied && codeEl){
-          codeEl.focus(); codeEl.select(); codeEl.setSelectionRange(0,99999);
-        }
-      };
-    }
+    successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
+    lineBtn.disabled=!linePairChatUrl;
+    lineBtn.textContent=linePairChatUrl?"LINEで連携する":"LINE連携URLを取得できませんでした";
     lineBtn.onclick=function(){
-      location.href=CONFIG.WEBHOOK_URL+"?line_action=login&id="+encodeURIComponent(inquiryId||"");
+      if(!linePairChatUrl){
+        alert("LINE連携URLを取得できませんでした。受付番号を控えて店舗へご連絡ください。");
+        return;
+      }
+      // LINE公式アカウントのトークを直接開き、連携コードは入力済みにする。
+      // お客様はLINE側で「送信」を1回押すだけ。
+      window.location.href=linePairChatUrl;
     };
   }else{
     lineArea.classList.add("hidden");
