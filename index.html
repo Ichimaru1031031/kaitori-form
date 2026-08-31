@@ -241,7 +241,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
 </div>
 
 <script>
-const EXPECTED_BUILD='KAITORI-LINE-AUTOCHAT-v11';
+const EXPECTED_BUILD='KAITORI-LINE-AUTOCHAT-v11.1';
 const CONFIG={
   // Google Apps Script等の受信URLをここに入れると自動送信できます。
   // 例: "https://script.google.com/macros/s/XXXXXXXX/exec"
@@ -742,47 +742,31 @@ async function submitInquiry(){
   }
 }
 function showSuccessAndReset(inquiryId, contact, linePairChatUrl){
-  document.getElementById("successInquiryId").textContent=inquiryId||"";
+  const success=document.getElementById("successPreview");
+  const successId=document.getElementById("successInquiryId");
+  const successMessage=document.getElementById("successMessage");
   const lineArea=document.getElementById("lineLinkArea");
   const lineBtn=document.getElementById("lineLinkBtn");
-  const successMessage=document.getElementById("successMessage");
+  if(successId) successId.textContent=inquiryId||"";
+  if(lineArea) lineArea.classList.add("hidden");
   if(contact==="LINE"){
-    lineArea.classList.remove("hidden");
-    successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
-    lineBtn.disabled=!linePairChatUrl;
-    lineBtn.textContent=linePairChatUrl?"LINEで連携する":"LINE連携URLを取得できませんでした";
-    lineBtn.onclick=function(){
-      if(!linePairChatUrl){
-        alert("LINE連携URLを取得できませんでした。受付番号を控えて店舗へご連絡ください。");
-        return;
-      }
-      // LINE公式アカウントのトークを直接開き、連携コードは入力済みにする。
-      // お客様はLINE側で「送信」を1回押すだけ。
-      window.location.href=linePairChatUrl;
-    };
+    if(lineArea) lineArea.classList.remove("hidden");
+    if(successMessage) successMessage.innerHTML="受付が完了しました。<br><b>続けてLINE連携をお願いします。</b>";
+    if(lineBtn){
+      lineBtn.disabled=!linePairChatUrl;
+      lineBtn.textContent=linePairChatUrl?"LINEで連携する":"LINE連携URLを取得できませんでした";
+      lineBtn.onclick=function(){
+        if(!linePairChatUrl){
+          alert("LINE連携URLを取得できませんでした。受付番号を控えて店舗へご連絡ください。");
+          return;
+        }
+        window.location.assign(linePairChatUrl);
+      };
+    }
   }else{
-    lineArea.classList.add("hidden");
-    successMessage.innerHTML=contact==="電話"
-      ? "内容を確認後、店舗からお電話します。<br>この受付番号はお問い合わせ時にご利用ください。"
-      : "内容を確認後、査定結果をメールでご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。";
+    if(successMessage) successMessage.innerHTML="内容を確認後、店舗からご連絡します。<br>この受付番号はお問い合わせ時にご利用ください。";
   }
-  document.getElementById("preview").style.display="none";
-  document.getElementById("successPreview").style.display="block";
-
-  // 送信成功後、入力内容を初期化。完了画面は残す。
-  document.getElementById("quoteForm").reset();
-  items=[{id:makeLocalId(),type:"冷蔵庫",qty:1,photos:[]}];
-  Object.keys(photoFiles).forEach(k=>delete photoFiles[k]);
-  inquiry=null;
-  visitPreferenceCount=1;
-  const extra=document.getElementById("extraVisitDates");
-  if(extra)extra.innerHTML="";
-  const addBtn=document.getElementById("addVisitDateBtn");
-  if(addBtn)addBtn.style.display="";
-  localStorage.removeItem("quoteDraft");
-  renderItems();
-  toggleVisit();
-  isSubmitting=false;
+  if(success) success.classList.add("show");
 }
 function finishAndReset(){
   document.getElementById("successPreview").style.display="none";
