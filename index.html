@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>家電買取 簡易見積もり・出張買取</title>
 <style>
+input[aria-invalid="true"]{border:2px solid #b91c1c;background:#fff7f7}.field-error{color:#b91c1c;font-size:13px;font-weight:700;margin:6px 0;line-height:1.6}
+
 :root{--primary:#1e3a8a;--accent:#2563eb;--green:#059669;--bg:#f8fafc;--border:#cbd5e1;--text:#0f172a;--muted:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:var(--text);line-height:1.55}
 .container{max-width:760px;margin:auto;padding:18px}.header{background:var(--primary);color:white;border-radius:14px;padding:18px 20px;margin-bottom:14px}.header h1{font-size:21px;margin:0 0 5px}.header p{margin:0;font-size:12px;opacity:.9}
@@ -662,6 +664,8 @@ function getData(){
 }
 function contactInputError(d){
   const clean=v=>String(v==null?'':v).normalize('NFKC').trim();
+  if(!clean(d.name))return {field:'name',message:'お名前を入力してください。'};
+  if((d.contact==='LINE'||d.contact==='メール')&&!clean(d.email))return {field:'email',message:'メールアドレスを入力してください。LINEの場合も予備連絡先として必要です。'};
   let tel=clean(d.tel).replace(/[\s()−ー‐-]/g,'');
   if(tel.startsWith('+81'))tel='0'+tel.slice(3);
   if(!/^0[1-9][0-9]{8,9}$/.test(tel)||/^0(\d)\1+$/.test(tel))return {field:'tel',message:'電話番号は市外局番から10〜11桁で入力してください。'};
@@ -674,8 +678,27 @@ function contactInputError(d){
   return null;
 }
 function showContactInputError(error){
-  alert(error.message);
-  document.getElementById(error.field).focus();
+  const input=document.getElementById(error.field);
+  if(!input)return;
+  const preview=document.getElementById('preview');
+  if(preview)preview.style.display='none';
+  let message=document.getElementById(error.field+'Error');
+  if(!message){message=document.createElement('p');message.id=error.field+'Error';message.className='field-error';message.setAttribute('role','alert');input.insertAdjacentElement('afterend',message);}
+  message.textContent=error.message;
+  message.hidden=false;
+  input.setAttribute('aria-invalid','true');
+  const described=(input.getAttribute('aria-describedby')||'').split(/\s+/).filter(Boolean);
+  if(!described.includes(message.id))described.push(message.id);
+  input.setAttribute('aria-describedby',described.join(' '));
+  if(!input.dataset.errorListener){input.addEventListener('input',()=>{input.removeAttribute('aria-invalid');message.hidden=true;});input.dataset.errorListener='yes';}
+  input.scrollIntoView({block:'center',behavior:'smooth'});
+  input.focus({preventScroll:true});
+}
+function serverContactError(message){
+  const fields=[['電話','tel'],['メール','email'],['郵便番号','zip'],['住所','address'],['お名前','name']];
+  if(/接続できません|通信|サービス/.test(message))return null;
+  const match=fields.find(([word])=>message.includes(word));
+  return match?{field:match[1],message}:null;
 }
 function safeShowPreview(){
   try{
@@ -693,9 +716,9 @@ function showPreview(){
   if(oldStatus){oldStatus.classList.add("hidden");oldStatus.innerHTML="";}
 
   if(!items.length){alert("商品を1つ追加してください。");return}
-  const d=getData(); if(!d)return; if(!d.name||!d.tel){alert("お名前・電話番号を入力してください。");return}
+  const d=getData(); if(!d)return;
   if(!d.contact){alert("査定結果の通知方法を選択してください。");return}
-  if((d.contact==="メール" || d.contact==="LINE") && !d.email){alert("LINEまたはメールで受け取る場合は、予備連絡先としてメールアドレスを入力してください。");document.getElementById("email").focus();return}
+  
   const contactError=contactInputError(d);
   if(contactError){showContactInputError(contactError);return;}
   inquiry=d;
@@ -803,6 +826,8 @@ async function submitInquiry(){
   }catch(e){
     if(busyV13)busyV13.classList.remove("show");
     console.error(e);
+    const fieldError=e.isServerResponse?serverContactError(e.message):null;
+    if(fieldError)showContactInputError(fieldError);
     status.innerHTML=e.isServerResponse
       ? "<b>受付できませんでした。</b><br>"+esc(e.message)+"<br>入力内容に不備がある場合は「修正する」から直してください。"
       : "<b>送信結果を確認できませんでした。</b><br>通信状態を確認して、もう一度お試しください。再送時は同じ受付番号を使用します。";
