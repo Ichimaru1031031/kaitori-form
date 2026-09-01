@@ -660,6 +660,21 @@ function getData(){
     contact:(document.querySelector('input[name="contactMethod"]:checked')||{}).value||"",note:document.getElementById("note").value.trim()
   };
 }
+function contactInputError(d){
+  const clean=v=>String(v==null?'':v).normalize('NFKC').trim();
+  let tel=clean(d.tel).replace(/[\s()−ー‐-]/g,'');
+  if(tel.startsWith('+81'))tel='0'+tel.slice(3);
+  if(!/^0[1-9][0-9]{8,9}$/.test(tel)||/^0(\d)\1+$/.test(tel))return {field:'tel',message:'電話番号は市外局番から10〜11桁で入力してください。'};
+  const email=clean(d.email),address=clean(d.address);
+  if(email&&(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email)||email.length>254))return {field:'email',message:'メールアドレスの形式を確認してください。'};
+  if(!address||address.length>500||!/[都道府県]/.test(address)||!/[市区町村]/.test(address)||!/\d|番地なし|無番地/.test(address))return {field:'address',message:'住所は都道府県・市区町村・番地まで入力してください。番地がない場合は「番地なし」と記載してください。'};
+  Object.assign(d,{tel,email,address});
+  return null;
+}
+function showContactInputError(error){
+  alert(error.message);
+  document.getElementById(error.field).focus();
+}
 function safeShowPreview(){
   try{
     showPreview();
@@ -679,6 +694,8 @@ function showPreview(){
   const d=getData(); if(!d)return; if(!d.name||!d.tel||!d.address){alert("お名前・電話番号・住所を入力してください。");return}
   if(!d.contact){alert("査定結果の通知方法を選択してください。");return}
   if((d.contact==="メール" || d.contact==="LINE") && !d.email){alert("LINEまたはメールで受け取る場合は、予備連絡先としてメールアドレスを入力してください。");document.getElementById("email").focus();return}
+  const contactError=contactInputError(d);
+  if(contactError){showContactInputError(contactError);return;}
   inquiry=d;
   const itemHtml=d.items.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px">
     <b>${i+1}. ${esc(x.type)} × ${esc(x.qty)}台</b>
@@ -718,6 +735,8 @@ function generateLinePairCodeClient_(){
 
 async function submitInquiry(){
   if(!inquiry || isSubmitting)return;
+  const contactError=contactInputError(inquiry);
+  if(contactError){closePreview();showContactInputError(contactError);return;}
   isSubmitting=true;
   const busyV13=document.getElementById("submitBusyV13");
   if(busyV13)busyV13.classList.add("show");
@@ -745,7 +764,9 @@ async function submitInquiry(){
     if(!r.ok)throw new Error("HTTP "+r.status);
     const result=await r.json().catch(()=>({ok:false,error:"サーバー応答を読み取れませんでした。"}));
     if(!result || result.ok!==true){
-      throw new Error(String((result&&result.error)||"受付サーバーでエラーが発生しました。"));
+      const error=new Error(String((result&&result.error)||"受付サーバーでエラーが発生しました。"));
+      error.isServerResponse=true;
+      throw error;
     }
     if(inquiry.contact==="LINE"){
       status.innerHTML="<b>受付内容を保存しました。</b><br>続けてLINE連携を完了してください。";
@@ -780,7 +801,9 @@ async function submitInquiry(){
   }catch(e){
     if(busyV13)busyV13.classList.remove("show");
     console.error(e);
-    status.innerHTML="<b>送信に失敗しました。</b><br>データは端末に保存しています。もう一度お試しください。";
+    status.innerHTML=e.isServerResponse
+      ? "<b>受付できませんでした。</b><br>"+esc(e.message)+"<br>入力内容に不備がある場合は「修正する」から直してください。"
+      : "<b>送信結果を確認できませんでした。</b><br>通信状態を確認して、もう一度お試しください。再送時は同じ受付番号を使用します。";
     isSubmitting=false;
     if(submitBtn){submitBtn.disabled=false;submitBtn.textContent="📨 見積もりを送信";submitBtn.style.opacity="1";}
   }
