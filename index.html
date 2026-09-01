@@ -151,8 +151,8 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
         <div><label>電話番号 *</label><input id="tel" type="tel" autocomplete="tel" placeholder="090-0000-0000" required></div>
       </div>
       <div id="emailField" style="margin-top:10px"><label>メールアドレス <span class="small">（LINEが利用できない場合の予備連絡先）</span></label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com"><div class="small" style="margin-top:5px;color:#64748b">LINEまたはメールを選ぶ場合は必須です。LINE連携が途中で完了しなかった場合にも査定結果をお届けできます。</div></div>
-      <div style="margin-top:10px"><label>郵便番号</label><div class="zip-search-row"><input id="zip" inputmode="numeric" maxlength="7" placeholder="2700175"><button type="button" class="btn" onclick="searchAddress()">住所検索</button></div></div>
-      <div style="margin-top:10px"><label>住所 *</label><input id="address" autocomplete="street-address" placeholder="千葉県流山市..." required></div>
+      <div style="margin-top:10px"><label>郵便番号 *</label><div class="zip-search-row"><input id="zip" inputmode="numeric" maxlength="8" required placeholder="2700175"><button type="button" class="btn" onclick="searchAddress()">住所検索</button></div></div>
+      <div style="margin-top:10px"><label>詳しい住所（任意）</label><input id="address" autocomplete="street-address" placeholder="市区町村まででも、空欄でもOK"><div class="small">見積もり時は郵便番号まででOK。番地・建物名は予約確定時に確認します。</div></div>
     </div>
 
     <div class="card">
@@ -667,8 +667,10 @@ function contactInputError(d){
   if(!/^0[1-9][0-9]{8,9}$/.test(tel)||/^0(\d)\1+$/.test(tel))return {field:'tel',message:'電話番号は市外局番から10〜11桁で入力してください。'};
   const email=clean(d.email),address=clean(d.address);
   if(email&&(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email)||email.length>254))return {field:'email',message:'メールアドレスの形式を確認してください。'};
-  if(!address||address.length>500||!/[都道府県]/.test(address)||!/[市区町村]/.test(address)||!/\d|番地なし|無番地/.test(address))return {field:'address',message:'住所は都道府県・市区町村・番地まで入力してください。番地がない場合は「番地なし」と記載してください。'};
-  Object.assign(d,{tel,email,address});
+  const zip=clean(d.zip).replace(/[\s-]/g,'');
+  if(!/^\d{7}$/.test(zip))return {field:'zip',message:'郵便番号を7桁で入力してください。詳しい住所は見積もり時には不要です。'};
+  if(address.length>500)return {field:'address',message:'住所は500文字以内で入力してください。'};
+  Object.assign(d,{tel,email,address,zip});
   return null;
 }
 function showContactInputError(error){
@@ -691,7 +693,7 @@ function showPreview(){
   if(oldStatus){oldStatus.classList.add("hidden");oldStatus.innerHTML="";}
 
   if(!items.length){alert("商品を1つ追加してください。");return}
-  const d=getData(); if(!d)return; if(!d.name||!d.tel||!d.address){alert("お名前・電話番号・住所を入力してください。");return}
+  const d=getData(); if(!d)return; if(!d.name||!d.tel){alert("お名前・電話番号を入力してください。");return}
   if(!d.contact){alert("査定結果の通知方法を選択してください。");return}
   if((d.contact==="メール" || d.contact==="LINE") && !d.email){alert("LINEまたはメールで受け取る場合は、予備連絡先としてメールアドレスを入力してください。");document.getElementById("email").focus();return}
   const contactError=contactInputError(d);
@@ -707,7 +709,7 @@ function showPreview(){
     <div class="preview-row"><b>お名前</b><span>${esc(d.name)}</span></div>
     <div class="preview-row"><b>電話</b><span>${esc(d.tel)}</span></div>
     ${d.email?`<div class="preview-row"><b>メール</b><span>${esc(d.email)}</span></div>`:""}
-    <div class="preview-row"><b>住所</b><span>${esc(d.address)}</span></div>
+    <div class="preview-row"><b>郵便番号</b><span>${esc(d.zip)}</span></div><div class="preview-row"><b>住所</b><span>${esc(d.address||"予約確定時に入力")}</span></div>
     <div class="preview-row"><b>依頼</b><span>${esc(d.mode)}</span></div>
     <div style="margin-top:10px"><b>商品</b>${itemHtml}</div>
     ${d.visit?`<div class="preview-row"><b>希望</b><span>${esc(d.visit.date||"おまかせ")} ${esc(d.visit.time||"")}${d.visit.date2?`<br>第2希望：${esc(d.visit.date2)} ${esc(d.visit.time2||"おまかせ")}`:""}${d.visit.date3?`<br>第3希望：${esc(d.visit.date3)} ${esc(d.visit.time3||"おまかせ")}`:""}</span></div><div class="preview-row"><b>搬出</b><span>${esc([d.visit.building,d.visit.floor,d.visit.elevator].filter(Boolean).join(" / "))}<br>${esc(d.visit.carry)}</span></div>`:""}
