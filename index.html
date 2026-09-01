@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>家電買取 簡易見積もり・出張買取</title>
 <style>
-input[aria-invalid="true"]{border:2px solid #b91c1c;background:#fff7f7}.field-error{color:#b91c1c;font-size:13px;font-weight:700;margin:6px 0;line-height:1.6}
+input[aria-invalid="true"],select[aria-invalid="true"]{border:2px solid #b91c1c;background:#fff7f7}.field-error{color:#b91c1c;font-size:13px;font-weight:700;margin:6px 0;line-height:1.6}
 
 :root{--primary:#1e3a8a;--accent:#2563eb;--green:#059669;--bg:#f8fafc;--border:#cbd5e1;--text:#0f172a;--muted:#64748b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:var(--text);line-height:1.55}
@@ -134,8 +134,6 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
   </div>
 
   <div class="notice">
-    <b>最初は「家電の種類＋写真＋お名前＋電話番号」だけでもOK。</b><br>
-    型番・年式・状態の詳しい入力は、わかる場合だけ追加してください。<br>
     <b style="color:#b91c1c">買取対象年式：エアコンは製造10年以内、その他の家電は製造5年以内です。対象年式を超える製品は買取できません。</b>
   </div>
 
@@ -154,7 +152,7 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       </div>
       <div id="emailField" style="margin-top:10px"><label>メールアドレス <span class="small">（LINEが利用できない場合の予備連絡先）</span></label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com"><div class="small" style="margin-top:5px;color:#64748b">LINEまたはメールを選ぶ場合は必須です。LINE連携が途中で完了しなかった場合にも査定結果をお届けできます。</div></div>
       <div style="margin-top:10px"><label>郵便番号 *</label><div class="zip-search-row"><input id="zip" inputmode="numeric" maxlength="8" required placeholder="2700175"><button type="button" class="btn" onclick="searchAddress()">住所検索</button></div></div>
-      <div style="margin-top:10px"><label>詳しい住所（任意）</label><input id="address" autocomplete="street-address" placeholder="市区町村まででも、空欄でもOK"><div class="small">見積もり時は郵便番号まででOK。番地・建物名は予約確定時に確認します。</div></div>
+      <div style="margin-top:10px"><label>詳しい住所（任意）</label><input id="address" autocomplete="street-address" placeholder="市区町村まででもOK"><div class="small">市区町村まででもOK。番地・建物名は予約確定時に確認します。</div></div>
     </div>
 
     <div class="card">
@@ -170,8 +168,8 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       <div class="notice">希望日時は仮受付です。店舗側で確認してから確定します。</div>
       <div id="visitPreferences" style="display:grid;gap:10px">
         <div class="grid2 visit-pref-row">
-          <div><label>第1希望日</label><input type="date" id="date1" onchange="validateVisitDate(this)"></div>
-          <div><label>第1希望時間</label><select id="time1"><option value="">おまかせ</option><option>10:00〜12:00</option><option>12:00〜14:00</option><option>14:00〜16:00</option><option>16:00〜18:00</option><option>18:00〜20:00</option></select></div>
+          <div><label>第1希望日 *</label><input type="date" id="date1" onchange="validateVisitDate(this)"></div>
+          <div><label>第1希望時間 *</label><select id="time1"><option value="">時間帯を選択してください</option><option>10:00〜12:00</option><option>12:00〜14:00</option><option>14:00〜16:00</option><option>16:00〜18:00</option><option>18:00〜20:00</option></select></div>
         </div>
         <div id="extraVisitDates" style="display:grid;gap:10px"></div>
       </div>
@@ -619,7 +617,7 @@ function toggleNotificationMethod(){
       "査定結果や日程調整をスタッフからお電話します。";
   }
 }
-function toggleVisit(){document.getElementById("visitCard").classList.toggle("hidden",document.querySelector('input[name="mode"]:checked').value!=="出張買取希望")}
+function toggleVisit(){const required=document.querySelector('input[name="mode"]:checked').value==="出張買取希望";document.getElementById("visitCard").classList.toggle("hidden",!required);['date1','time1'].forEach(id=>{document.getElementById(id).required=required;});}
 function searchAddress(){
   const zip=document.getElementById("zip").value.replace(/\D/g,"");
   if(zip.length!==7){alert("郵便番号7桁を入力してください。");return}
@@ -662,6 +660,15 @@ function getData(){
     contact:(document.querySelector('input[name="contactMethod"]:checked')||{}).value||"",note:document.getElementById("note").value.trim()
   };
 }
+function visitPreferenceError(d){
+  if(d.mode!=='出張買取希望')return null;
+  const visit=d.visit||{},date=String(visit.date||''),time=String(visit.time||'');
+  const parsed=new Date(date+'T00:00:00Z');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date)return {field:'date1',message:'第1希望日を入力してください。'};
+  if(parsed.getUTCDay()===4)return {field:'date1',message:'第1希望日は木曜日以外を選択してください（木曜定休）。'};
+  if(!['10:00〜12:00','12:00〜14:00','14:00〜16:00','16:00〜18:00','18:00〜20:00'].includes(time))return {field:'time1',message:'第1希望時間を選択してください。'};
+  return null;
+}
 function contactInputError(d){
   const clean=v=>String(v==null?'':v).normalize('NFKC').trim();
   if(!clean(d.name))return {field:'name',message:'お名前を入力してください。'};
@@ -675,7 +682,7 @@ function contactInputError(d){
   if(!/^\d{7}$/.test(zip))return {field:'zip',message:'郵便番号を7桁で入力してください。詳しい住所は見積もり時には不要です。'};
   if(address.length>500)return {field:'address',message:'住所は500文字以内で入力してください。'};
   Object.assign(d,{tel,email,address,zip});
-  return null;
+  return visitPreferenceError(d);
 }
 function showContactInputError(error){
   const input=document.getElementById(error.field);
@@ -695,7 +702,7 @@ function showContactInputError(error){
   input.focus({preventScroll:true});
 }
 function serverContactError(message){
-  const fields=[['電話','tel'],['メール','email'],['郵便番号','zip'],['住所','address'],['お名前','name']];
+  const fields=[['第1希望日','date1'],['第1希望時間','time1'],['電話','tel'],['メール','email'],['郵便番号','zip'],['住所','address'],['お名前','name']];
   if(/接続できません|通信|サービス/.test(message))return null;
   const match=fields.find(([word])=>message.includes(word));
   return match?{field:match[1],message}:null;
