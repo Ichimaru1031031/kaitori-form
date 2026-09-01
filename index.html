@@ -515,6 +515,7 @@ function renderItems(){
       <div style="display:flex;gap:8px;margin-top:9px">
         <div style="flex:1"><label>台数</label><input type="number" min="1" value="${x.qty}" onchange="setItem('${x.id}','qty',this.value)"></div>
       </div>
+      <p style="font-size:12px;color:#64748b;line-height:1.6;margin:8px 0 6px">お品物の状態がわかる写真を添付してください。全体・型番ラベル・傷や不具合のある箇所など。</p>
       <div class="photo-grid" style="margin-top:9px">
         ${[0,1,2].map((p)=>`<div class="photo-box">📷${p+1}<input type="file" accept="image/*,.heic,.heif" onchange="photoChanged('${x.id}',${p},this.files[0],this)"><div class="small" style="margin-top:4px">${x.photos&&x.photos[p]?"✓ "+esc(x.photos[p].name):"写真を選択"}</div></div>`).join("")}
       </div>
@@ -524,7 +525,7 @@ function renderItems(){
           <div><label>型番</label><select onchange="setItem('${x.id}','model',this.value);renderItems()">${modelOptions(x.type,x.maker,x.model||'')}</select>${x.model==='__custom__'?`<input style="margin-top:6px" placeholder="型番を入力" value="${escAttr(x.modelCustom||'')}" oninput="setCustom('${x.id}','modelCustom',this.value)">`:''}</div>
           <div><label>年式</label><select onchange="setItem('${x.id}','year',this.value)">${yearOptions(x.year||'',x.type)}</select></div>
         </div>
-        <button type="button" class="btn" style="margin-top:10px;width:100%;background:#0891b2" onclick="showModelGuide()">🔍 型番・年式がわからない方はこちら</button>
+        <button type="button" class="btn" style="margin-top:6px;background:transparent;color:#64748b;font-size:12px;font-weight:400;padding:8px 0;box-shadow:none;text-decoration:underline;text-underline-offset:3px" onclick="showModelGuide()">型番・年式がわからない方はこちら</button>
         <div style="margin-top:10px"><label>動作</label>
           <select onchange="setItem('${x.id}','operation',this.value)">
             ${["正常","不具合あり","不明"].map(v=>`<option ${v===(x.operation||"不明")?"selected":""}>${v}</option>`).join("")}
