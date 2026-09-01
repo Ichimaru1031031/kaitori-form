@@ -523,7 +523,7 @@ function renderItems(){
         <div class="grid3">
           <div><label>メーカー</label><select onchange="changeMaker('${x.id}',this.value)">${makerOptions(x.type,x.maker||'')}</select>${x.maker==='__custom__'?`<input style="margin-top:6px" placeholder="メーカー名を入力" value="${escAttr(x.makerCustom||'')}" oninput="setCustom('${x.id}','makerCustom',this.value)">`:''}</div>
           <div><label>型番</label><select onchange="setItem('${x.id}','model',this.value);renderItems()">${modelOptions(x.type,x.maker,x.model||'')}</select>${x.model==='__custom__'?`<input style="margin-top:6px" placeholder="型番を入力" value="${escAttr(x.modelCustom||'')}" oninput="setCustom('${x.id}','modelCustom',this.value)">`:''}</div>
-          <div><label>年式</label><select onchange="setItem('${x.id}','year',this.value)">${yearOptions(x.year||'',x.type)}</select></div>
+          <div><label>年式 *</label><select id="year-${x.id}" required onchange="setItem('${x.id}','year',this.value)">${yearOptions(x.year||'',x.type)}</select></div>
         </div>
         <button type="button" class="btn" style="margin-top:6px;background:transparent;color:#64748b;font-size:12px;font-weight:400;padding:8px 0;box-shadow:none;text-decoration:underline;text-underline-offset:3px" onclick="showModelGuide()">型番・年式がわからない方はこちら</button>
         <div style="margin-top:10px"><label>動作</label>
@@ -671,6 +671,8 @@ function visitPreferenceError(d){
 }
 function contactInputError(d){
   const clean=v=>String(v==null?'':v).normalize('NFKC').trim();
+  const missingYear=(d.items||[]).findIndex(x=>!clean(x.year));
+  if(missingYear>=0)return {field:'year-'+d.items[missingYear].id,message:'商品'+(missingYear+1)+'の年式を選択してください。'};
   if(!clean(d.name))return {field:'name',message:'お名前を入力してください。'};
   if((d.contact==='LINE'||d.contact==='メール')&&!clean(d.email))return {field:'email',message:'メールアドレスを入力してください。LINEの場合も予備連絡先として必要です。'};
   let tel=clean(d.tel).replace(/[\s()−ー‐-]/g,'');
