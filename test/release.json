@@ -3,7 +3,8 @@
   "release": "KR-SYSTEM-1.0.0-test.9",
   "gasVersion": 10,
   "notificationMode": "SIMULATED",
-  "access": "MYSELF",
-  "webAppUrl": "https://script.google.com/macros/s/AKfycbzYafSh_PpD0rQprmBjasm7WxmBY2Pc8A7OulRr4jxcZoNmWyrBUJEJJ1f-eGX2gqoOBA/exec",
+  "access": "TEST_BRANCH_NOT_PUBLISHED",
+  "gatewayUrl": "https://kaitori-rescue-test-gateway-gl6ltoiuva-an.a.run.app",
+  "cloudProject": "kaitori-rescue-system-test",
   "upstreamCommit": "64b5c9b706206aba6dfc7a2315b63565d7221874"
 }
