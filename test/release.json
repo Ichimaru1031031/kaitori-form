@@ -1,0 +1,9 @@
+{
+  "environment": "TEST",
+  "release": "KR-SYSTEM-1.0.0-test.6",
+  "gasVersion": 7,
+  "notificationMode": "SIMULATED",
+  "access": "MYSELF",
+  "webAppUrl": "https://script.google.com/macros/s/AKfycbzYafSh_PpD0rQprmBjasm7WxmBY2Pc8A7OulRr4jxcZoNmWyrBUJEJJ1f-eGX2gqoOBA/exec",
+  "upstreamCommit": "64b5c9b706206aba6dfc7a2315b63565d7221874"
+}
