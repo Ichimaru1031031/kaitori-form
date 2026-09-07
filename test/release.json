@@ -1,7 +1,7 @@
 {
   "environment": "TEST",
-  "release": "KR-SYSTEM-1.0.0-test.8",
-  "gasVersion": 9,
+  "release": "KR-SYSTEM-1.0.0-test.9",
+  "gasVersion": 10,
   "notificationMode": "SIMULATED",
   "access": "MYSELF",
   "webAppUrl": "https://script.google.com/macros/s/AKfycbzYafSh_PpD0rQprmBjasm7WxmBY2Pc8A7OulRr4jxcZoNmWyrBUJEJJ1f-eGX2gqoOBA/exec",
