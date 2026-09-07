@@ -594,8 +594,9 @@ async function buildInquiryPayload(){
           itemId:x.id,
           itemType:x.type,
           position:p+1,
-          originalName:f.name,
-          ...photo
+          originalName:photo.name,
+          type:photo.type,
+          data:photo.data
         });
       }
     }
@@ -631,6 +632,11 @@ function val(id){
   const el=document.getElementById(id);
   return el ? (el.value || "") : "";
 }
+function secureInquiryId(){
+  if(!window.crypto||typeof window.crypto.getRandomValues!=='function')throw new Error('安全な受付番号を作成できません。ブラウザを更新してください。');
+  const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
+  return 'KR-'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+}
 function getData(){
   const mode=document.querySelector('input[name="mode"]:checked').value;
   if(mode==="出張買取希望"){
@@ -644,14 +650,14 @@ function getData(){
     }
   }
   return {
-    inquiryId:"KR-"+Math.random().toString(36).slice(2,6).toUpperCase(),
+    inquiryId:secureInquiryId(),
     createdAt:new Date().toISOString(),store:CONFIG.STORE_NAME,
     name:document.getElementById("name").value.trim(),
     tel:document.getElementById("tel").value.trim(),
     email:document.getElementById("email").value.trim(),
     zip:document.getElementById("zip").value.trim(),
     address:document.getElementById("address").value.trim(),
-    mode,items:items.map(x=>({...x,maker:x.maker==='__custom__'?(x.makerCustom||''):x.maker,model:x.model==='__custom__'?(x.modelCustom||''):x.model})),
+    mode,items:items.map(x=>({id:x.id,type:x.type,qty:Number(x.qty),maker:x.maker==='__custom__'?(x.makerCustom||''):(x.maker||''),model:x.model==='__custom__'?(x.modelCustom||''):(x.model||''),year:x.year||'',operation:x.operation||'不明',condition:x.condition||'不明'})),
     visit:mode==="出張買取希望"?{
       date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
       building:document.getElementById("building").value,floor:document.getElementById("floor").value,
@@ -822,6 +828,7 @@ async function submitInquiry(){
         if(bs)bs.innerHTML="LINEの案内に沿って連携してください。<br><b>LINE連携が完了すると受付完了です。</b>";
         window.location.assign(chatUrl);
       }else{
+        if(busyV13)busyV13.classList.remove("show");
         showSuccessAndReset(inquiry.inquiryId, inquiry.contact, "");
         const successMessageEl=document.getElementById("successMessage");
         if(successMessageEl){
