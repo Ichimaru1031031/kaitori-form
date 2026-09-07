@@ -595,8 +595,9 @@ async function buildInquiryPayload(){
           itemId:x.id,
           itemType:x.type,
           position:p+1,
-          originalName:f.name,
-          ...photo
+          originalName:photo.name,
+          type:photo.type,
+          data:photo.data
         });
       }
     }
