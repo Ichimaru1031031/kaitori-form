@@ -633,9 +633,10 @@ function val(id){
   return el ? (el.value || "") : "";
 }
 function secureInquiryId(){
-  if(!window.crypto||typeof window.crypto.getRandomValues!=='function')throw new Error('安全な受付番号を作成できません。ブラウザを更新してください。');
-  const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
-  return 'KR-'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+  if(!window.crypto||typeof window.crypto.getRandomValues!=="function")throw new Error("安全な受付番号を作成できません。ブラウザを更新してください。");
+  const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",bytes=new Uint8Array(4);
+  window.crypto.getRandomValues(bytes);
+  return "KR-"+Array.from(bytes,b=>alphabet[b%alphabet.length]).join("");
 }
 function getData(){
   const mode=document.querySelector('input[name="mode"]:checked').value;
