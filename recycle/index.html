@@ -129,7 +129,7 @@ select,input{width:100%;height:48px;border:1.5px solid #d0d5dd;border-radius:11p
     <div id="detailForm">
       <div class="formgrid">
         <div class="field"><label>種類・サイズ</label><select id="size"></select></div>
-        <div class="field"><label>メーカー</label><div class="maker-wrap"><input id="makerSearch" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="メーカー名・ブランド名を入力"><div id="makerCandidates" class="maker-list hidden"></div></div><div id="makerSelected" class="maker-selected hidden"></div><div class="maker-hint">候補にない小規模メーカー・旧ブランドは、入力した名称を「指定法人（コード999）」として選択できます。</div></div>
+        <div class="field"><label>メーカー</label><div class="maker-wrap"><input id="makerSearch" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="メーカー名・ブランド名・旧社名を入力"><div id="makerCandidates" class="maker-list hidden"></div></div><div id="makerSelected" class="maker-selected hidden"></div><div class="maker-hint">RKC公式2026年7月版の製造業者名・略称・旧社名から検索します。指定法人（コード999）は公式表で対象となる会社・品目だけに表示されます。</div></div>
       </div>
       <div class="field"><label>受付区分</label>
         <div class="choice"><button type="button" id="normal" class="on">配送・買取・持込</button><button type="button" id="dispose">処分のみ</button></div>
@@ -167,6 +167,18 @@ const $ = (id) => document.getElementById(id);
 
 const RKC_MASTER = [{"name":"パナソニック","code":"100","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"パナソニック Panasonic ナショナル National 松下"},{"name":"メーカーコード 101","code":"101","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"メーカーコード 101 "},{"name":"東芝ライフスタイル","code":"110","itemCodes":["10","31","32","40"],"kana":"東芝ライフスタイル 東芝 TOSHIBA"},{"name":"TVS REGZA","code":"114","itemCodes":["21","22","51","52"],"kana":"TVS REGZA REGZA レグザ 東芝テレビ"},{"name":"ダイキン工業","code":"120","itemCodes":["10"],"kana":"ダイキン工業 ダイキン DAIKIN"},{"name":"ハイセンスジャパン","code":"151","itemCodes":["10","31","32","40","51","52"],"kana":"ハイセンスジャパン ハイセンス HISENSE"},{"name":"LG Electronics Japan","code":"180","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"LG Electronics Japan LG エルジー"},{"name":"メーカーコード 182","code":"182","itemCodes":["10","40"],"kana":"メーカーコード 182 "},{"name":"コロナ","code":"185","itemCodes":["10","31","32","40"],"kana":"コロナ CORONA"},{"name":"メーカーコード 187","code":"187","itemCodes":["10"],"kana":"メーカーコード 187 "},{"name":"メーカーコード 189","code":"189","itemCodes":["10","40"],"kana":"メーカーコード 189 "},{"name":"サムスン電子ジャパン","code":"191","itemCodes":["21","22","31","32","40","51","52"],"kana":"サムスン電子ジャパン Samsung サムスン 三星"},{"name":"メーカーコード 193","code":"193","itemCodes":["31","32"],"kana":"メーカーコード 193 "},{"name":"メーカーコード 194","code":"194","itemCodes":["10"],"kana":"メーカーコード 194 "},{"name":"メーカーコード 198","code":"198","itemCodes":["51","52"],"kana":"メーカーコード 198 "},{"name":"メーカーコード 199","code":"199","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"メーカーコード 199 "},{"name":"日立グローバルライフソリューションズ","code":"300","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"日立グローバルライフソリューションズ 日立 HITACHI"},{"name":"シャープ","code":"310","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"シャープ SHARP"},{"name":"三菱電機","code":"320","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"三菱電機 MITSUBISHI"},{"name":"三菱電機エンジニアリング","code":"321","itemCodes":["31"],"kana":"三菱電機エンジニアリング "},{"name":"ソニー","code":"340","itemCodes":["21","22","51","52"],"kana":"ソニー SONY"},{"name":"ゼネラル","code":"350","itemCodes":["10","21","22","31","32","40","52"],"kana":"ゼネラル "},{"name":"ソニー（アイワ）","code":"360","itemCodes":["21","22","51","52"],"kana":"ソニー（アイワ） "},{"name":"三菱重工冷熱","code":"370","itemCodes":["10"],"kana":"三菱重工冷熱 "},{"name":"メーカーコード 381","code":"381","itemCodes":["10"],"kana":"メーカーコード 381 "},{"name":"メーカーコード 382","code":"382","itemCodes":["10"],"kana":"メーカーコード 382 "},{"name":"メーカーコード 384","code":"384","itemCodes":["10"],"kana":"メーカーコード 384 "},{"name":"良品計画","code":"387","itemCodes":["21","22","31","32","40","51","52"],"kana":"良品計画 MUJI 無印良品"},{"name":"リンナイ","code":"388","itemCodes":["10","40"],"kana":"リンナイ "},{"name":"ハイアールジャパンセールス","code":"392","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"ハイアールジャパンセールス ハイアール HAIER"},{"name":"アクア","code":"393","itemCodes":["10","31","32","40"],"kana":"アクア AQUA"},{"name":"メーカーコード 394","code":"394","itemCodes":["31","32"],"kana":"メーカーコード 394 "},{"name":"アイリスオーヤマ（冷蔵庫等）","code":"395","itemCodes":["31","32","40"],"kana":"アイリスオーヤマ（冷蔵庫等） アイリス IRIS OHYAMA"},{"name":"小泉成器","code":"505","itemCodes":["10","21","22","31"],"kana":"小泉成器 "},{"name":"ツインバード","code":"511","itemCodes":["31","32","40","51","52"],"kana":"ツインバード TWINBIRD"},{"name":"ツナシマ商事","code":"512","itemCodes":["31","32","40"],"kana":"ツナシマ商事 "},{"name":"メーカーコード 514","code":"514","itemCodes":["32","40"],"kana":"メーカーコード 514 "},{"name":"メーカーコード 522","code":"522","itemCodes":["40"],"kana":"メーカーコード 522 "},{"name":"メーカーコード 524","code":"524","itemCodes":["31","32","40"],"kana":"メーカーコード 524 "},{"name":"メーカーコード 529","code":"529","itemCodes":["31","32","40"],"kana":"メーカーコード 529 "},{"name":"デバイスタイル","code":"531","itemCodes":["31","32"],"kana":"デバイスタイル "},{"name":"メーカーコード 532","code":"532","itemCodes":["31","32"],"kana":"メーカーコード 532 "},{"name":"メーカーコード 533","code":"533","itemCodes":["31","32"],"kana":"メーカーコード 533 "},{"name":"日本ゼネラル・アプラィアンス","code":"535","itemCodes":["31","32","40"],"kana":"日本ゼネラル・アプラィアンス "},{"name":"ダイレイ","code":"536","itemCodes":["31","32"],"kana":"ダイレイ "},{"name":"グローバル","code":"538","itemCodes":["31","32"],"kana":"グローバル "},{"name":"ジンアンドマリー","code":"542","itemCodes":["31","32","40"],"kana":"ジンアンドマリー "},{"name":"アズマ","code":"543","itemCodes":["31","32","40","51","52"],"kana":"アズマ "},{"name":"メーカーコード 547","code":"547","itemCodes":["31"],"kana":"メーカーコード 547 "},{"name":"カンデラ・メディアテック","code":"550","itemCodes":["51","52"],"kana":"カンデラ・メディアテック "},{"name":"ザ・ビーズインターナショナル","code":"552","itemCodes":["51","52"],"kana":"ザ・ビーズインターナショナル "},{"name":"Freedom","code":"559","itemCodes":["31","51","52"],"kana":"Freedom "},{"name":"メーカーコード 563","code":"563","itemCodes":["51","52"],"kana":"メーカーコード 563 "},{"name":"ユニテク","code":"566","itemCodes":["52"],"kana":"ユニテク "},{"name":"ピクセラ","code":"570","itemCodes":["51","52"],"kana":"ピクセラ "},{"name":"エスケイジャパン","code":"573","itemCodes":["10","31","32","40","51","52"],"kana":"エスケイジャパン "},{"name":"イー・エム・エー","code":"582","itemCodes":["31","40","51","52"],"kana":"イー・エム・エー "},{"name":"テクタイト","code":"586","itemCodes":["21","22","31","32","40","51","52"],"kana":"テクタイト "},{"name":"メーカーコード 587","code":"587","itemCodes":["51","52"],"kana":"メーカーコード 587 "},{"name":"シロカ","code":"591","itemCodes":["31"],"kana":"シロカ "},{"name":"ジーマックス","code":"596","itemCodes":["31","32"],"kana":"ジーマックス "},{"name":"アルミス","code":"598","itemCodes":["31","40"],"kana":"アルミス "},{"name":"N・TEC","code":"700","itemCodes":["32"],"kana":"N・TEC "},{"name":"マクスゼン","code":"701","itemCodes":["10","31","32","40","51","52"],"kana":"マクスゼン MAXZEN"},{"name":"アントビー","code":"702","itemCodes":["31","32"],"kana":"アントビー "},{"name":"スタイルクレア","code":"703","itemCodes":["31","32"],"kana":"スタイルクレア "},{"name":"山善","code":"704","itemCodes":["10","31","32","40","52"],"kana":"山善 YAMAZEN"},{"name":"ベルソス","code":"706","itemCodes":["31","40","51","52"],"kana":"ベルソス "},{"name":"シービージャパン","code":"707","itemCodes":["40"],"kana":"シービージャパン "},{"name":"ノジマ","code":"708","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"ノジマ "},{"name":"吉岡電気工業","code":"711","itemCodes":["31","32","40"],"kana":"吉岡電気工業 "},{"name":"ドウシシャ","code":"713","itemCodes":["21","22","31","32","40","51","52"],"kana":"ドウシシャ "},{"name":"ライソン","code":"715","itemCodes":["31"],"kana":"ライソン "},{"name":"WIS","code":"717","itemCodes":["31","51","52"],"kana":"WIS "},{"name":"アイリスオーヤマ（エアコン・テレビ）","code":"718","itemCodes":["10","52"],"kana":"アイリスオーヤマ（エアコン・テレビ） アイリス IRIS OHYAMA"},{"name":"A-Stage","code":"719","itemCodes":["31","32","40","52"],"kana":"A-Stage "},{"name":"ティーズネットワーク","code":"721","itemCodes":["31","40","51","52"],"kana":"ティーズネットワーク "},{"name":"池商","code":"724","itemCodes":["31"],"kana":"池商 "},{"name":"SIS","code":"725","itemCodes":["31","40"],"kana":"SIS "},{"name":"TCL JAPAN ELECTRONICS","code":"727","itemCodes":["10","31","32","40","52"],"kana":"TCL JAPAN ELECTRONICS TCL"},{"name":"FFF SMART LIFE CONNECTED","code":"728","itemCodes":["52"],"kana":"FFF SMART LIFE CONNECTED "},{"name":"A&R","code":"730","itemCodes":["31","32","40","52"],"kana":"A&R "},{"name":"ベステックグループ","code":"732","itemCodes":["31","32","40"],"kana":"ベステックグループ "},{"name":"はぴねすくらぶ","code":"733","itemCodes":["31"],"kana":"はぴねすくらぶ "},{"name":"ニトリ","code":"735","itemCodes":["10","31","32","40","52"],"kana":"ニトリ NITORI"},{"name":"ジャスト","code":"736","itemCodes":["52"],"kana":"ジャスト "},{"name":"ウィンコド","code":"737","itemCodes":["31","32","40","51","52"],"kana":"ウィンコド "},{"name":"三金商事","code":"738","itemCodes":["31","40"],"kana":"三金商事 "},{"name":"ジョワイユ","code":"739","itemCodes":["52"],"kana":"ジョワイユ "},{"name":"ケーズウェーブ","code":"740","itemCodes":["40"],"kana":"ケーズウェーブ "},{"name":"さくら製作所","code":"741","itemCodes":["31","32"],"kana":"さくら製作所 "},{"name":"サンコー","code":"742","itemCodes":["31","32","40"],"kana":"サンコー "},{"name":"ユニーク","code":"743","itemCodes":["52"],"kana":"ユニーク "},{"name":"オーム電機","code":"745","itemCodes":["31","40"],"kana":"オーム電機 "},{"name":"モダンデコ","code":"746","itemCodes":["31","32","40","51","52"],"kana":"モダンデコ "},{"name":"アグレクション","code":"747","itemCodes":["52"],"kana":"アグレクション "},{"name":"オプトスタイル","code":"748","itemCodes":["52"],"kana":"オプトスタイル "},{"name":"ユアサプライムス","code":"750","itemCodes":["31"],"kana":"ユアサプライムス "},{"name":"TOHO","code":"751","itemCodes":["31","40"],"kana":"TOHO "},{"name":"グリーンハウス","code":"752","itemCodes":["51","52"],"kana":"グリーンハウス "},{"name":"エレクトロラックス・ジャパン","code":"753","itemCodes":["31","32","40"],"kana":"エレクトロラックス・ジャパン "},{"name":"大橋産業","code":"754","itemCodes":["31"],"kana":"大橋産業 "},{"name":"AKART","code":"755","itemCodes":["51"],"kana":"AKART "},{"name":"オウルテック","code":"756","itemCodes":["31"],"kana":"オウルテック "},{"name":"ナヴィック","code":"757","itemCodes":["10"],"kana":"ナヴィック "},{"name":"都光","code":"758","itemCodes":["31","32"],"kana":"都光 "},{"name":"ファミリーイナダ","code":"760","itemCodes":["52"],"kana":"ファミリーイナダ "},{"name":"サイエルインターナショナル","code":"761","itemCodes":["31","40"],"kana":"サイエルインターナショナル "},{"name":"マキタ","code":"763","itemCodes":["31"],"kana":"マキタ "},{"name":"富士倉","code":"764","itemCodes":["31"],"kana":"富士倉 "},{"name":"ミナト電機工業","code":"765","itemCodes":["31"],"kana":"ミナト電機工業 "},{"name":"eX.media","code":"766","itemCodes":["31","32"],"kana":"eX.media "},{"name":"大自工業","code":"767","itemCodes":["31"],"kana":"大自工業 "},{"name":"オーヤマ","code":"768","itemCodes":["31"],"kana":"オーヤマ "},{"name":"工機ホールディングス","code":"769","itemCodes":["31"],"kana":"工機ホールディングス "},{"name":"フィラディス","code":"770","itemCodes":["31","32"],"kana":"フィラディス "},{"name":"日本美的","code":"772","itemCodes":["10","31","32","40"],"kana":"日本美的 "},{"name":"ロイヤル","code":"773","itemCodes":["31"],"kana":"ロイヤル "},{"name":"コンポジット","code":"774","itemCodes":["31"],"kana":"コンポジット "},{"name":"天通","code":"775","itemCodes":["10","31","32","40","51","52"],"kana":"天通 "},{"name":"TOSEI","code":"776","itemCodes":["40"],"kana":"TOSEI "},{"name":"都商会","code":"777","itemCodes":["31"],"kana":"都商会 "},{"name":"LED TOKYO","code":"778","itemCodes":["52"],"kana":"LED TOKYO "},{"name":"三木森","code":"780","itemCodes":["40"],"kana":"三木森 "},{"name":"アンカー・ジャパン","code":"781","itemCodes":["31"],"kana":"アンカー・ジャパン "},{"name":"ロゴスコーポレーション","code":"782","itemCodes":["31"],"kana":"ロゴスコーポレーション "},{"name":"デンマート","code":"783","itemCodes":["31","32"],"kana":"デンマート "},{"name":"シー・シー・ピー","code":"784","itemCodes":["40"],"kana":"シー・シー・ピー "},{"name":"慶洋エンジニアリング","code":"785","itemCodes":["51","52"],"kana":"慶洋エンジニアリング "},{"name":"HKO JAPAN","code":"786","itemCodes":["52"],"kana":"HKO JAPAN "},{"name":"ライフオンプロダクツ","code":"787","itemCodes":["31"],"kana":"ライフオンプロダクツ "},{"name":"Hanx","code":"789","itemCodes":["31","32","40"],"kana":"Hanx "},{"name":"ISSYZONE JAPAN","code":"790","itemCodes":["31"],"kana":"ISSYZONE JAPAN "},{"name":"ギャランツジャパン","code":"791","itemCodes":["40"],"kana":"ギャランツジャパン "},{"name":"イオントップバリュ","code":"792","itemCodes":["32"],"kana":"イオントップバリュ "},{"name":"ダイコーアペックス","code":"793","itemCodes":["51","52"],"kana":"ダイコーアペックス "},{"name":"UI","code":"794","itemCodes":["40"],"kana":"UI "},{"name":"VANLINKS","code":"795","itemCodes":["31","32"],"kana":"VANLINKS "},{"name":"高橋国際商事","code":"796","itemCodes":["52"],"kana":"高橋国際商事 "},{"name":"ワールプールジャパン","code":"797","itemCodes":["40"],"kana":"ワールプールジャパン "},{"name":"ジェネレーションパス","code":"901","itemCodes":["31","32","40","51","52"],"kana":"ジェネレーションパス "},{"name":"ハート電機サービス","code":"902","itemCodes":["31","32","40"],"kana":"ハート電機サービス "},{"name":"加島商事","code":"903","itemCodes":["31"],"kana":"加島商事 "},{"name":"ベバストサーモアンドコンフォートジャパン","code":"904","itemCodes":["31"],"kana":"ベバストサーモアンドコンフォートジャパン "},{"name":"ビーカム","code":"905","itemCodes":["31"],"kana":"ビーカム "},{"name":"マリン商事","code":"906","itemCodes":["31"],"kana":"マリン商事 "},{"name":"リアルシステム","code":"907","itemCodes":["31","32"],"kana":"リアルシステム "},{"name":"ダイヤ","code":"908","itemCodes":["40"],"kana":"ダイヤ "},{"name":"スカイワースジャパンエレクトロニクス","code":"909","itemCodes":["52"],"kana":"スカイワースジャパンエレクトロニクス "},{"name":"マルエヌ","code":"910","itemCodes":["40"],"kana":"マルエヌ "},{"name":"KTC科技日本","code":"911","itemCodes":["52"],"kana":"KTC科技日本 "},{"name":"ヒロ・コーポレーション","code":"912","itemCodes":["31"],"kana":"ヒロ・コーポレーション "},{"name":"エディオン","code":"913","itemCodes":["31","32","40"],"kana":"エディオン "},{"name":"タンスのゲン","code":"914","itemCodes":["31","32"],"kana":"タンスのゲン "},{"name":"三和一商事","code":"915","itemCodes":["31"],"kana":"三和一商事 "},{"name":"ミラタップ","code":"916","itemCodes":["32"],"kana":"ミラタップ "},{"name":"指定法人","code":"999","itemCodes":["10","21","22","31","32","40","51","52"],"kana":"指定法人 "}];
 const RKC_FEES = {"100":{"10":550,"21":1320,"22":2420,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"101":{"10":550,"21":1320,"22":2420,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"110":{"10":550,"31":3740,"32":4730,"40":2530},"114":{"21":1320,"22":2420,"51":1870,"52":2970},"120":{"10":550},"151":{"10":990,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"180":{"10":990,"21":1320,"22":2420,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"182":{"10":990,"40":2530},"185":{"10":550,"31":4730,"32":4730,"40":2530},"187":{"10":990},"189":{"10":990,"40":2530},"191":{"21":1870,"22":2970,"51":1870,"52":2970,"31":3740,"32":4730,"40":2640},"193":{"31":5599,"32":6149},"194":{"10":9900},"198":{"51":3352,"52":3352},"199":{"10":1265,"21":1595,"22":2695,"51":2145,"52":3245,"31":4015,"32":5005,"40":2805},"300":{"10":990,"21":1870,"22":2970,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"310":{"10":990,"21":1870,"22":2970,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"320":{"10":990,"21":1870,"22":2970,"51":1870,"52":2970,"31":3740,"32":4730,"40":2530},"321":{"31":3740},"340":{"21":1870,"22":2970,"51":1870,"52":2970},"350":{"10":990,"21":1870,"22":2970,"52":2970,"31":3740,"32":4730,"40":2530},"360":{"21":1870,"22":2970,"51":1870,"52":2970},"370":{"10":990},"381":{"10":1034},"382":{"10":1034},"384":{"10":990},"387":{"21":1914,"22":3014,"51":1914,"52":3014,"31":3784,"32":4774,"40":2574},"388":{"10":1034,"40":2574},"392":{"10":1034,"21":1364,"22":2464,"51":1914,"52":3014,"31":3784,"32":4774,"40":2574},"393":{"10":1034,"31":3784,"32":4774,"40":2574},"394":{"31":4774,"32":4774},"395":{"31":4730,"32":4730,"40":2530},"505":{"10":990,"21":3100,"22":3700,"31":5200},"511":{"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"512":{"31":5200,"32":5600,"40":3300},"514":{"32":5600,"40":3300},"522":{"40":3300},"524":{"31":5200,"32":5600,"40":3300},"529":{"31":5200,"32":5600,"40":3300},"531":{"31":5200,"32":5600},"532":{"31":5200,"32":5600},"533":{"31":5200,"32":5600},"535":{"31":5200,"32":5600,"40":3300},"536":{"31":5200,"32":5600},"538":{"31":5200,"32":5600},"542":{"31":5200,"32":5600,"40":3300},"543":{"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"547":{"31":5200},"550":{"51":3100,"52":3700},"552":{"51":3100,"52":3700},"559":{"51":3100,"52":3700,"31":5200},"563":{"51":3100,"52":3700},"566":{"52":3700},"570":{"51":3100,"52":3700},"573":{"10":2000,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"582":{"51":3100,"52":3700,"31":5200,"40":3300},"586":{"21":3100,"22":3700,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"587":{"51":3100,"52":3700},"591":{"31":5200},"596":{"31":5200,"32":5600},"598":{"31":5200,"40":3300},"700":{"32":5600},"701":{"10":2000,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"702":{"31":5200,"32":5600},"703":{"31":5200,"32":5600},"704":{"10":2000,"52":3700,"31":5200,"32":5600,"40":3300},"706":{"51":3100,"52":3700,"31":5200,"40":3300},"707":{"40":3300},"708":{"10":2000,"21":3100,"22":3700,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"711":{"31":5200,"32":5600,"40":3300},"713":{"21":3100,"22":3700,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"715":{"31":5200},"717":{"51":3100,"52":3700,"31":5200},"718":{"10":2000,"52":3700},"719":{"52":3700,"31":5200,"32":5600,"40":3300},"721":{"51":3100,"52":3700,"31":5200,"40":3300},"724":{"31":5200},"725":{"31":5200,"40":3300},"727":{"10":2000,"52":3700,"31":5200,"32":5600,"40":3300},"728":{"52":3700},"730":{"52":3700,"31":5200,"32":5600,"40":3300},"732":{"31":5200,"32":5600,"40":3300},"733":{"31":5200},"735":{"10":2000,"52":3700,"31":5200,"32":5600,"40":3300},"736":{"52":3700},"737":{"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"738":{"31":5200,"40":3300},"739":{"52":3700},"740":{"40":3300},"741":{"31":5200,"32":5600},"742":{"31":5200,"32":5600,"40":3300},"743":{"52":3700},"745":{"31":5200,"40":3300},"746":{"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"747":{"52":3700},"748":{"52":3700},"750":{"31":5200},"751":{"31":5200,"40":3300},"752":{"51":3100,"52":3700},"753":{"31":5200,"32":5600,"40":3300},"754":{"31":5200},"755":{"51":3100},"756":{"31":5200},"757":{"10":2000},"758":{"31":5200,"32":5600},"760":{"52":3700},"761":{"31":5200,"40":3300},"763":{"31":5200},"764":{"31":5200},"765":{"31":5200},"766":{"31":5200,"32":5600},"767":{"31":5200},"768":{"31":5200},"769":{"31":5200},"770":{"31":5200,"32":5600},"772":{"10":2000,"31":5200,"32":5600,"40":3300},"773":{"31":5200},"774":{"31":5200},"775":{"10":2000,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"776":{"40":3300},"777":{"31":5200},"778":{"52":3700},"780":{"40":3300},"781":{"31":5200},"782":{"31":5200},"783":{"31":5200,"32":5600},"784":{"40":3300},"785":{"51":3100,"52":3700},"786":{"52":3700},"787":{"31":5200},"789":{"31":5200,"32":5600,"40":3300},"790":{"31":5200},"791":{"40":3300},"792":{"32":5600},"793":{"51":3100,"52":3700},"794":{"40":3300},"795":{"31":5200,"32":5600},"796":{"52":3700},"797":{"40":3300},"901":{"51":3100,"52":3700,"31":5200,"32":5600,"40":3300},"902":{"31":5200,"32":5600,"40":3300},"903":{"31":5200},"904":{"31":5200},"905":{"31":5200},"906":{"31":5200},"907":{"31":5200,"32":5600},"908":{"40":3300},"909":{"52":3700},"910":{"40":3300},"911":{"52":3700},"912":{"31":5200},"913":{"31":5200,"32":5600,"40":3300},"914":{"31":5200,"32":5600},"915":{"31":5200},"916":{"32":5600},"999":{"10":2000,"21":3100,"22":3700,"51":3100,"52":3700,"31":5200,"32":5600,"40":3300}};
+
+// 2026年7月版で追加確認した製造業者コード。
+Object.assign(RKC_FEES,{"184":{"31":3740,"32":4730},"506":{"31":5200},"507":{"31":5200,"32":5600},"779":{"31":5200}});
+
+let RKC_ALIASES={aircon:[],tv:[],fridge:[],washer:[]};
+fetch("./rkc-aliases.json",{cache:"no-cache"})
+  .then(function(response){if(!response.ok)throw new Error("HTTP "+response.status);return response.json();})
+  .then(function(data){
+    RKC_ALIASES=data;
+    if(document.activeElement===$("makerSearch") && editing.type) showMakerCandidates($("makerSearch").value);
+  })
+  .catch(function(error){console.error("RKC製造業者名マスタを読み込めませんでした",error);});
 
 const TOP_MAKERS = {
   tv:["TVS REGZA","ソニー","シャープ","パナソニック","ハイセンスジャパン","TCL JAPAN ELECTRONICS","LG Electronics Japan","サムスン電子ジャパン","マクスゼン","ニトリ"],
@@ -220,8 +232,29 @@ function makersFor(type,size){
   const code=itemCodeFor(type,size);
   return RKC_MASTER.filter(function(m){ return m.itemCodes.indexOf(code)!==-1; });
 }
-function makerRecord(name){
-  return RKC_MASTER.find(function(m){return m.name===name;}) || null;
+function aliasMakerRecordsFor(type,size){
+  const itemCode=itemCodeFor(type,size);
+  return (RKC_ALIASES[type]||[]).map(function(row){
+    const itemCodes=String(row[2]||"").match(/../g)||[];
+    return {name:row[0],code:String(row[1]),itemCodes:itemCodes,kana:row[0],officialAlias:true,designated:String(row[1])==="999"};
+  }).filter(function(m){
+    return m.itemCodes.indexOf(itemCode)!==-1 && RKC_FEES[m.code] && typeof RKC_FEES[m.code][itemCode]==="number";
+  });
+}
+function allMakerRecords(type,size){
+  const records=makersFor(type,size).filter(function(m){return !(m.code==="999" && m.name==="指定法人");})
+    .concat(aliasMakerRecordsFor(type,size));
+  const seen={};
+  return records.filter(function(m){
+    const key=normalizeMakerText(m.name)+"|"+m.code;
+    if(seen[key]) return false;
+    seen[key]=true;
+    return true;
+  });
+}
+function makerRecord(name,type,size){
+  const records=type && size ? allMakerRecords(type,size) : RKC_MASTER;
+  return records.find(function(m){return m.name===name;}) || null;
 }
 function toKatakana(str){
   return String(str||"").replace(/[ぁ-ゖ]/g,function(ch){return String.fromCharCode(ch.charCodeAt(0)+0x60);});
@@ -236,23 +269,18 @@ function escapeHtml(v){
 }
 function searchMakerRecordsFor(type,size,query){
   const q=normalizeMakerText(query);
-  const records=makersFor(type,size);
+  const records=allMakerRecords(type,size);
   if(!q){
     const top=TOP_MAKERS[type]||[];
     return top.map(function(n){return records.find(function(m){return m.name===n;});}).filter(Boolean);
   }
-  const matched=records.filter(function(m){
+  return records.filter(function(m){
     return normalizeMakerText(m.name+" "+(m.kana||"")+" "+m.code).indexOf(q)!==-1;
   }).sort(function(a,b){
     const an=normalizeMakerText(a.name), bn=normalizeMakerText(b.name);
     const ap=an.indexOf(q)===0?0:1, bp=bn.indexOf(q)===0?0:1;
     return ap-bp || a.name.localeCompare(b.name,"ja");
   });
-  const typed=String(query||"").trim();
-  if(typed && !matched.some(function(m){return m.code==="999";})){
-    matched.push({name:typed,code:"999",itemCodes:["10","21","22","31","32","40","51","52"],kana:typed,designated:true});
-  }
-  return matched;
 }
 function searchMakerRecords(query){
   return searchMakerRecordsFor(editing.type,editing.size,query);
@@ -268,7 +296,7 @@ function showMakerCandidates(query){
   if(!records.length){
     const empty=document.createElement("div");
     empty.className="maker-empty";
-    empty.textContent="該当するメーカーがありません。メーカー名・ブランド名・メーカーコードでも検索できます。";
+    empty.textContent="RKC公式マスタに該当するメーカーがありません。銘板の製造業者名・旧社名・ブランド名を確認し、見つからない場合はRKCへ確認してください。";
     box.appendChild(empty);
   }else{
     records.forEach(function(rec){
@@ -276,8 +304,8 @@ function showMakerCandidates(query){
       b.type="button";
       b.className="maker-option";
       const fee=RKC_FEES[rec.code] && RKC_FEES[rec.code][itemCodeFor(editing.type,editing.size)];
-      b.innerHTML=rec.designated
-        ? '<b>「'+escapeHtml(rec.name)+'」を指定法人として選択</b><small>メーカーコード 999 ／ 指定法人対象と確認できる場合のみ選択</small>'
+      b.innerHTML=rec.code==="999"
+        ? '<b>'+escapeHtml(rec.name)+'</b><small>指定法人 ／ メーカーコード 999 ／ RKC公式対象</small>'
         : '<b>'+escapeHtml(rec.name)+'</b><small>メーカーコード '+escapeHtml(rec.code)+(typeof fee==="number"?' ／ RKC料金登録済み':'')+'</small>';
       // iPhone対策：pointerdownでは確定しない。スクロール後の通常clickだけで選択する。
       b.addEventListener("click",function(e){e.preventDefault();chooseMaker(rec);});
@@ -297,8 +325,8 @@ function chooseMaker(rec){
   updatePreview();
 }
 function refreshMakerCandidates(){
-  const names=makersFor(editing.type,editing.size).map(function(m){return m.name;});
-  if(editing.maker && editing.makerCode!=="999" && names.indexOf(editing.maker)===-1){
+  const valid=allMakerRecords(editing.type,editing.size).some(function(m){return m.name===editing.maker && m.code===editing.makerCode;});
+  if(editing.maker && !valid){
     editing.maker="";editing.makerCode="";$("makerSearch").value="";$("makerSelected").classList.add("hidden");
   }
   if(document.activeElement===$("makerSearch")) showMakerCandidates($("makerSearch").value);
@@ -332,7 +360,7 @@ let items = [];
 let editing = {type:null,size:null,maker:"",makerCode:"",mode:"normal"};
 
 function calc(o){
-  const rec=makerRecord(o.maker);
+  const rec=makerRecord(o.maker,o.type,o.size);
   const makerCode=o.makerCode || (rec ? rec.code : "");
   const itemCode=itemCodeFor(o.type,o.size);
   const r=makerCode && RKC_FEES[makerCode] ? RKC_FEES[makerCode][itemCode] : null;
@@ -343,7 +371,7 @@ function calc(o){
 function recycleEntry(o){
   const c=calc(o);
   const found=TYPES[o.type] && TYPES[o.type].sizes.find(function(x){return x[0]===o.size;});
-  const rec=makerRecord(o.maker);
+  const rec=makerRecord(o.maker,o.type,o.size);
   return {
     type:o.type,
     appliance:TYPES[o.type] ? TYPES[o.type].name : "",
@@ -362,7 +390,7 @@ function recycleEntry(o){
 
 // 承り伝票など他画面からも、同じ料金マスタと計算結果を利用するための共通窓口。
 window.KaitoriRecycle=Object.freeze({
-  version:"2.7",
+  version:"2.8",
   types:TYPES,
   searchMakers:function(o){
     return searchMakerRecordsFor(o.type,o.size,o.query||"").map(function(m){
@@ -411,7 +439,7 @@ function updatePreview(){
   $("pRecycle").textContent = editing.maker ? (c.r===null?"公式確認":yen(c.r)) : "—";
   $("pTransport").textContent = yen(c.t);
   $("pTotal").textContent = (editing.maker && c.total!==null) ? yen(c.total) : "—";
-  const mr=makerRecord(editing.maker); $("makerCode").textContent = editing.makerCode || (mr ? mr.code : (editing.maker ? "要公式確認" : "—"));
+  const mr=makerRecord(editing.maker,editing.type,editing.size); $("makerCode").textContent = editing.makerCode || (mr ? mr.code : (editing.maker ? "要公式確認" : "—"));
   $("itemCode").textContent = editing.type ? itemCodeFor(editing.type,editing.size) : "—";
 }
 
@@ -470,7 +498,7 @@ $("makerSearch").addEventListener("click",function(e){
 });
 $("makerSearch").addEventListener("input",function(e){
   const v=e.target.value.trim();
-  const exact=makersFor(editing.type,editing.size).find(function(m){return m.name===v;});
+  const exact=allMakerRecords(editing.type,editing.size).find(function(m){return m.name===v;});
   editing.maker=exact ? exact.name : "";
   editing.makerCode=exact ? exact.code : "";
   if(editing.maker){
@@ -533,7 +561,7 @@ $("customerBtn").addEventListener("click",function(){
     d.innerHTML=
       '<h3>'+(i+1)+'. '+TYPES[it.type].name+'</h3>'+
       '<div class="meta"><b>メーカー：</b>'+escapeHtml(it.maker)+'<br><b>家電：</b>'+escapeHtml(label)+'<br>'+(it.mode==="dispose"?"処分のみ":"配送・買取・持込")+'</div>'+
-      '<div class="code-confirm"><b>メーカーコード：</b>'+(it.makerCode||(makerRecord(it.maker)?makerRecord(it.maker).code:'—'))+'<br><b>品目・料金区分コード：</b>'+itemCodeFor(it.type,it.size)+'</div>'+
+      '<div class="code-confirm"><b>メーカーコード：</b>'+(it.makerCode||(makerRecord(it.maker,it.type,it.size)?makerRecord(it.maker,it.type,it.size).code:'—'))+'<br><b>品目・料金区分コード：</b>'+itemCodeFor(it.type,it.size)+'</div>'+
       '<div style="margin-top:10px">'+
       '<div class="mrow"><span>家電リサイクル料金</span><b>'+yen(c.r)+'</b></div>'+
       '<div class="mrow"><span>収集運搬料金</span><b>'+yen(c.t)+'</b></div>'+
