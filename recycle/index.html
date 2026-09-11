@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b2f61">
-<title>買取レスキュー｜家電リサイクル料金計算 v2.3 v2.6</title>
+<title>買取レスキュー｜家電リサイクル料金計算 v2.7</title>
 <style>
 :root{
   --navy:#0b2f61; --blue:#1d67d8; --green:#169b62;
@@ -97,9 +97,9 @@ select,input{width:100%;height:48px;border:1.5px solid #d0d5dd;border-radius:11p
       <p class="sub">アイコンを押すと詳細入力が開きます。追加するたびに家電を選び直します。</p>
 
       <div class="tiles">
-        <button class="tile" data-type="tv"><span class="icon"><svg viewBox="0 0 64 64"><rect x="9" y="12" width="46" height="34" rx="3"/><path d="M24 54h16M32 46v8"/></svg></span><b>テレビ</b><span>ブラウン管 / 液晶・有機EL・プラズマ</span></button>
-        <button class="tile" data-type="fridge"><span class="icon"><svg viewBox="0 0 64 64"><rect x="18" y="5" width="28" height="54" rx="3"/><path d="M18 27h28M23 13v8M23 34v9"/></svg></span><b>冷蔵庫・冷凍庫</b><span>170L以下 / 171L以上</span></button>
-        <button class="tile" data-type="washer"><span class="icon"><svg viewBox="0 0 64 64"><rect x="13" y="7" width="38" height="50" rx="4"/><circle cx="32" cy="36" r="13"/><path d="M18 14h3M26 14h3M43 14h2"/></svg></span><b>洗濯機・衣類乾燥機</b><span>洗濯機 / ドラム式 / 乾燥機</span></button>
+        <button class="tile" data-type="tv"><span class="icon"><svg viewBox="0 0 64 64"><rect x="9" y="12" width="46" height="34" rx="3"/><path d="M24 54h16M32 46v8"/></svg></span><b>テレビ</b><span>15以下 / 16～29 / 30以上</span></button>
+        <button class="tile" data-type="fridge"><span class="icon"><svg viewBox="0 0 64 64"><rect x="18" y="5" width="28" height="54" rx="3"/><path d="M18 27h28M23 13v8M23 34v9"/></svg></span><b>冷蔵庫・冷凍庫</b><span>170L以下 / 171～400L / 401L以上</span></button>
+        <button class="tile" data-type="washer"><span class="icon"><svg viewBox="0 0 64 64"><rect x="13" y="7" width="38" height="50" rx="4"/><circle cx="32" cy="36" r="13"/><path d="M18 14h3M26 14h3M43 14h2"/></svg></span><b>洗濯機・衣類乾燥機</b><span>5.9kg以下 / 6.0kg以上 / ドラム / 乾燥機</span></button>
         <button class="tile" data-type="aircon"><span class="icon"><svg viewBox="0 0 64 64"><rect x="7" y="15" width="50" height="26" rx="4"/><path d="M12 33h40M18 41c0 6-5 5-5 10M31 41c0 7-5 7-5 12M44 41c0 6 5 5 5 10"/></svg></span><b>エアコン</b><span>ルーム / 窓用 / 片側のみ</span></button>
       </div>
 
@@ -129,7 +129,7 @@ select,input{width:100%;height:48px;border:1.5px solid #d0d5dd;border-radius:11p
     <div id="detailForm">
       <div class="formgrid">
         <div class="field"><label>種類・サイズ</label><select id="size"></select></div>
-        <div class="field"><label>メーカー</label><div class="maker-wrap"><input id="makerSearch" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="見つからないメーカーは1文字から検索"><div id="makerCandidates" class="maker-list hidden"></div></div><div id="makerSelected" class="maker-selected hidden"></div><div class="maker-hint">未入力ではこの家電の主要10メーカーを表示。1文字入力すると、この家電に対応する検索用メーカー一覧から候補を絞り込みます。</div></div>
+        <div class="field"><label>メーカー</label><div class="maker-wrap"><input id="makerSearch" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="メーカー名・ブランド名を入力"><div id="makerCandidates" class="maker-list hidden"></div></div><div id="makerSelected" class="maker-selected hidden"></div><div class="maker-hint">候補にない小規模メーカー・旧ブランドは、入力した名称を「指定法人（コード999）」として選択できます。</div></div>
       </div>
       <div class="field"><label>受付区分</label>
         <div class="choice"><button type="button" id="normal" class="on">配送・買取・持込</button><button type="button" id="dispose">処分のみ</button></div>
@@ -178,13 +178,15 @@ const TOP_MAKERS = {
 const TYPES = {
   tv:{name:"テレビ",sizes:[
     ["flat_s","液晶・有機EL・プラズマ 15V型以下"],
-    ["flat_l","液晶・有機EL・プラズマ 16V型以上"],
+    ["flat_m","液晶・有機EL・プラズマ 16～29V型"],
+    ["flat_l","液晶・有機EL・プラズマ 30V型以上"],
     ["crt_s","ブラウン管 15型以下"],
-    ["crt_l","ブラウン管 16型以上"]
+    ["crt_m","ブラウン管 16～29型"],
+    ["crt_l","ブラウン管 30型以上"]
   ]},
-  fridge:{name:"冷蔵庫・冷凍庫",sizes:[["s","170L以下"],["l","171L以上"]]},
+  fridge:{name:"冷蔵庫・冷凍庫",sizes:[["s","170L以下"],["m","171～400L"],["l","401L以上"]]},
   washer:{name:"洗濯機・衣類乾燥機",sizes:[
-    ["washer","洗濯機（縦型等）"],["drum","ドラム式洗濯乾燥機"],["dryer","衣類乾燥機"]
+    ["washer_s","洗濯機 5.9kg以下"],["washer_l","洗濯機 6.0kg以上"],["drum","ドラム式洗濯乾燥機"],["dryer","衣類乾燥機"]
   ]},
   aircon:{name:"エアコン",sizes:[["room","ルームエアコン"],["window","窓用"],["one","片側のみ"]]}
 };
@@ -192,7 +194,7 @@ const TYPES = {
 function recycleKey(type,size){
   if(type==="tv"){
     if(size==="flat_s") return "tv_flat_s";
-    if(size==="flat_l") return "tv_flat_l";
+    if(size==="flat_m" || size==="flat_l") return "tv_flat_l";
     if(size==="crt_s") return "tv_crt_s";
     return "tv_crt_l";
   }
@@ -208,9 +210,9 @@ function itemCodeFor(type,size){
   if(type==="washer") return "40";
   if(type==="tv"){
     if(size==="crt_s") return "21";
-    if(size==="crt_l") return "22";
+    if(size==="crt_m" || size==="crt_l") return "22";
     if(size==="flat_s") return "51";
-    if(size==="flat_l") return "52";
+    if(size==="flat_m" || size==="flat_l") return "52";
   }
   return "—";
 }
@@ -227,20 +229,33 @@ function toKatakana(str){
 function normalizeMakerText(v){
   return toKatakana(String(v||"")).toUpperCase().replace(/[\s　・･_.\-（）()株式会社]/g,"");
 }
-function searchMakerRecords(query){
+function escapeHtml(v){
+  return String(v==null?"":v).replace(/[&<>"']/g,function(ch){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch];
+  });
+}
+function searchMakerRecordsFor(type,size,query){
   const q=normalizeMakerText(query);
-  const records=makersFor(editing.type,editing.size);
+  const records=makersFor(type,size);
   if(!q){
-    const top=TOP_MAKERS[editing.type]||[];
+    const top=TOP_MAKERS[type]||[];
     return top.map(function(n){return records.find(function(m){return m.name===n;});}).filter(Boolean);
   }
-  return records.filter(function(m){
+  const matched=records.filter(function(m){
     return normalizeMakerText(m.name+" "+(m.kana||"")+" "+m.code).indexOf(q)!==-1;
   }).sort(function(a,b){
     const an=normalizeMakerText(a.name), bn=normalizeMakerText(b.name);
     const ap=an.indexOf(q)===0?0:1, bp=bn.indexOf(q)===0?0:1;
     return ap-bp || a.name.localeCompare(b.name,"ja");
   });
+  const typed=String(query||"").trim();
+  if(typed && !matched.some(function(m){return m.code==="999";})){
+    matched.push({name:typed,code:"999",itemCodes:["10","21","22","31","32","40","51","52"],kana:typed,designated:true});
+  }
+  return matched;
+}
+function searchMakerRecords(query){
+  return searchMakerRecordsFor(editing.type,editing.size,query);
 }
 function showMakerCandidates(query){
   const box=$("makerCandidates");
@@ -261,38 +276,50 @@ function showMakerCandidates(query){
       b.type="button";
       b.className="maker-option";
       const fee=RKC_FEES[rec.code] && RKC_FEES[rec.code][itemCodeFor(editing.type,editing.size)];
-      b.innerHTML='<b>'+rec.name+'</b><small>メーカーコード '+rec.code+(typeof fee==="number"?' ／ RKC料金登録済み':'')+'</small>';
+      b.innerHTML=rec.designated
+        ? '<b>「'+escapeHtml(rec.name)+'」を指定法人として選択</b><small>メーカーコード 999 ／ 指定法人対象と確認できる場合のみ選択</small>'
+        : '<b>'+escapeHtml(rec.name)+'</b><small>メーカーコード '+escapeHtml(rec.code)+(typeof fee==="number"?' ／ RKC料金登録済み':'')+'</small>';
       // iPhone対策：pointerdownでは確定しない。スクロール後の通常clickだけで選択する。
-      b.addEventListener("click",function(e){e.preventDefault();chooseMaker(rec.name);});
+      b.addEventListener("click",function(e){e.preventDefault();chooseMaker(rec);});
       box.appendChild(b);
     });
   }
   box.classList.remove("hidden");
 }
 function hideMakerCandidates(){ $("makerCandidates").classList.add("hidden"); }
-function chooseMaker(name){
-  editing.maker=name;
-  $("makerSearch").value=name;
-  $("makerSelected").textContent="選択中："+name;
+function chooseMaker(rec){
+  editing.maker=rec.name;
+  editing.makerCode=rec.code;
+  $("makerSearch").value=rec.name;
+  $("makerSelected").textContent="選択中："+rec.name+(rec.code==="999" && rec.name!=="指定法人" ? "（指定法人・コード999）" : "");
   $("makerSelected").classList.remove("hidden");
   hideMakerCandidates();
   updatePreview();
 }
 function refreshMakerCandidates(){
   const names=makersFor(editing.type,editing.size).map(function(m){return m.name;});
-  if(editing.maker && names.indexOf(editing.maker)===-1){
-    editing.maker="";$("makerSearch").value="";$("makerSelected").classList.add("hidden");
+  if(editing.maker && editing.makerCode!=="999" && names.indexOf(editing.maker)===-1){
+    editing.maker="";editing.makerCode="";$("makerSearch").value="";$("makerSelected").classList.add("hidden");
   }
   if(document.activeElement===$("makerSearch")) showMakerCandidates($("makerSearch").value);
 }
 
 function transport(type,size,mode){
   const dispose = mode==="dispose";
-  if(type==="tv") return size.endsWith("_s") ? (dispose?5500:2200) : (dispose?6600:3300);
-  if(type==="fridge") return size==="s" ? (dispose?6600:3300) : (dispose?7700:4400);
+  if(type==="tv"){
+    if(size.endsWith("_s")) return dispose?5500:2200;
+    if(size.endsWith("_m")) return dispose?6600:3300;
+    return dispose?7700:4400;
+  }
+  if(type==="fridge"){
+    if(size==="s") return dispose?6600:3300;
+    if(size==="m") return dispose?7700:4400;
+    return dispose?8800:5500;
+  }
   if(type==="washer"){
     if(size==="drum") return dispose?8800:5500;
     if(size==="dryer") return dispose?6600:3300;
+    if(size==="washer_s") return dispose?6600:3300;
     return dispose?7700:4400;
   }
   if(type==="aircon") return size==="room" ? (dispose?7700:4400) : (dispose?5500:2200);
@@ -302,19 +329,61 @@ function transport(type,size,mode){
 function yen(n){ return Number(n||0).toLocaleString("ja-JP")+"円"; }
 
 let items = [];
-let editing = {type:null,size:null,maker:"",mode:"normal"};
+let editing = {type:null,size:null,maker:"",makerCode:"",mode:"normal"};
 
 function calc(o){
   const rec=makerRecord(o.maker);
+  const makerCode=o.makerCode || (rec ? rec.code : "");
   const itemCode=itemCodeFor(o.type,o.size);
-  const r=rec && RKC_FEES[rec.code] ? RKC_FEES[rec.code][itemCode] : null;
+  const r=makerCode && RKC_FEES[makerCode] ? RKC_FEES[makerCode][itemCode] : null;
   const t=transport(o.type,o.size,o.mode);
   return {r:typeof r==="number"?r:null,t:t,total:typeof r==="number"?r+t:null};
 }
 
+function recycleEntry(o){
+  const c=calc(o);
+  const found=TYPES[o.type] && TYPES[o.type].sizes.find(function(x){return x[0]===o.size;});
+  const rec=makerRecord(o.maker);
+  return {
+    type:o.type,
+    appliance:TYPES[o.type] ? TYPES[o.type].name : "",
+    size:o.size,
+    sizeLabel:found ? found[1] : "",
+    maker:o.maker,
+    makerCode:o.makerCode || (rec ? rec.code : ""),
+    itemCode:itemCodeFor(o.type,o.size),
+    mode:o.mode,
+    modeLabel:o.mode==="dispose" ? "処分のみ" : "配送・買取・持込",
+    recycleFee:c.r,
+    transportFee:c.t,
+    total:c.total
+  };
+}
+
+// 承り伝票など他画面からも、同じ料金マスタと計算結果を利用するための共通窓口。
+window.KaitoriRecycle=Object.freeze({
+  version:"2.7",
+  types:TYPES,
+  searchMakers:function(o){
+    return searchMakerRecordsFor(o.type,o.size,o.query||"").map(function(m){
+      return {name:m.name,code:m.code,designated:!!m.designated};
+    });
+  },
+  calculate:function(o){return recycleEntry(o);},
+  getCurrentItems:function(){return items.map(recycleEntry);},
+  getCurrentTotals:function(){
+    return items.map(recycleEntry).reduce(function(a,x){
+      a.recycleFee+=x.recycleFee||0;
+      a.transportFee+=x.transportFee||0;
+      a.total+=x.total||0;
+      return a;
+    },{recycleFee:0,transportFee:0,total:0});
+  }
+});
+
 function openSheet(type){
   if(!TYPES[type]) return;
-  editing = {type:type,size:TYPES[type].sizes[0][0],maker:"",mode:"normal"};
+  editing = {type:type,size:TYPES[type].sizes[0][0],maker:"",makerCode:"",mode:"normal"};
 
   $("modalTitle").textContent = TYPES[type].name+"を追加";
   $("size").innerHTML = TYPES[type].sizes.map(function(x){
@@ -342,7 +411,7 @@ function updatePreview(){
   $("pRecycle").textContent = editing.maker ? (c.r===null?"公式確認":yen(c.r)) : "—";
   $("pTransport").textContent = yen(c.t);
   $("pTotal").textContent = (editing.maker && c.total!==null) ? yen(c.total) : "—";
-  const mr=makerRecord(editing.maker); $("makerCode").textContent = mr ? mr.code : (editing.maker ? "要公式確認" : "—");
+  const mr=makerRecord(editing.maker); $("makerCode").textContent = editing.makerCode || (mr ? mr.code : (editing.maker ? "要公式確認" : "—"));
   $("itemCode").textContent = editing.type ? itemCodeFor(editing.type,editing.size) : "—";
 }
 
@@ -361,7 +430,7 @@ function render(){
     div.className = "item";
     div.innerHTML =
       '<div class="itemtop"><div><b>'+(i+1)+'. '+TYPES[it.type].name+'</b>'+
-      '<div class="itemmeta">'+it.maker+'<br>'+label+'<br>'+
+      '<div class="itemmeta">'+escapeHtml(it.maker)+'<br>'+escapeHtml(label)+'<br>'+
       (it.mode==="dispose"?"処分のみ":"配送・買取・持込")+
       '</div></div><button type="button" class="remove">削除</button></div>'+
       '<div class="itemmoney"><span>小計</span><b>'+yen(c.total)+'</b></div>';
@@ -378,6 +447,7 @@ function render(){
   $("rsum").textContent = yen(rs);
   $("tsum").textContent = yen(ts);
   $("grand").textContent = yen(g);
+  window.dispatchEvent(new CustomEvent("kaitori-recycle-change",{detail:{items:window.KaitoriRecycle.getCurrentItems(),totals:window.KaitoriRecycle.getCurrentTotals()}}));
 }
 
 document.querySelectorAll(".tile[data-type]").forEach(function(btn){
@@ -400,7 +470,9 @@ $("makerSearch").addEventListener("click",function(e){
 });
 $("makerSearch").addEventListener("input",function(e){
   const v=e.target.value.trim();
-  editing.maker=makersFor(editing.type,editing.size).some(function(m){return m.name===v;}) ? v : "";
+  const exact=makersFor(editing.type,editing.size).find(function(m){return m.name===v;});
+  editing.maker=exact ? exact.name : "";
+  editing.makerCode=exact ? exact.code : "";
   if(editing.maker){
     $("makerSelected").textContent="選択中："+editing.maker;
     $("makerSelected").classList.remove("hidden");
@@ -436,7 +508,7 @@ $("add").addEventListener("click",function(){
   if(!editing.maker){alert("候補に表示されるメーカーを選択してください");return;}
   if(c.r===null){alert("メーカーは検索できましたが、選択した組み合わせの料金がRKCマスタにありません。RKC公式料金を確認してください。");return;}
   items.push({
-    type:editing.type,size:editing.size,maker:editing.maker,mode:editing.mode,
+    type:editing.type,size:editing.size,maker:editing.maker,makerCode:editing.makerCode,mode:editing.mode,
     id:String(Date.now())+"_"+String(Math.random())
   });
   closeSheet();
@@ -460,8 +532,8 @@ $("customerBtn").addEventListener("click",function(){
     d.className="ccard";
     d.innerHTML=
       '<h3>'+(i+1)+'. '+TYPES[it.type].name+'</h3>'+
-      '<div class="meta"><b>メーカー：</b>'+it.maker+'<br><b>家電：</b>'+label+'<br>'+(it.mode==="dispose"?"処分のみ":"配送・買取・持込")+'</div>'+
-      '<div class="code-confirm"><b>メーカーコード：</b>'+(makerRecord(it.maker)?makerRecord(it.maker).code:'—')+'<br><b>品目・料金区分コード：</b>'+itemCodeFor(it.type,it.size)+'</div>'+
+      '<div class="meta"><b>メーカー：</b>'+escapeHtml(it.maker)+'<br><b>家電：</b>'+escapeHtml(label)+'<br>'+(it.mode==="dispose"?"処分のみ":"配送・買取・持込")+'</div>'+
+      '<div class="code-confirm"><b>メーカーコード：</b>'+(it.makerCode||(makerRecord(it.maker)?makerRecord(it.maker).code:'—'))+'<br><b>品目・料金区分コード：</b>'+itemCodeFor(it.type,it.size)+'</div>'+
       '<div style="margin-top:10px">'+
       '<div class="mrow"><span>家電リサイクル料金</span><b>'+yen(c.r)+'</b></div>'+
       '<div class="mrow"><span>収集運搬料金</span><b>'+yen(c.t)+'</b></div>'+

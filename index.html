@@ -116,6 +116,19 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
   }
 
 /* v13 送信中表示 */
+#recycleOverlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.78);z-index:1200;padding:12px}
+#recycleOverlay.show{display:flex;align-items:center;justify-content:center}
+.recycle-panel{width:min(1100px,100%);height:min(92vh,920px);background:#fff;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 22px 70px #0005}
+.recycle-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid #e2e8f0}
+.recycle-panel-head b{font-size:16px;color:var(--primary)}
+.recycle-panel iframe{width:100%;flex:1;border:0;background:#f6f8fb}
+.recycle-panel-actions{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;padding:10px 12px;border-top:1px solid #e2e8f0}
+.recycle-summary{margin-top:10px;border:1px solid #a7f3d0;background:#ecfdf5;border-radius:10px;padding:11px;font-size:13px}
+.recycle-summary-row{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+.recycle-summary-row>b{white-space:nowrap}
+.recycle-summary-row.total{border-top:1px solid #a7f3d0;margin-top:5px;padding-top:8px;font-weight:900;color:#047857}
+@media(max-width:600px){#recycleOverlay{padding:0}.recycle-panel{height:100vh;border-radius:0}.recycle-panel-actions{grid-template-columns:1fr 1.5fr}}
+
 #submitBusyV13{display:none;position:fixed;inset:0;background:#f6f7f9;z-index:10050;align-items:center;justify-content:center;padding:22px}
 #submitBusyV13.show{display:flex}
 #submitBusyV13 .busy-card{width:min(390px,100%);background:#fff;border-radius:22px;padding:34px 24px;text-align:center;box-shadow:0 8px 28px #0002}
@@ -142,6 +155,13 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
       <div class="section-title">1. 何を売りたいですか？</div>
       <div id="items"></div>
       <button type="button" id="addApplianceBtn" class="btn green full" onclick="safeAddItem()">＋ 家電を追加</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">リサイクル回収（必要な場合）</div>
+      <div class="notice">買取品とは別に処分する家電がある場合、メーカー・サイズ・受付区分を選ぶと、リサイクル料金と収集運搬料金を計算して承り内容へ反映できます。</div>
+      <button type="button" class="btn green full" onclick="openRecycleCalculator()">♻️ リサイクル家電を選択・料金計算</button>
+      <div id="recycleSlipSummary" class="recycle-summary hidden"></div>
     </div>
 
     <div class="card">
@@ -205,6 +225,17 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
   </form>
 
   <div class="foot">※この簡易版は、店舗側の自動受付サーバーを接続できる構成です。送信先URLを設定すると「確認→送信」の1回操作にできます。</div>
+</div>
+
+<div id="recycleOverlay" role="dialog" aria-modal="true" aria-label="リサイクル料金計算">
+  <div class="recycle-panel">
+    <div class="recycle-panel-head"><b>♻️ リサイクル家電の選択</b><button type="button" class="btn gray" onclick="closeRecycleCalculator()">閉じる</button></div>
+    <iframe id="recycleFrame" src="./recycle/" title="家電リサイクル料金計算"></iframe>
+    <div class="recycle-panel-actions">
+      <button type="button" class="btn gray" onclick="closeRecycleCalculator()">キャンセル</button>
+      <button type="button" class="btn green" onclick="applyRecycleToSlip()">選択内容を承り伝票へ反映</button>
+    </div>
+  </div>
 </div>
 
 <div class="preview" id="preview">
@@ -439,7 +470,43 @@ const CONFIG={
 
 let items=[];
 let inquiry=null;
+let recycleSelection={items:[],totals:{recycleFee:0,transportFee:0,total:0}};
 const photoFiles={};
+
+function yenRecycle(n){return Number(n||0).toLocaleString("ja-JP")+"円"}
+function openRecycleCalculator(){
+  const overlay=document.getElementById("recycleOverlay");
+  if(overlay)overlay.classList.add("show");
+}
+function closeRecycleCalculator(){
+  const overlay=document.getElementById("recycleOverlay");
+  if(overlay)overlay.classList.remove("show");
+}
+function applyRecycleToSlip(){
+  const frame=document.getElementById("recycleFrame");
+  let api=null;
+  try{api=frame&&frame.contentWindow&&frame.contentWindow.KaitoriRecycle}catch(e){}
+  if(!api){alert("リサイクル料金画面の読み込みが完了していません。少し待ってからもう一度お試しください。");return}
+  const selected=api.getCurrentItems();
+  if(!selected.length){alert("リサイクル家電を1つ以上追加してください。");return}
+  recycleSelection={items:JSON.parse(JSON.stringify(selected)),totals:api.getCurrentTotals()};
+  renderRecycleSlipSummary();
+  saveDraft();
+  closeRecycleCalculator();
+}
+function renderRecycleSlipSummary(){
+  const box=document.getElementById("recycleSlipSummary");
+  if(!box)return;
+  if(!recycleSelection.items.length){box.classList.add("hidden");box.innerHTML="";return}
+  const rows=recycleSelection.items.map(function(x,i){
+    return '<div class="recycle-summary-row"><span>'+(i+1)+'. '+esc(x.appliance)+'<br><small>'+esc(x.maker)+' / '+esc(x.sizeLabel)+' / '+esc(x.modeLabel)+'</small></span><b>'+yenRecycle(x.total)+'</b></div>';
+  }).join("");
+  box.innerHTML='<b>承り伝票へ反映するリサイクル内容</b>'+rows+
+    '<div class="recycle-summary-row"><span>リサイクル料金</span><b>'+yenRecycle(recycleSelection.totals.recycleFee)+'</b></div>'+
+    '<div class="recycle-summary-row"><span>収集運搬料金</span><b>'+yenRecycle(recycleSelection.totals.transportFee)+'</b></div>'+
+    '<div class="recycle-summary-row total"><span>合計（税込）</span><b>'+yenRecycle(recycleSelection.totals.total)+'</b></div>';
+  box.classList.remove("hidden");
+}
 
 function makeLocalId(){
   return "id-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10);
@@ -659,6 +726,7 @@ function getData(){
     zip:document.getElementById("zip").value.trim(),
     address:document.getElementById("address").value.trim(),
     mode,items:items.map(x=>({id:x.id,type:x.type,qty:Number(x.qty),maker:x.maker==='__custom__'?(x.makerCustom||''):(x.maker||''),model:x.model==='__custom__'?(x.modelCustom||''):(x.model||''),year:x.year||'',operation:x.operation||'不明',condition:x.condition||'不明'})),
+    recycle:recycleSelection.items.length?JSON.parse(JSON.stringify(recycleSelection)):null,
     visit:mode==="出張買取希望"?{
       date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
       building:document.getElementById("building").value,floor:document.getElementById("floor").value,
@@ -752,6 +820,7 @@ function showPreview(){
     <div class="preview-row"><b>郵便番号</b><span>${esc(d.zip)}</span></div><div class="preview-row"><b>住所</b><span>${esc(d.address||"予約確定時に入力")}</span></div>
     <div class="preview-row"><b>依頼</b><span>${esc(d.mode)}</span></div>
     <div style="margin-top:10px"><b>商品</b>${itemHtml}</div>
+    ${d.recycle?`<div style="margin-top:10px"><b>リサイクル回収</b>${d.recycle.items.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px"><b>${i+1}. ${esc(x.appliance)}</b><div class="small">${esc(x.maker)}（メーカーコード ${esc(x.makerCode)}） / ${esc(x.sizeLabel)}</div><div class="small">品目コード ${esc(x.itemCode)} / ${esc(x.modeLabel)} / ${yenRecycle(x.total)}</div></div>`).join("")}<div class="preview-row"><b>料金合計</b><span>リサイクル料金 ${yenRecycle(d.recycle.totals.recycleFee)}<br>収集運搬料金 ${yenRecycle(d.recycle.totals.transportFee)}<br><strong>合計 ${yenRecycle(d.recycle.totals.total)}</strong></span></div></div>`:""}
     ${d.visit?`<div class="preview-row"><b>希望</b><span>${esc(d.visit.date||"おまかせ")} ${esc(d.visit.time||"")}${d.visit.date2?`<br>第2希望：${esc(d.visit.date2)} ${esc(d.visit.time2||"おまかせ")}`:""}${d.visit.date3?`<br>第3希望：${esc(d.visit.date3)} ${esc(d.visit.time3||"おまかせ")}`:""}</span></div><div class="preview-row"><b>搬出</b><span>${esc([d.visit.building,d.visit.floor,d.visit.elevator].filter(Boolean).join(" / "))}<br>${esc(d.visit.carry)}</span></div>`:""}
     <div class="preview-row"><b>査定結果の通知方法</b><span>${esc(d.contact)} ${esc(d.note)}</span></div>`;
   document.getElementById("sendStatus").classList.add("hidden");
@@ -900,8 +969,8 @@ function closeModelGuide(){
   const el=document.getElementById("model-guide-overlay");
   if(el)el.classList.remove("show");
 }
-function clearAll(){if(!confirm("入力内容をすべて消しますか？"))return;document.getElementById("quoteForm").reset();items=[];addItem();toggleVisit();toggleNotificationMethod();localStorage.removeItem("quoteDraft")}
-function saveDraft(){try{localStorage.setItem("quoteDraft",JSON.stringify({items}))}catch(e){}}
+function clearAll(){if(!confirm("入力内容をすべて消しますか？"))return;document.getElementById("quoteForm").reset();items=[];recycleSelection={items:[],totals:{recycleFee:0,transportFee:0,total:0}};renderRecycleSlipSummary();addItem();toggleVisit();toggleNotificationMethod();localStorage.removeItem("quoteDraft")}
+function saveDraft(){try{localStorage.setItem("quoteDraft",JSON.stringify({items,recycleSelection}))}catch(e){}}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function escAttr(v){return esc(v)}
 document.getElementById("quoteForm").addEventListener("input",()=>saveDraft());
@@ -919,6 +988,12 @@ if(addApplianceBtn){
   renderItems();
   toggleVisit();
   toggleNotificationMethod();
+})();
+
+(function(){
+  const overlay=document.getElementById("recycleOverlay");
+  if(overlay)overlay.addEventListener("click",function(e){if(e.target===overlay)closeRecycleCalculator()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeRecycleCalculator()});
 })();
 
 // 型番・年式ガイド：背景タップ／Escでも閉じる
