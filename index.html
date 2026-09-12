@@ -158,13 +158,6 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
     </div>
 
     <div class="card">
-      <div class="section-title">リサイクル回収（必要な場合）</div>
-      <div class="notice">買取品とは別に処分する家電がある場合、メーカー・サイズ・受付区分を選ぶと、リサイクル料金と収集運搬料金を計算して承り内容へ反映できます。</div>
-      <button type="button" class="btn green full" onclick="openRecycleCalculator()">♻️ リサイクル家電を選択・料金計算</button>
-      <div id="recycleSlipSummary" class="recycle-summary hidden"></div>
-    </div>
-
-    <div class="card">
       <div class="section-title">2. お客様情報</div>
       <div class="grid2">
         <div><label>お名前 *</label><input id="name" autocomplete="name" placeholder="山田 太郎" required></div>
@@ -225,17 +218,6 @@ label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}input,selec
   </form>
 
   <div class="foot">※この簡易版は、店舗側の自動受付サーバーを接続できる構成です。送信先URLを設定すると「確認→送信」の1回操作にできます。</div>
-</div>
-
-<div id="recycleOverlay" role="dialog" aria-modal="true" aria-label="リサイクル料金計算">
-  <div class="recycle-panel">
-    <div class="recycle-panel-head"><b>♻️ リサイクル家電の選択</b><button type="button" class="btn gray" onclick="closeRecycleCalculator()">閉じる</button></div>
-    <iframe id="recycleFrame" src="./recycle/" title="家電リサイクル料金計算"></iframe>
-    <div class="recycle-panel-actions">
-      <button type="button" class="btn gray" onclick="closeRecycleCalculator()">キャンセル</button>
-      <button type="button" class="btn green" onclick="applyRecycleToSlip()">選択内容を承り伝票へ反映</button>
-    </div>
-  </div>
 </div>
 
 <div class="preview" id="preview">
@@ -726,7 +708,7 @@ function getData(){
     zip:document.getElementById("zip").value.trim(),
     address:document.getElementById("address").value.trim(),
     mode,items:items.map(x=>({id:x.id,type:x.type,qty:Number(x.qty),maker:x.maker==='__custom__'?(x.makerCustom||''):(x.maker||''),model:x.model==='__custom__'?(x.modelCustom||''):(x.model||''),year:x.year||'',operation:x.operation||'不明',condition:x.condition||'不明'})),
-    recycle:recycleSelection.items.length?JSON.parse(JSON.stringify(recycleSelection)):null,
+    recycle:null,
     visit:mode==="出張買取希望"?{
       date:val("date1"),time:val("time1"),date2:val("date2"),time2:val("time2"),date3:val("date3"),time3:val("time3"),
       building:document.getElementById("building").value,floor:document.getElementById("floor").value,
