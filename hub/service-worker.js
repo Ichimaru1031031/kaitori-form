@@ -1,5 +1,5 @@
-const CACHE='kr-hub-v5';
-const SHELL=['./','./index.html','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/aro-loading.webp','./assets/aro-loading-box.webp','./assets/aro-notification.webp','./assets/aro-notification-cancel.webp'];
+const CACHE='kr-hub-v6';
+const SHELL=['./','./index.html','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/aro-loading.webp','./assets/aro-loading-box.webp','./assets/aro-notification.webp','./assets/aro-notification-cancel.webp','./assets/aro-menu-nav.webp','./assets/aro-menu-assessment.webp','./assets/desktop-nav-pop.css','./assets/desktop-nav-pop.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{const request=event.request,url=new URL(request.url);if(request.method!=='GET'||url.origin!==self.location.origin)return;const fallback=request.mode==='navigate'?'./index.html':request;event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(fallback,copy)).catch(()=>{})}return response}).catch(()=>caches.match(fallback)))});
