@@ -1,4 +1,4 @@
-const CACHE='kr-hub-v4';
+const CACHE='kr-hub-v5';
 const SHELL=['./','./index.html','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/aro-loading.webp','./assets/aro-loading-box.webp','./assets/aro-notification.webp','./assets/aro-notification-cancel.webp'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
