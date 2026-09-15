@@ -788,6 +788,7 @@ function showPreview(){
   
   const contactError=contactInputError(d);
   if(contactError){showContactInputError(contactError);return;}
+  d.receiptKey=generateReceiptKeyClient_();
   inquiry=d;
   const itemHtml=d.items.map((x,i)=>`<div class="card" style="margin:8px 0;padding:10px">
     <b>${i+1}. ${esc(x.type)} × ${esc(x.qty)}台</b>
@@ -825,6 +826,66 @@ function generateLinePairCodeClient_(){
   for(let i=0;i<12;i++) s+=alphabet[bytes[i]%alphabet.length];
   return s.slice(0,6)+"-"+s.slice(6);
 }
+function generateReceiptKeyClient_(){
+  const bytes=new Uint8Array(24);
+  if(window.crypto && window.crypto.getRandomValues){
+    window.crypto.getRandomValues(bytes);
+  }else{
+    for(let i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
+  }
+  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+function verifyInquiryReceipt_(payload){
+  return new Promise(resolve=>{
+    if(!payload || !payload.inquiryId || !payload.receiptKey){resolve(null);return;}
+    const callback="__receptionStatus"+Date.now()+Math.random().toString(36).slice(2);
+    const script=document.createElement("script");
+    let finished=false;
+    const cleanup=()=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      try{delete window[callback];}catch(_e){window[callback]=undefined;}
+      script.remove();
+    };
+    window[callback]=result=>{cleanup();resolve(result&&result.ok&&result.exists?result:null);};
+    script.onerror=()=>{cleanup();resolve(null);};
+    const timer=setTimeout(()=>{cleanup();resolve(null);},12000);
+    const q=new URLSearchParams({action:"receptionStatus",id:payload.inquiryId,key:payload.receiptKey,callback,_:String(Date.now())});
+    script.src=CONFIG.WEBHOOK_URL+"?"+q.toString();
+    document.head.appendChild(script);
+  });
+}
+
+function completeInquirySubmission_(result){
+  const status=document.getElementById("sendStatus");
+  const submitBtn=document.getElementById("submitInquiryBtn");
+  const busyV13=document.getElementById("submitBusyV13");
+  if(inquiry.contact==="LINE"){
+    status.innerHTML="<b>受付内容を保存しました。</b><br>続けてLINE連携を完了してください。";
+    if(submitBtn)submitBtn.textContent="LINE連携へ";
+    const chatUrl=String(result.linePairChatUrl||"").trim();
+    document.getElementById("preview").style.display="none";
+    if(chatUrl){
+      const bt=document.getElementById("submitBusyTitleV13"),bs=document.getElementById("submitBusySubV13");
+      if(bt)bt.textContent="LINE連携へ進みます…";
+      if(bs)bs.innerHTML="LINEの案内に沿って連携してください。<br><b>LINE連携が完了すると受付完了です。</b>";
+      window.location.assign(chatUrl);
+    }else{
+      if(busyV13)busyV13.classList.remove("show");
+      showSuccessAndReset(inquiry.inquiryId,inquiry.contact,"");
+      const message=document.getElementById("successMessage");
+      if(message)message.innerHTML="受付は正常に完了しました。<br><b>LINE連携だけ開始できませんでした。</b><br>受付番号を控えて店舗へご連絡ください。";
+    }
+    return;
+  }
+  status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
+    (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
+  if(submitBtn)submitBtn.textContent="✓ 送信済み";
+  if(busyV13)busyV13.classList.remove("show");
+  document.getElementById("preview").style.display="none";
+  showSuccessAndReset(inquiry.inquiryId,inquiry.contact,"");
+}
 
 async function submitInquiry(){
   if(!inquiry || isSubmitting)return;
@@ -844,59 +905,36 @@ async function submitInquiry(){
     return;
   }
   status.textContent="送信中…写真を圧縮してアップロードしています。";
+  let postStarted=false;
   try{
     const payload=await buildInquiryPayload();
     if(inquiry.contact==="LINE" && !payload.linePairCode){
       payload.linePairCode=generateLinePairCodeClient_();
     }
+    postStarted=true;
     const r=await fetch(CONFIG.WEBHOOK_URL,{
       method:"POST",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify(payload)
     });
     if(!r.ok)throw new Error("HTTP "+r.status);
-    const result=await r.json().catch(()=>({ok:false,error:"サーバー応答を読み取れませんでした。"}));
+    const result=await r.json().catch(()=>{throw new Error("サーバー応答を読み取れませんでした。");});
     if(!result || result.ok!==true){
       const error=new Error(String((result&&result.error)||"受付サーバーでエラーが発生しました。"));
       error.isServerResponse=true;
       throw error;
     }
-    if(inquiry.contact==="LINE"){
-      status.innerHTML="<b>受付内容を保存しました。</b><br>続けてLINE連携を完了してください。";
-      if(submitBtn){submitBtn.textContent="LINE連携へ";}
-    }else{
-      status.innerHTML="<b>送信しました。</b><br>受付番号："+esc(inquiry.inquiryId)+
-        (result.photoCount!=null?"<br>写真："+result.photoCount+"枚を保存しました。":"");
-      if(submitBtn){submitBtn.textContent="✓ 送信済み";}
-    }
-    // LINE選択時：URLが取れた時だけLINEへ移動。
-    // URL生成だけ失敗しても受付自体は成功扱いにし、再送による二重受付を防ぐ。
-    if(inquiry.contact==="LINE"){
-      const chatUrl=String(result.linePairChatUrl||"").trim();
-      document.getElementById("preview").style.display="none";
-      if(chatUrl){
-        const bt=document.getElementById("submitBusyTitleV13"),bs=document.getElementById("submitBusySubV13");
-        if(bt)bt.textContent="LINE連携へ進みます…";
-        if(bs)bs.innerHTML="LINEの案内に沿って連携してください。<br><b>LINE連携が完了すると受付完了です。</b>";
-        window.location.assign(chatUrl);
-      }else{
-        if(busyV13)busyV13.classList.remove("show");
-        showSuccessAndReset(inquiry.inquiryId, inquiry.contact, "");
-        const successMessageEl=document.getElementById("successMessage");
-        if(successMessageEl){
-          successMessageEl.innerHTML="受付は正常に完了しました.<br><b>LINE連携だけ開始できませんでした。</b><br>受付番号を控えて店舗へご連絡ください。";
-        }
-      }
-      return;
-    }
-    if(busyV13)busyV13.classList.remove("show");
-    document.getElementById("preview").style.display="none";
-    showSuccessAndReset(inquiry.inquiryId, inquiry.contact, "");
+    completeInquirySubmission_(result);
   }catch(e){
-    if(busyV13)busyV13.classList.remove("show");
     console.error(e);
     const fieldError=e.isServerResponse?serverContactError(e.message):null;
     if(fieldError)showContactInputError(fieldError);
+    if(!e.isServerResponse && postStarted){
+      status.innerHTML="<b>受付結果を確認しています…</b><br>画面を閉じずにお待ちください。";
+      const verified=await verifyInquiryReceipt_(inquiry);
+      if(verified){completeInquirySubmission_(verified);return;}
+    }
+    if(busyV13)busyV13.classList.remove("show");
     status.innerHTML=e.isServerResponse
       ? "<b>受付できませんでした。</b><br>"+esc(e.message)+"<br>入力内容に不備がある場合は「修正する」から直してください。"
       : "<b>送信結果を確認できませんでした。</b><br>通信状態を確認して、もう一度お試しください。再送時は同じ受付番号を使用します。";
