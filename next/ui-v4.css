@@ -1,0 +1,162 @@
+/* NEXT UI v4 */
+.nav{
+  background:linear-gradient(145deg,rgba(255,255,255,.34),rgba(236,246,242,.22))!important;
+  border:1px solid rgba(255,255,255,.92)!important;
+  box-shadow:0 12px 34px rgba(30,46,40,.17),inset 0 1px 0 rgba(255,255,255,.82),inset 0 -1px 0 rgba(75,109,97,.08)!important;
+  backdrop-filter:blur(34px) saturate(205%)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(205%)!important;
+}
+.nav::after{
+  content:"";position:absolute;inset:1px;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 48%);
+}
+.nav button.active{
+  background:linear-gradient(180deg,rgba(207,229,221,.46),rgba(183,214,203,.28))!important;
+  color:#245449!important;
+  box-shadow:inset 0 0 0 1px rgba(67,107,94,.16),0 2px 8px rgba(48,82,70,.06)!important;
+}
+.nav .navIcon{width:28px!important;height:28px!important}
+.nav .navIcon svg{width:25px!important;height:25px!important}
+.nav b{font-size:9.7px!important}
+
+/* Calendar: fixed day number top-left, staff immediately beneath */
+.dayCell{
+  display:block!important;
+  text-align:left!important;
+  vertical-align:top!important;
+  position:relative!important;
+  padding:5px!important;
+}
+.dayTop{
+  display:flex!important;
+  justify-content:flex-start!important;
+  align-items:flex-start!important;
+  width:100%!important;
+  min-height:18px!important;
+  margin:0!important;
+}
+.dayNum{
+  display:block!important;
+  width:auto!important;
+  margin:0!important;
+  padding:0!important;
+  text-align:left!important;
+  font-size:12px!important;
+  line-height:1.15!important;
+}
+.dayStaffRow{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:2px!important;
+  width:100%!important;
+  min-height:16px!important;
+  margin:2px 0 3px!important;
+  align-items:center!important;
+}
+.dayStaffRow .staffChip{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:2px 2px!important;
+  text-align:center!important;
+  font-size:7px!important;
+  line-height:1.1!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  border-radius:4px!important;
+}
+.staffChip.working{background:#dff0e8!important;color:#1f624b!important;border-color:#b6d9ca!important}
+.staffChip.extra{background:#e1ecfa!important;color:#285d91!important;border-color:#b8cfe8!important}
+.staffChip.absent{background:#fbe0dd!important;color:#ad3c34!important;border-color:#efb7b1!important}
+.calEvent{width:100%!important;box-sizing:border-box!important}
+
+/* Slip primary actions */
+.slipPrimaryBar{
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(0,.8fr);
+  gap:7px;
+  margin:2px 0 8px;
+}
+.slipPrimaryBar button{
+  min-height:42px;border:1px solid var(--line);border-radius:12px;background:#fff;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:11px;font-weight:950;color:var(--ink);
+}
+.slipPrimaryBar svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.createSlipPrimary{
+  background:linear-gradient(180deg,#547a70,#42675e)!important;color:#fff!important;border-color:#42675e!important;
+  box-shadow:0 4px 12px rgba(49,83,72,.12);
+}
+.toggleSlipSearch{background:rgba(255,255,255,.78)!important}
+.slipSearchBox{display:none!important;grid-template-columns:1fr 34px;gap:6px;align-items:center;margin-bottom:7px}
+.slipSearchBox.open{display:grid!important}
+.slipSearchBox input{margin:0!important}
+.slipSearchBox button{height:34px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#65716c;font-size:18px}
+
+/* Field card actions */
+.fieldActions{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+  padding:8px;border-top:1px solid var(--line);background:#fafcfb;
+}
+.fieldAction{
+  min-height:40px;border:1px solid #d7dfdb;border-radius:10px;background:#fff;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  color:#34423d;text-decoration:none;font-size:10px;font-weight:900;
+}
+.fieldAction:disabled{opacity:.38}
+.fieldAction.primary{
+  background:#edf5f2;color:#2d6253;border-color:#bfd3cc;
+}
+.fieldActionIcon{display:grid;place-items:center;width:18px;height:18px}
+.fieldActionIcon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fieldAction b{font-size:10px}
+
+/* Swipe affordance */
+.fieldSwipeGuide{
+  display:grid;grid-template-columns:34px 1fr 34px;align-items:center;gap:7px;
+  margin:0 0 7px;padding:6px 8px;
+  background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:12px;
+}
+.fieldSwipeGuide>div{text-align:center}
+.fieldSwipeGuide b,.fieldSwipeGuide small{display:block}
+.fieldSwipeGuide b{font-size:10px;color:#3e4d48}
+.fieldSwipeGuide small{font-size:8px;color:#7a8580;margin-top:2px}
+.fieldSwipeGuide button{
+  width:32px;height:32px;border:1px solid #d7dfdb;border-radius:50%;
+  background:rgba(255,255,255,.9);color:#42665c;font-size:22px;line-height:1;
+}
+.fieldSwipeGuide button:disabled{opacity:.25}
+.fieldDayTrack{
+  gap:9px!important;
+  padding:0 28px 3px 0!important;
+  scroll-padding-right:28px!important;
+}
+.fieldDaySlide{
+  flex:0 0 calc(100% - 26px)!important;
+}
+.fieldSwipeFooter{
+  display:grid;grid-template-columns:42px 1fr 42px;align-items:center;
+  margin:4px 0 2px;
+}
+.fieldSwipeFooter>span{font-size:8px;color:#75807c}
+.fieldSwipeFooter .fieldDayDots{margin:0!important;justify-self:center}
+.fieldDayDots i{width:5px!important;height:5px!important}
+.fieldDayDots i.active{width:16px!important;background:#537a6f!important}
+.localAppointmentEdit{
+  position:absolute;right:8px;top:8px;border:1px solid #d4ddd8;background:#fff;border-radius:999px;
+  padding:4px 7px;font-size:8px;font-weight:900;color:#57655f;
+}
+.cardmain{position:relative}
+
+@media(max-width:600px){
+  .dayCell{padding:4px!important}
+  .dayStaffRow .staffChip{font-size:6.8px!important;padding:2px 1px!important}
+  .fieldDaySlide{flex-basis:calc(100% - 22px)!important}
+  .fieldDayTrack{padding-right:24px!important}
+  .fieldActions{gap:5px;padding:7px}
+  .fieldAction{min-height:39px}
+  .slipPrimaryBar{grid-template-columns:1.35fr .8fr}
+}
