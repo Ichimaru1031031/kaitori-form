@@ -619,6 +619,13 @@ function opAppointmentUpsert_(entityId,p,key){
     updatedAt:now
   };
   if(row) updateRow_("APPOINTMENTS",row,obj); else appendObject_("APPOINTMENTS",obj);
+  if(obj.caseId && ["休み","出勤"].indexOf(String(obj.category))<0){
+    const caseRow=findRow_("CASES","caseId",obj.caseId);
+    if(caseRow){
+      const next=String(obj.category)==="買取"?"訪問・買取伝票作成":String(obj.category)==="工事"?"訪問・工事伝票作成":String(obj.category)+"対応";
+      updateRow_("CASES",caseRow,{status:"✅ 訪問日時確定",nextAction:next,confirmedDate:obj.date,confirmedStart:obj.startTime,confirmedEnd:obj.endTime,assignedEmployeeIds:obj.assignedEmployeeIds,updatedAt:now});
+    }
+  }
   const sourceRef=String(obj.sourceRef||"");
   if(sourceRef){
     if(sourceRef.indexOf("CHK-")===0){
@@ -808,9 +815,15 @@ function opCallLog_(entityId,p,key){
 function opVisitStart_(entityId,p,key){
   const at=String(p.startedAt||new Date().toISOString());
   const row=findRow_("APPOINTMENTS","appointmentId",entityId);
+  const appt=row?rowObject_(sh_("APPOINTMENTS"),row):{};
   if(row) updateRow_("APPOINTMENTS",row,{status:"visiting",updatedAt:at});
+  const caseId=String(p.caseId||appt.caseId||"");
+  if(caseId){
+    const caseRow=findRow_("CASES","caseId",caseId);
+    if(caseRow) updateRow_("CASES",caseRow,{status:"訪問中",nextAction:"伝票入力・確定",updatedAt:at});
+  }
   audit_("appointment",entityId,"visit-start",p,"NEXT");
-  return {appointmentId:entityId,status:"visiting",startedAt:at};
+  return {appointmentId:entityId,caseId:caseId,status:"visiting",startedAt:at};
 }
 
 function opFinalizeSlip_(entityId,p,key){
