@@ -7,6 +7,11 @@ const CONFIG = Object.freeze({
 
 function doGet(e) {
   const action = String((e && e.parameter && e.parameter.action) || "ping");
+  if (action === "bridge") {
+    return HtmlService.createHtmlOutput(bridgeHtml_())
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  if (action === "snapshot") return json_(buildSnapshot_());
   if (action === "ping") return json_({ok:true, service:"kaitori-rescue-next-green", time:new Date().toISOString()});
   return json_({ok:true, action:action, readOnly:false});
 }
@@ -31,6 +36,80 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+
+function greenBridgeRequest(request, payload) {
+  request = String(request || "");
+  payload = payload || {};
+  if (request === "ping") return {ok:true,pong:true,time:new Date().toISOString()};
+  if (request === "snapshot") return buildSnapshot_();
+  if (request === "write") {
+    const body = payload.job || payload;
+    const key = String(body.idempotencyKey || body.id || "");
+    const operation = String(body.operation || "");
+    const entityId = String(body.entityId || "");
+    const p = body.payload || {};
+    if (!key || !operation) throw new Error("INVALID_REQUEST");
+    const previous = idempotencyResult_(key);
+    if (previous) return {ok:true,idempotent:true,result:previous};
+    const result = dispatch_(operation, entityId, p, key);
+    writeIdempotency_(key, operation, entityId, result);
+    return {ok:true,idempotent:false,result:result};
+  }
+  throw new Error("UNSUPPORTED_BRIDGE_REQUEST:"+request);
+}
+
+function buildSnapshot_() {
+  const specs = {
+    customers:"CUSTOMERS",
+    cases:"CASES",
+    appointments:"APPOINTMENTS",
+    inventory:"INVENTORY",
+    employees:"EMPLOYEES",
+    serviceOrders:"SERVICE_ORDERS",
+    lineItems:"LINE_ITEMS",
+    documents:"DOCUMENTS",
+    modelMaster:"MODEL_MASTER",
+    processMaster:"INVENTORY_PROCESS_MASTER",
+    processLogs:"INVENTORY_PROCESS_LOG"
+  };
+  const out = {
+    schemaVersion:3,
+    generatedAt:new Date().toISOString(),
+    source:"Kaitori Rescue NEXT Green API",
+    writeAuthority:"GREEN"
+  };
+  Object.keys(specs).forEach(function(k){ out[k]=sheetObjects_(specs[k]); });
+  return out;
+}
+
+function sheetObjects_(name) {
+  const s = sh_(name), lr=s.getLastRow(), lc=s.getLastColumn();
+  if (lr < 2 || lc < 1) return [];
+  const values=s.getRange(1,1,lr,lc).getDisplayValues();
+  const h=values[0].map(String), rows=[];
+  for(let r=1;r<values.length;r++){
+    if(!values[r].some(function(v){return String(v).trim()!=="";})) continue;
+    const o={};
+    h.forEach(function(k,i){o[k]=values[r][i] == null ? "" : values[r][i];});
+    rows.push(o);
+  }
+  return rows;
+}
+
+function bridgeHtml_() {
+  return '<!doctype html><html><head><meta charset="utf-8"></head><body><script>'+
+    '(function(){'+
+    'function send(m){try{parent.postMessage(m,"*")}catch(e){}}'+
+    'send({type:"kr-next-green-bridge-ready"});'+
+    'addEventListener("message",function(e){var d=e.data||{};if(d.type!=="kr-next-green-request"||!d.requestId)return;'+
+    'google.script.run.withSuccessHandler(function(result){send({type:"kr-next-green-response",requestId:d.requestId,result:result})})'+
+    '.withFailureHandler(function(err){send({type:"kr-next-green-response",requestId:d.requestId,error:String(err&&err.message||err)})})'+
+    '.greenBridgeRequest(d.request,d.payload||{});'+
+    '});'+
+    '})();'+
+    '<\/script></body></html>';
 }
 
 function dispatch_(op, entityId, p, key) {
