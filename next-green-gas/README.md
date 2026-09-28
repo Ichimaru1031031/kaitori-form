@@ -35,3 +35,24 @@
 
 ## 二重登録防止
 すべての書き込みは `idempotencyKey` を必須とし、`IDEMPOTENCY` シートで重複処理を防止する。
+
+
+## Stripe Checkout
+
+Apps Script の Script Properties に以下を設定します。
+
+- `STRIPE_SECRET_KEY` — Stripe のシークレットキー。ブラウザ側には絶対に置かない。
+- `SHOP_SUCCESS_URL` — 任意。未設定時は NEXT 販売ページの success URL を使用。
+- `SHOP_CANCEL_URL` — 任意。未設定時は NEXT 販売ページの cancel URL を使用。
+
+### 決済フロー
+1. 公開中の EC 商品だけを Green 側で再検証。
+2. 商品価格はクライアント値ではなく `EC_LISTINGS` / `INVENTORY` から取得。
+3. Checkout Session 作成時に商品を30分間 `決済中` にして一覧から外す。
+4. 支払完了確認後に在庫を `売約済み`、EC掲載を `非公開` に更新。
+5. 未払いで期限切れの場合は、販売中在庫のみ `公開` へ戻す。
+6. 店頭受取は `引渡し準備`、配送は `配送日時調整` を次アクションにする。
+
+配送費は Green `SETTINGS` の
+`shop.shipping.pickup`, `shop.shipping.nagareyama`, `shop.shipping.kashiwa`
+から読みます。`shop.shipping.other=quote` はオンライン決済せず個別見積です。

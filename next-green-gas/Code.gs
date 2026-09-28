@@ -73,6 +73,7 @@ function buildSnapshot_() {
     serviceOrders:"SERVICE_ORDERS",
     lineItems:"LINE_ITEMS",
     documents:"DOCUMENTS",
+    notifications:"NOTIFICATIONS",
     sales:"SALES",
     modelMaster:"MODEL_MASTER",
     processMaster:"INVENTORY_PROCESS_MASTER",
@@ -430,6 +431,11 @@ function opCheckoutCreate_(entityId,p,key){
   audit_("checkout",checkoutId,"create",{stripeSessionId:session.id,listingIds:listingIds,inventoryIds:inventoryIds,total:total,deliveryOption:deliveryOption},"NEXT");
   return {checkoutId:checkoutId,sessionId:session.id,url:session.url,expiresAt:expires.toISOString(),amountSubtotal:subtotal,shippingFee:shippingFee,amountTotal:total};
 }
+function stripeShippingText_(session){
+  const d=(session.shipping_details)||(session.collected_information&&session.collected_information.shipping_details)||{};
+  const a=d.address||{};
+  return [a.postal_code,a.state,a.city,a.line1,a.line2].filter(Boolean).join(" ");
+}
 function confirmStripeCheckout_(sessionId){
   if(!sessionId)throw new Error("SESSION_ID_REQUIRED");
   const session=stripeFetch_("/v1/checkout/sessions/"+encodeURIComponent(sessionId),{method:"get"});
@@ -439,12 +445,20 @@ function confirmStripeCheckout_(sessionId){
   if(String(co.status)==="paid")return {sessionId:sessionId,paymentStatus:"paid",known:true,alreadyConfirmed:true};
   const listingIds=parseJsonArray_(co.listingIdsJson),inventoryIds=parseJsonArray_(co.inventoryIdsJson);
   if(String(session.payment_status)==="paid"){
-    const now=new Date().toISOString(),customer=(session.customer_details&&session.customer_details.name)||(session.customer_details&&session.customer_details.email)||"EC購入";
+    const now=new Date().toISOString();
+    const customer=(session.customer_details&&session.customer_details.name)||(session.customer_details&&session.customer_details.email)||"EC購入";
+    const deliveryOption=String(co.deliveryOption||(session.metadata&&session.metadata.delivery_option)||"pickup");
+    const shippingAddress=stripeShippingText_(session);
+    const nextAction=deliveryOption==="pickup"?"引渡し準備":"配送日時調整";
+    const deliveryLabel=deliveryOption==="pickup"?"店頭受取":deliveryOption==="nagareyama"?"流山市内配送":deliveryOption==="kashiwa"?"柏市内配送":"配送";
+    const inventoryNos=[];
     inventoryIds.forEach(function(inventoryId){
       const ir=findRow_("INVENTORY","inventoryId",inventoryId);
+      let inv={};
       if(ir){
-        const inv=rowObject_(sh_("INVENTORY"),ir);
-        updateRow_("INVENTORY",ir,{stage:"売約済み",nextAction:"引渡し日時を確認",assignedEmployeeId:"EC決済",updatedAt:now});
+        inv=rowObject_(sh_("INVENTORY"),ir);
+        inventoryNos.push(String(inv.inventoryNo||inventoryId));
+        updateRow_("INVENTORY",ir,{stage:"売約済み",nextAction:nextAction,assignedEmployeeId:"EC決済",updatedAt:now});
         appendObject_("INVENTORY_PROCESS_LOG",{
           logId:"PROC-"+Utilities.getUuid(),
           inventoryId:inventoryId,
@@ -456,16 +470,18 @@ function confirmStripeCheckout_(sessionId){
           completedAt:now,
           source:"STRIPE",
           idempotencyKey:"stripe:"+sessionId,
-          note:"Stripe Checkout支払完了"
+          note:"Stripe Checkout支払完了 / "+deliveryLabel
         });
       }
       const sr=findRow_("SALES","inventoryId",inventoryId);
-      const salePrice=(function(){const lr=findRow_("EC_LISTINGS","inventoryId",inventoryId);return lr?Number(rowObject_(sh_("EC_LISTINGS"),lr).salePrice||0):0;})();
-      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",source:"STRIPE",updatedAt:now};
+      const lr=findRow_("EC_LISTINGS","inventoryId",inventoryId);
+      const listing=lr?rowObject_(sh_("EC_LISTINGS"),lr):{};
+      const salePrice=Number(listing.salePrice||inv.salePrice||0);
+      const noteText=["EC決済",deliveryLabel,shippingAddress].filter(Boolean).join(" / ");
+      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",notes:noteText,source:"STRIPE",updatedAt:now};
       if(sr)updateRow_("SALES",sr,saleObj);
       else{
-        const ir2=findRow_("INVENTORY","inventoryId",inventoryId),inv2=ir2?rowObject_(sh_("INVENTORY"),ir2):{};
-        appendObject_("SALES",Object.assign({saleId:"SALE-"+inventoryId,inventoryId:inventoryId,inventoryNo:inv2.inventoryNo||"",deliveredAt:"",notes:"",idempotencyKey:"stripe:"+sessionId},saleObj));
+        appendObject_("SALES",Object.assign({saleId:"SALE-"+inventoryId,inventoryId:inventoryId,inventoryNo:inv.inventoryNo||"",deliveredAt:"",idempotencyKey:"stripe:"+sessionId},saleObj));
       }
     });
     listingIds.forEach(function(listingId){
@@ -473,8 +489,20 @@ function confirmStripeCheckout_(sessionId){
       if(lr)updateRow_("EC_LISTINGS",lr,{status:"非公開",updatedAt:now});
     });
     updateRow_("CHECKOUTS",row,{status:"paid",paidAt:now,lastError:""});
-    audit_("checkout",co.checkoutId||sessionId,"paid",{sessionId:sessionId,inventoryIds:inventoryIds,listingIds:listingIds},"STRIPE");
-    return {sessionId:sessionId,paymentStatus:"paid",known:true,inventoryIds:inventoryIds};
+    appendObject_("NOTIFICATIONS",{
+      notificationId:"NOTIF-"+Utilities.getUuid(),
+      caseId:"",
+      type:"EC_ORDER_PAID",
+      channel:"internal",
+      recipient:"staff",
+      status:"new",
+      message:"EC決済完了｜"+inventoryNos.join("・")+"｜"+deliveryLabel+"｜"+customer+(shippingAddress?("｜"+shippingAddress):""),
+      createdAt:now,
+      sentAt:"",
+      error:""
+    });
+    audit_("checkout",co.checkoutId||sessionId,"paid",{sessionId:sessionId,inventoryIds:inventoryIds,listingIds:listingIds,deliveryOption:deliveryOption,shippingAddress:shippingAddress},"STRIPE");
+    return {sessionId:sessionId,paymentStatus:"paid",known:true,inventoryIds:inventoryIds,deliveryOption:deliveryOption,nextAction:nextAction};
   }
   const expired=String(session.status)==="expired" || Date.parse(String(co.expiresAt||""))<=Date.now();
   if(expired){
