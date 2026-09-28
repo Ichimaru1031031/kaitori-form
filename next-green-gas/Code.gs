@@ -42,6 +42,7 @@ function dispatch_(op, entityId, p, key) {
     case "call-log": return opCallLog_(entityId,p,key);
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
+    case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
   }
 }
@@ -99,6 +100,35 @@ function writeIdempotency_(key,op,entityId,result){
     key:key, operation:op, entityId:entityId,
     resultJson:result, createdAt:new Date().toISOString(), expiresAt:""
   });
+}
+
+function opAppointmentUpsert_(entityId,p,key){
+  const now=String(p.updatedAt||new Date().toISOString());
+  const row=findRow_("APPOINTMENTS","appointmentId",entityId);
+  const obj={
+    appointmentId:entityId,
+    caseId:p.caseId||"",
+    date:p.date||"",
+    startTime:p.startTime||"",
+    endTime:p.endTime||"",
+    category:p.category||"",
+    title:p.title||"",
+    customerName:p.customerName||"",
+    phone:p.phone||"",
+    address:p.address||"",
+    assignedEmployeeIds:p.assignedEmployeeIds||"[]",
+    status:p.status||"confirmed",
+    callStatus:p.callStatus||"",
+    callAt:p.callAt||"",
+    blueScheduleId:p.blueScheduleId||"",
+    serviceOrderId:p.serviceOrderId||"",
+    notes:p.notes||"",
+    createdAt:p.createdAt||now,
+    updatedAt:now
+  };
+  if(row) updateRow_("APPOINTMENTS",row,obj); else appendObject_("APPOINTMENTS",obj);
+  audit_("appointment",entityId,row?"update":"create",obj,"NEXT");
+  return {appointmentId:entityId,saved:true,updatedAt:now};
 }
 
 function opInventoryProcess_(entityId,p,key){
