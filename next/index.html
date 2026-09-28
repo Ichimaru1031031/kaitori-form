@@ -1,143 +1,23 @@
 <!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#123d32">
-<link rel="manifest" href="./manifest.webmanifest">
-<title>買取レスキュー NEXT</title>
-<style>
-:root{
- --bg:#f4f7f5;--panel:#fff;--ink:#13231f;--muted:#6d7b76;--line:#dfe8e3;
- --green:#167a5a;--green2:#eaf7f1;--blue:#2f6edb;--blue2:#eef4ff;
- --amber:#a26a00;--amber2:#fff7df;--red:#b5483f;--red2:#fff0ee;
- --shadow:0 8px 28px rgba(18,55,43,.08);--radius:18px;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:var(--ink)}
-button,a{font:inherit}
-.app{max-width:980px;margin:auto;min-height:100vh;padding:16px 16px 104px}
-.hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
-.hero h1{font-size:24px;margin:0;font-weight:900;letter-spacing:.01em}
-.hero small{display:block;color:var(--muted);font-weight:700;margin-top:4px}
-.sync{display:inline-flex;gap:7px;align-items:center;background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:999px;font-size:12px;font-weight:800;color:var(--green)}
-.dot{width:8px;height:8px;border-radius:50%;background:#2da874;box-shadow:0 0 0 5px #2da87418}
-.alerts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}
-.alert{border:0;border-radius:15px;padding:13px;text-align:left;background:#fff;box-shadow:var(--shadow);border:1px solid var(--line)}
-.alert strong{display:block;font-size:22px;margin-top:5px}
-.alert.red{background:var(--red2);border-color:#f0c6c1}.alert.red span{color:var(--red)}
-.alert.amber{background:var(--amber2);border-color:#ecdca7}.alert.amber span{color:var(--amber)}
-.alert.blue{background:var(--blue2);border-color:#cad9fb}.alert.blue span{color:var(--blue)}
-.section{margin-top:16px}
-.sectionHead{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-bottom:10px}
-.sectionHead h2{margin:0;font-size:20px}.sectionHead small{color:var(--muted);font-weight:700}
-.filters{display:flex;gap:7px;overflow:auto;padding-bottom:3px}
-.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800;white-space:nowrap}
-.chip.active{background:#173f34;color:white;border-color:#173f34}
-.timeline{display:grid;gap:10px}
-.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
-.cardMain{display:grid;grid-template-columns:82px 1fr;gap:12px;padding:15px}
-.time{font-weight:950;font-size:19px;letter-spacing:.01em}
-.kind{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:900;margin-top:6px;padding:5px 8px;border-radius:999px;background:var(--green2);color:var(--green)}
-.title{font-size:18px;font-weight:950;margin-bottom:4px}
-.meta{color:var(--muted);font-size:13px;font-weight:700;line-height:1.6}
-.status{margin-top:8px;font-size:12px;font-weight:900;color:var(--blue)}
-.actions{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
-.action{border:0;background:white;padding:13px 7px;font-weight:900;font-size:13px}
-.action+.action{border-left:1px solid var(--line)}
-.action.primary{background:#163f34;color:white}
-.expand{display:none;padding:0 15px 15px 109px;color:#34443e;font-size:13px;line-height:1.7}
-.card.open .expand{display:block}
-.nextBlock{background:linear-gradient(135deg,#153f34,#235a4a);color:white;border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 12px 30px #163f3426}
-.nextBlock small{opacity:.8;font-weight:800}.nextBlock strong{display:block;font-size:20px;margin:5px 0 3px}
-.resume{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
-.resume strong{display:block;margin-bottom:5px}.resume p{margin:0;color:var(--muted);font-size:13px}
-.resume button{margin-top:10px;width:100%;border:0;border-radius:12px;padding:12px;background:#eef6f2;color:#165a45;font-weight:900}
-.nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(620px,calc(100vw - 20px));display:grid;grid-template-columns:repeat(5,1fr);background:#143c31;color:white;border-radius:20px;padding:7px;box-shadow:0 10px 40px #08271d55;z-index:50}
-.nav button{border:0;background:transparent;color:#cfe1da;padding:8px 2px;border-radius:13px;font-size:11px;font-weight:800}
-.nav button b{display:block;font-size:20px;line-height:1.2;margin-bottom:2px}.nav button.active{background:#fff;color:#143c31}
-@media(max-width:640px){.app{padding:12px 12px 100px}.hero h1{font-size:21px}.alerts{grid-template-columns:repeat(3,minmax(0,1fr))}.alert{padding:11px 9px}.alert span{font-size:11px}.alert strong{font-size:20px}.cardMain{grid-template-columns:70px 1fr}.expand{padding-left:97px}}
-</style>
-</head>
-<body>
-<div class="app">
-  <div class="hero">
-    <div><h1>買取レスキュー NEXT</h1><small id="todayLabel">今日の現場</small></div>
-    <div class="sync"><i class="dot"></i><span>Green環境</span></div>
-  </div>
-
-  <div class="alerts">
-    <button class="alert red"><span>要返信</span><strong>3</strong></button>
-    <button class="alert amber"><span>新規予約</span><strong>2</strong></button>
-    <button class="alert blue"><span>日程未確定</span><strong>1</strong></button>
-  </div>
-
-  <section class="section">
-    <div class="sectionHead">
-      <div><h2>今日の予定</h2><small>時間順で表示</small></div>
-      <div class="filters">
-        <button class="chip active">全員</button>
-        <button class="chip">大森</button>
-        <button class="chip">かずき</button>
-      </div>
-    </div>
-
-    <div class="nextBlock">
-      <small>次の訪問</small>
-      <strong>11:30　佐藤様｜エアコン工事</strong>
-      <span>担当：かずき ・ 柏市</span>
-    </div>
-
-    <div class="timeline" id="timeline"></div>
-  </section>
-
-  <section class="resume">
-    <strong>続きから</strong>
-    <p>山田様｜買取＋リサイクル｜伝票入力中</p>
-    <button type="button">伝票の続きへ</button>
-  </section>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#123d32"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./app.css"><title>買取レスキュー NEXT</title></head>
+<body><div id="app">
+<header class="top"><div><b>買取レスキュー NEXT</b><small id="status">Green検証環境・Blue読取のみ</small></div><button id="more">•••</button></header>
+<main id="home" class="screen active">
+<section class="metrics"><button data-filter="reply"><span>要返信</span><strong id="reply">–</strong></button><button data-filter="new"><span>新規査定</span><strong id="new">–</strong></button><button data-filter="unscheduled"><span>日程未確定</span><strong id="unscheduled">–</strong></button></section>
+<section class="head"><div><h1>今日の現場</h1><p id="todayLabel"></p></div><button data-tab="schedule">月間予定</button></section>
+<div id="today"></div>
+<section class="compat"><div><b>本番予定表</b><span>現行Blueをそのまま表示</span></div><iframe id="schedulePreview" title="本番予定表"></iframe></section>
+<section class="draft"><div><b>作業途中</b><span id="draftSummary">保存中のNEXT伝票はありません</span></div><button id="resume" disabled>続きから</button></section>
+</main>
+<main id="module" class="screen"><div class="modulebar"><button id="back">‹</button><div><b id="moduleTitle"></b><small>現行Blue互換モード</small></div><button id="newSlip">NEXT伝票</button></div><iframe id="frame"></iframe></main>
+<nav class="nav"><button class="active" data-tab="home">⌂<b>今日</b></button><button data-tab="schedule">▦<b>予定</b></button><button data-tab="assessment">⌕<b>査定</b></button><button data-tab="slips">✎<b>伝票</b></button><button data-tab="inventory">▣<b>在庫</b></button></nav>
 </div>
-
-<nav class="nav" aria-label="メインナビ">
-  <button class="active"><b>⌂</b>今日</button>
-  <button><b>▦</b>予定</button>
-  <button><b>✎</b>伝票</button>
-  <button><b>▣</b>在庫</button>
-  <button><b>⋯</b>その他</button>
-</nav>
-
-<script>
-const items=[
- {time:'09:00',kind:'💰 出張買取',name:'山田様',city:'流山市',staff:'大森',detail:'冷蔵庫・洗濯機ほか3点',status:'TEL済 08:42',note:'査定サイト入力あり。駐車場は建物裏側。'},
- {time:'11:30',kind:'🔧 エアコン工事',name:'佐藤様',city:'柏市',staff:'かずき',detail:'エアコン交換工事',status:'伝票 未作成',note:'標準工事＋既設取外し。室外機2F。'},
- {time:'14:00',kind:'♻️ リサイクル収集',name:'田中様',city:'流山市',staff:'大森・かずき',detail:'冷蔵庫1 / 洗濯機1',status:'訪問前',note:'収集運搬あり。事前連絡必須。'},
- {time:'16:30',kind:'📋 出張見積',name:'鈴木様',city:'松戸市',staff:'大森',detail:'大型家電まとめ見積',status:'伝票 未作成',note:'現地確認後に金額確定。'}
-];
-const timeline=document.getElementById('timeline');
-for(const x of items){
- const card=document.createElement('article');
- card.className='card';
- card.innerHTML=`
-  <div class="cardMain">
-    <div><div class="time">${x.time}</div><div class="kind">${x.kind}</div></div>
-    <div>
-      <div class="title">${x.name}</div>
-      <div class="meta">${x.city}｜担当：${x.staff}<br>${x.detail}</div>
-      <div class="status">${x.status}</div>
-    </div>
-  </div>
-  <div class="expand">${x.note}</div>
-  <div class="actions">
-    <button class="action">☎ TEL</button>
-    <button class="action">📍 訪問</button>
-    <button class="action primary">📄 伝票</button>
-  </div>`;
- card.querySelector('.cardMain').addEventListener('click',()=>card.classList.toggle('open'));
- timeline.appendChild(card);
-}
-const now=new Date();
-document.getElementById('todayLabel').textContent=`${now.getMonth()+1}/${now.getDate()} 今日の現場`;
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));}
-</script>
-</body>
-</html>
+<div id="drawer" class="overlay"><section><header><b>その他</b><button data-close="drawer">×</button></header><button data-tab="recycle">♻️ リサイクル料金</button><button data-tab="store">🛒 販売</button><button data-tab="settings">⚙️ 設定</button><button id="manualSlip">＋ NEXT伝票を手入力</button><p>既存Blue・LINE・Webhook・本番データは変更しません。</p></section></div>
+<div id="slip" class="overlay"><section class="sheet"><header><div><b>NEXT伝票</b><small id="saveState">端末へ自動保存</small></div><button data-close="slip">×</button></header><div class="body">
+<div class="common"><label>お名前<input id="name"></label><label>電話<input id="phone"></label><label>住所<input id="address"></label><label>メール<input id="email"></label></div>
+<div class="services"><b>今回の業務</b><div id="serviceButtons"></div></div>
+<div id="serviceArea"></div>
+<div class="total"><span>差引</span><b id="total">¥0</b></div>
+</div><footer><button id="customerPreview">お客様確認</button><button id="saveDraft">下書き保存</button></footer></section></div>
+<div id="preview" class="overlay"><section class="sheet preview"><header><b>お客様確認</b><button data-close="preview">×</button></header><div id="previewBody" class="body"></div></section></div>
+<script src="./app.js"></script></body></html>
