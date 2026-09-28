@@ -1,0 +1,11 @@
+{
+  "name":"買取レスキュー NEXT",
+  "short_name":"レスキューNEXT",
+  "description":"買取レスキューの次世代業務アプリ",
+  "lang":"ja",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f4f7f5",
+  "theme_color":"#123d32"
+}
