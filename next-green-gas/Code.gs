@@ -257,19 +257,20 @@ function opInventorySaleUpdate_(entityId,p,key){
     updatedAt:now
   });
   const saleRow=findRow_("SALES","inventoryId",entityId);
+  const previousSale=saleRow?rowObject_(sh_("SALES"),saleRow):{};
   const saleObj={
-    saleId:p.saleId||("SALE-"+entityId),
+    saleId:p.saleId||previousSale.saleId||("SALE-"+entityId),
     inventoryId:entityId,
     inventoryNo:inventoryNo,
     status:stage,
-    customerName:"",
+    customerName:p.customerName||previousSale.customerName||"",
     salePrice:Number(p.salePrice||0),
     employeeId:p.employeeId||"",
     employeeName:p.employeeName||"",
-    reservedAt:saleRow?rowObject_(sh_("SALES"),saleRow).reservedAt||"":"",
-    soldAt:saleRow?rowObject_(sh_("SALES"),saleRow).soldAt||"":"",
-    deliveredAt:saleRow?rowObject_(sh_("SALES"),saleRow).deliveredAt||"":"",
-    notes:p.notes||"",
+    reservedAt:p.reservedAt||previousSale.reservedAt||"",
+    soldAt:p.soldAt||previousSale.soldAt||"",
+    deliveredAt:p.deliveredAt||previousSale.deliveredAt||"",
+    notes:p.notes||previousSale.notes||"",
     source:"NEXT",
     idempotencyKey:key,
     updatedAt:now
