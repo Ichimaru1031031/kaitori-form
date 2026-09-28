@@ -445,6 +445,10 @@ function opFinalizeSlip_(entityId,p,key){
     status:"お客様確認済み",
     updatedAt:confirmedAt
   });
+  if(links.appointmentId){
+    const apptRow=findRow_("APPOINTMENTS","appointmentId",links.appointmentId);
+    if(apptRow) updateRow_("APPOINTMENTS",apptRow,{serviceOrderId:links.serviceOrderId,status:"completed",updatedAt:confirmedAt});
+  }
   audit_("service-order",links.serviceOrderId,"finalize-slip",{snapshotId:p.id,version:version,pdfFileId:pdf.fileId,inventory:inventoryLinks},"NEXT");
   return {
     snapshotId:p.id||entityId,
@@ -462,7 +466,7 @@ function nextId_(prefix){
   return prefix+"-"+Utilities.getUuid().replace(/-/g,"").slice(0,8).toUpperCase();
 }
 function ensureFinalizedEntities_(p,confirmedAt){
-  const payload=p.payload||{},customer=payload.customer||{},selected=payload.selected||[];
+  const payload=p.payload||{},customer=payload.customer||{},selected=payload.selected||[],appointmentId=String(payload.appointmentId||p.appointmentId||"").trim();
   let caseId=String(p.caseId||"").trim(),customerId="";
   if(caseId){
     const row=findRow_("CASES","caseId",caseId);
@@ -505,7 +509,7 @@ function ensureFinalizedEntities_(p,confirmedAt){
   const totals=totalsFromPayload_(payload);
   const soRow=findRow_("SERVICE_ORDERS","serviceOrderId",serviceOrderId);
   const so={
-    serviceOrderId:serviceOrderId,caseId:caseId,appointmentId:"",customerId:customerId,
+    serviceOrderId:serviceOrderId,caseId:caseId,appointmentId:appointmentId,customerId:customerId,
     status:"お客様確認済み",selectedServicesJson:JSON.stringify(selected),paymentMethod:payload.paymentMethod||"",
     salesWorkTotal:totals.salesWorkTotal,purchaseTotal:totals.purchaseTotal,recycleTotal:totals.recycleTotal,
     deliveryTotal:totals.deliveryTotal,netTotal:Number(p.total||totals.netTotal),customerConfirmed:true,
@@ -513,7 +517,7 @@ function ensureFinalizedEntities_(p,confirmedAt){
     createdAt:soRow?rowObject_(sh_("SERVICE_ORDERS"),soRow).createdAt||confirmedAt:confirmedAt,updatedAt:confirmedAt
   };
   if(soRow) updateRow_("SERVICE_ORDERS",soRow,so); else appendObject_("SERVICE_ORDERS",so);
-  return {caseId:caseId,customerId:customerId,serviceOrderId:serviceOrderId};
+  return {caseId:caseId,customerId:customerId,serviceOrderId:serviceOrderId,appointmentId:appointmentId};
 }
 function newServiceOrderId_(){
   for(let i=0;i<30;i++){
