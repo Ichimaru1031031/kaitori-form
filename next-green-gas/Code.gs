@@ -122,6 +122,7 @@ function dispatch_(op, entityId, p, key) {
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
+    case "case-upsert": return opCaseUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
   }
 }
@@ -179,6 +180,32 @@ function writeIdempotency_(key,op,entityId,result){
     key:key, operation:op, entityId:entityId,
     resultJson:result, createdAt:new Date().toISOString(), expiresAt:""
   });
+}
+
+function opCaseUpsert_(entityId,p,key){
+  const now=new Date().toISOString(),customer=p.customer||{},caze=p.case||{},caseId=String(entityId||caze.caseId||"").trim();
+  if(!caseId) throw new Error("CASE_ID_REQUIRED");
+  let customerId=String(customer.customerId||caze.customerId||"").trim();
+  if(!customerId) customerId=nextId_("NEXT-CUST");
+  const customerObj={
+    customerId:customerId,name:customer.name||caze.name||"",phone:String(customer.phone||caze.phone||"").replace(/\D/g,""),
+    email:customer.email||caze.email||"",postalCode:customer.postalCode||"",address:customer.address||caze.address||"",
+    preferredContact:customer.preferredContact||"電話",lineUserId:customer.lineUserId||"",source:customer.source||caze.source||"phone-assessment",
+    blueReceptionId:customer.blueReceptionId||"",createdAt:customer.createdAt||now,updatedAt:now
+  };
+  const cr=findRow_("CUSTOMERS","customerId",customerId);
+  if(cr) updateRow_("CUSTOMERS",cr,customerObj); else appendObject_("CUSTOMERS",customerObj);
+  const caseObj={
+    caseId:caseId,customerId:customerId,status:caze.status||"🔴 新規",nextAction:caze.nextAction||"電話査定・訪問日程調整",
+    source:caze.source||"phone-assessment",blueReceptionId:caze.blueReceptionId||"",title:caze.title||((customerObj.name||"")+"様"),
+    summary:caze.summary||"",assignedEmployeeIds:caze.assignedEmployeeIds||"[]",requestedDatesJson:caze.requestedDatesJson||"[]",
+    confirmedDate:caze.confirmedDate||"",confirmedStart:caze.confirmedStart||"",confirmedEnd:caze.confirmedEnd||"",
+    notes:caze.notes||"",createdAt:caze.createdAt||now,updatedAt:now
+  };
+  const row=findRow_("CASES","caseId",caseId);
+  if(row) updateRow_("CASES",row,caseObj); else appendObject_("CASES",caseObj);
+  audit_("case",caseId,row?"update":"create",caseObj,"NEXT");
+  return {caseId:caseId,customerId:customerId,saved:true,updatedAt:now};
 }
 
 function opAppointmentUpsert_(entityId,p,key){
