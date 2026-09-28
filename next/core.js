@@ -334,19 +334,29 @@
     bridge.src = K.C.main + "?page=bridge&embed=1&_next=" + Date.now();
     document.body.appendChild(bridge);
     let ready = false;
+    K.requestBlueCases = () => {
+      if (!ready || !bridge.contentWindow) return false;
+      try {
+        bridge.contentWindow.postMessage(
+          { type: "kr-hub-bridge-request", request: "customers" },
+          "*",
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    };
     window.addEventListener("message", (e) => {
       const d = e.data || {};
       if (d.type === "kr-hub-bridge-ready") {
         ready = true;
         K.$("#status").textContent = "Green検証・Blueライブ読取接続済み";
-        bridge.contentWindow.postMessage(
-          { type: "kr-hub-bridge-request", request: "customers" },
-          "*",
-        );
+        K.requestBlueCases();
       }
       if (d.type === "kr-hub-customer-cases") {
         K.liveCases = Array.isArray(d.payload) ? d.payload : [];
         K.renderHome();
+        K.renderAssessment && K.renderAssessment();
       }
     });
     setTimeout(() => {
@@ -399,7 +409,7 @@
     if ("serviceWorker" in navigator)
       window.addEventListener("load", () =>
         navigator.serviceWorker
-        .register("./service-worker.js?v=7", { updateViaCache: "none" })
+          .register("./service-worker.js?v=8", { updateViaCache: "none" })
           .then((r) => r.update())
           .catch(() => {}),
       );

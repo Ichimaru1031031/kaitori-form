@@ -1,91 +1,927 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#46665f"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./app.css"><link rel="stylesheet" href="./native.css"><link rel="stylesheet" href="./workflow.css"><link rel="stylesheet" href="./slip-extra.css"><link rel="stylesheet" href="./confirm-extra.css"><link rel="stylesheet" href="./api.css"><link rel="stylesheet" href="./inventory-process.css"><link rel="stylesheet" href="./inventory-workbench.css"><link rel="stylesheet" href="./visual-refresh.css"><link rel="stylesheet" href="./schedule-edit.css"><link rel="stylesheet" href="./recycle-native.css"><link rel="stylesheet" href="./sales-native.css"><link rel="stylesheet" href="./global-search.css"><link rel="stylesheet" href="./design-v2.css"><link rel="stylesheet" href="./flow-v2.css"><link rel="stylesheet" href="./phone-assessment.css"><link rel="stylesheet" href="./ux-v3.css"><link rel="stylesheet" href="./sales-workbench.css"><link rel="stylesheet" href="./ec-workbench.css"><link rel="stylesheet" href="./home-fulfillment.css"><link rel="stylesheet" href="./ui-v4.css"><link rel="stylesheet" href="./sales-flow.css"><link rel="stylesheet" href="./accent-v1.css"><link rel="stylesheet" href="./ui-v5.css"><title>買取レスキュー NEXT</title></head><body><div id="app">
-<header class="top"><div><b>買取レスキュー NEXT</b><small id="status">Green検証環境・Blue読取のみ</small></div><div class="topActions"><button id="globalSearchBtn" aria-label="検索">⌕</button><button id="more" aria-label="その他">•••</button></div></header>
-<main id="home" class="screen active"><section class="metrics"><button data-filter="reply"><span>要返信</span><strong id="reply">–</strong></button><button data-filter="new"><span>新規査定</span><strong id="new">–</strong></button><button data-filter="unscheduled"><span>日程未確定</span><strong id="unscheduled">–</strong></button></section><button id="homeOrderAlert" class="homeOrderAlert hidden" type="button"><span>EC注文</span><b id="homeOrderAlertCount">0</b><small>決済完了・対応確認</small></button><section class="head"><div><h1>今日の現場</h1><p id="todayLabel"></p></div><button data-tab="schedule">月間予定</button></section><div id="today"></div>
-<section id="homeFulfillmentSection" class="homeFulfillmentSection hidden">
-  <div class="homeWorkHead"><div><h2>引渡し対応</h2><p id="homeFulfillmentSummary">売約後の次アクション</p></div><button id="openFulfillmentAll" type="button">すべて</button></div>
-  <div id="homeFulfillmentList" class="homeFulfillmentList"></div>
-</section>
-<section class="homeWorkSection myWorkSection">
-  <div class="homeWorkHead"><div><h2>自分の作業中</h2><p id="homeMyWorkLabel">担当者未設定</p></div><button id="openMyWork" type="button">すべて</button></div>
-  <div id="homeMyWork" class="homeStoreWork"></div>
-</section>
-<section class="compat"><div><b>現行Blue</b><span>必要なら現在の予定表へ即切替</span></div><button class="compatOpen" data-blue="schedule">現行予定表を開く</button></section><section class="draft"><div><b>作業途中</b><span id="draftSummary">保存中のNEXT伝票はありません</span></div><button id="resume" disabled>続きから</button></section></main>
-<main id="scheduleView" class="screen nativeScreen"><section class="nativeHead"><div><h1>予定</h1><p id="scheduleSync">Green読取データ</p></div><div class="scheduleHeadActions"><button id="addAppointment" type="button">＋ 予定</button><button data-blue="schedule">現行予定表</button></div></section><div class="monthNav"><button id="prevMonth">‹</button><b id="monthLabel"></b><button id="nextMonth">›</button></div><div class="calendarLegend"><span class="legend purchase">買取</span><span class="legend work">工事</span><span class="legend delivery">配送</span><span class="legend recycle">リサイクル</span><span class="legend estimate">見積</span></div><div class="weekHead"><span>月</span><span>火</span><span>水</span><span>金</span><span>土</span><span>日</span></div><div id="calendarGrid" class="calendarGrid"></div><section id="dayDetail" class="dayDetail"></section></main>
-<main id="assessmentView" class="screen nativeScreen"><section class="nativeHead"><div><h1>査定</h1><p id="assessmentSync">ネット / 電話 → 出張買取</p></div><div class="assessmentHeadActions"><button id="addPhoneAssessment" type="button">＋ 電話査定</button><button data-blue="assessment">現行査定</button></div></section><div class="workflowSearch"><input id="assessmentSearch" placeholder="受付番号・名前・電話・商品を検索"></div><div id="assessmentFilters" class="workflowFilters"></div><div class="workflowMeta"><b id="assessmentCount">0件</b><span>次アクション順</span></div><div id="assessmentList" class="workflowList"></div></main>
-<main id="slipsView" class="screen nativeScreen"><section class="nativeHead"><div><h1>伝票</h1><p id="slipsSync">Green読取データ</p></div><button data-blue="slips">現行伝票</button></section><div class="slipPrimaryBar"><button id="createSlipPrimary" class="createSlipPrimary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l1 2h2a1 1 0 0 1 1 1v13H4V7a1 1 0 0 1 1-1h2z"/><path d="M12 10v6M9 13h6"/></svg><span>伝票を作成</span></button><button id="toggleSlipSearch" class="toggleSlipSearch" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 5 5"/></svg><span>検索</span></button></div><div id="slipSearchBox" class="workflowSearch slipSearchBox"><input id="slipSearch" placeholder="伝票番号・顧客名を検索"><button id="closeSlipSearch" type="button" aria-label="検索を閉じる">×</button></div><div id="slipFilters" class="workflowFilters"></div><div class="workflowMeta"><b id="slipCount">0件</b><span>更新順</span></div><div id="slipList" class="workflowList"></div></main>
-<main id="inventoryView" class="screen nativeScreen"><section class="nativeHead"><div><h1>在庫</h1><p id="inventorySync">Green読取データ</p></div><div class="inventoryHeadActions"><button id="inventoryMe" type="button">自分：未設定</button><button data-blue="inventory">現行在庫</button></div></section><div id="inventoryQuick" class="inventoryQuick"></div><div class="inventorySearch"><input id="inventorySearch" placeholder="在庫番号・メーカー・型番・元伝票を検索"></div><div id="inventoryFilters" class="inventoryFilters"></div><div class="inventoryMeta"><b id="inventoryCount">0件</b><span id="inventorySortLabel">最近更新順</span></div><div id="inventoryList" class="inventoryList"></div><button id="inventoryMore" class="moreRows hidden">さらに表示</button></main>
-<main id="recycleView" class="screen nativeScreen"><section class="nativeHead"><div><h1>リサイクル</h1><p id="recycleSync">Green料金マスター</p></div><button data-blue="recycle">現行画面</button></section>
-      <div id="recycleTypeChips" class="recycleTypeChips"></div>
-      <section class="recycleBuilder">
-        <div class="recycleFormRow"><label>サイズ<select id="recycleSize"></select></label><label>受付区分<select id="recycleMode"><option value="normal">配送・買取・持込</option><option value="dispose">処分のみ</option></select></label></div>
-        <label>メーカー<input id="recycleMakerSearch" placeholder="メーカー名・ブランド名・コード"></label>
-        <div id="recycleMakerResults" class="recycleMakerResults"></div>
-        <div id="recyclePricePreview" class="recyclePricePreview">メーカーを選択してください</div>
-        <button id="addRecycleItem" class="addRecycleItem" disabled>この家電を追加</button>
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#46665f" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./app.css" />
+    <link rel="stylesheet" href="./native.css" />
+    <link rel="stylesheet" href="./workflow.css" />
+    <link rel="stylesheet" href="./slip-extra.css" />
+    <link rel="stylesheet" href="./confirm-extra.css" />
+    <link rel="stylesheet" href="./api.css" />
+    <link rel="stylesheet" href="./inventory-process.css" />
+    <link rel="stylesheet" href="./inventory-workbench.css" />
+    <link rel="stylesheet" href="./visual-refresh.css" />
+    <link rel="stylesheet" href="./schedule-edit.css" />
+    <link rel="stylesheet" href="./recycle-native.css" />
+    <link rel="stylesheet" href="./sales-native.css" />
+    <link rel="stylesheet" href="./global-search.css" />
+    <link rel="stylesheet" href="./design-v2.css" />
+    <link rel="stylesheet" href="./flow-v2.css" />
+    <link rel="stylesheet" href="./phone-assessment.css" />
+    <link rel="stylesheet" href="./assessment-workbench.css" />
+    <link rel="stylesheet" href="./ux-v3.css" />
+    <link rel="stylesheet" href="./sales-workbench.css" />
+    <link rel="stylesheet" href="./ec-workbench.css" />
+    <link rel="stylesheet" href="./home-fulfillment.css" />
+    <link rel="stylesheet" href="./ui-v4.css" />
+    <link rel="stylesheet" href="./sales-flow.css" />
+    <link rel="stylesheet" href="./accent-v1.css" />
+    <link rel="stylesheet" href="./ui-v5.css" />
+    <title>買取レスキュー NEXT</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <div>
+          <b>買取レスキュー NEXT</b
+          ><small id="status">Green検証環境・Blue読取のみ</small>
+        </div>
+        <div class="topActions">
+          <button id="globalSearchBtn" aria-label="検索">⌕</button
+          ><button id="more" aria-label="その他">•••</button>
+        </div>
+      </header>
+      <main id="home" class="screen active">
+        <section class="metrics">
+          <button data-filter="reply">
+            <span>要返信</span><strong id="reply">–</strong></button
+          ><button data-filter="new">
+            <span>新規査定</span><strong id="new">–</strong></button
+          ><button data-filter="unscheduled">
+            <span>日程未確定</span><strong id="unscheduled">–</strong>
+          </button>
+        </section>
+        <button id="homeOrderAlert" class="homeOrderAlert hidden" type="button">
+          <span>EC注文</span><b id="homeOrderAlertCount">0</b
+          ><small>決済完了・対応確認</small>
+        </button>
+        <section class="head">
+          <div>
+            <h1>今日の現場</h1>
+            <p id="todayLabel"></p>
+          </div>
+          <button data-tab="schedule">月間予定</button>
+        </section>
+        <div id="today"></div>
+        <section
+          id="homeFulfillmentSection"
+          class="homeFulfillmentSection hidden"
+        >
+          <div class="homeWorkHead">
+            <div>
+              <h2>引渡し対応</h2>
+              <p id="homeFulfillmentSummary">売約後の次アクション</p>
+            </div>
+            <button id="openFulfillmentAll" type="button">すべて</button>
+          </div>
+          <div id="homeFulfillmentList" class="homeFulfillmentList"></div>
+        </section>
+        <section class="homeWorkSection myWorkSection">
+          <div class="homeWorkHead">
+            <div>
+              <h2>自分の作業中</h2>
+              <p id="homeMyWorkLabel">担当者未設定</p>
+            </div>
+            <button id="openMyWork" type="button">すべて</button>
+          </div>
+          <div id="homeMyWork" class="homeStoreWork"></div>
+        </section>
+        <section class="compat">
+          <div><b>現行Blue</b><span>必要なら現在の予定表へ即切替</span></div>
+          <button class="compatOpen" data-blue="schedule">
+            現行予定表を開く
+          </button>
+        </section>
+        <section class="draft">
+          <div>
+            <b>作業途中</b
+            ><span id="draftSummary">保存中のNEXT伝票はありません</span>
+          </div>
+          <button id="resume" disabled>続きから</button>
+        </section>
+      </main>
+      <main id="scheduleView" class="screen nativeScreen">
+        <section class="nativeHead">
+          <div>
+            <h1>予定</h1>
+            <p id="scheduleSync">Green読取データ</p>
+          </div>
+          <div class="scheduleHeadActions">
+            <button id="addAppointment" type="button">＋ 予定</button
+            ><button data-blue="schedule">現行予定表</button>
+          </div>
+        </section>
+        <div class="monthNav">
+          <button id="prevMonth">‹</button><b id="monthLabel"></b
+          ><button id="nextMonth">›</button>
+        </div>
+        <div class="calendarLegend">
+          <span class="legend purchase">買取</span
+          ><span class="legend work">工事</span
+          ><span class="legend delivery">配送</span
+          ><span class="legend recycle">リサイクル</span
+          ><span class="legend estimate">見積</span>
+        </div>
+        <div class="weekHead">
+          <span>月</span><span>火</span><span>水</span><span>金</span
+          ><span>土</span><span>日</span>
+        </div>
+        <div id="calendarGrid" class="calendarGrid"></div>
+        <section id="dayDetail" class="dayDetail"></section>
+      </main>
+      <main id="assessmentView" class="screen nativeScreen">
+        <section class="nativeHead">
+          <div>
+            <h1>査定</h1>
+            <p id="assessmentSync">フォーム・旧ダッシュボードと同期</p>
+          </div>
+          <div class="assessmentHeadActions">
+            <button id="refreshAssessment" type="button">↻ 同期</button
+            ><button id="addPhoneAssessment" type="button">＋ 電話査定</button
+            ><button id="openAssessmentDashboard" type="button">
+              全案件を操作
+            </button>
+          </div>
+        </section>
+        <div class="assessmentSourceBar">
+          <span class="assessmentSourceDot"></span>
+          <div>
+            <b>Blue本番データ</b
+            ><small>旧ダッシュボードと同じ受付・査定・送信経路</small>
+          </div>
+          <em id="assessmentBridgeState">接続確認中</em>
+        </div>
+        <div class="workflowSearch">
+          <input
+            id="assessmentSearch"
+            placeholder="受付番号・名前・電話・商品を検索"
+          />
+        </div>
+        <div id="assessmentFilters" class="workflowFilters"></div>
+        <div class="workflowMeta">
+          <b id="assessmentCount">0件</b><span>次アクション順</span>
+        </div>
+        <div id="assessmentList" class="workflowList"></div>
+      </main>
+      <main id="slipsView" class="screen nativeScreen">
+        <section class="nativeHead">
+          <div>
+            <h1>伝票</h1>
+            <p id="slipsSync">Green読取データ</p>
+          </div>
+          <button data-blue="slips">現行伝票</button>
+        </section>
+        <div class="slipPrimaryBar">
+          <button
+            id="createSlipPrimary"
+            class="createSlipPrimary"
+            type="button"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 4h8l1 2h2a1 1 0 0 1 1 1v13H4V7a1 1 0 0 1 1-1h2z" />
+              <path d="M12 10v6M9 13h6" /></svg
+            ><span>伝票を作成</span></button
+          ><button id="toggleSlipSearch" class="toggleSlipSearch" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="5.5" />
+              <path d="m15 15 5 5" /></svg
+            ><span>検索</span>
+          </button>
+        </div>
+        <div id="slipSearchBox" class="workflowSearch slipSearchBox">
+          <input id="slipSearch" placeholder="伝票番号・顧客名を検索" /><button
+            id="closeSlipSearch"
+            type="button"
+            aria-label="検索を閉じる"
+          >
+            ×
+          </button>
+        </div>
+        <div id="slipFilters" class="workflowFilters"></div>
+        <div class="workflowMeta">
+          <b id="slipCount">0件</b><span>更新順</span>
+        </div>
+        <div id="slipList" class="workflowList"></div>
+      </main>
+      <main id="inventoryView" class="screen nativeScreen">
+        <section class="nativeHead">
+          <div>
+            <h1>在庫</h1>
+            <p id="inventorySync">Green読取データ</p>
+          </div>
+          <div class="inventoryHeadActions">
+            <button id="inventoryMe" type="button">自分：未設定</button
+            ><button data-blue="inventory">現行在庫</button>
+          </div>
+        </section>
+        <div id="inventoryQuick" class="inventoryQuick"></div>
+        <div class="inventorySearch">
+          <input
+            id="inventorySearch"
+            placeholder="在庫番号・メーカー・型番・元伝票を検索"
+          />
+        </div>
+        <div id="inventoryFilters" class="inventoryFilters"></div>
+        <div class="inventoryMeta">
+          <b id="inventoryCount">0件</b
+          ><span id="inventorySortLabel">最近更新順</span>
+        </div>
+        <div id="inventoryList" class="inventoryList"></div>
+        <button id="inventoryMore" class="moreRows hidden">さらに表示</button>
+      </main>
+      <main id="recycleView" class="screen nativeScreen">
+        <section class="nativeHead">
+          <div>
+            <h1>リサイクル</h1>
+            <p id="recycleSync">Green料金マスター</p>
+          </div>
+          <button data-blue="recycle">現行画面</button>
+        </section>
+        <div id="recycleTypeChips" class="recycleTypeChips"></div>
+        <section class="recycleBuilder">
+          <div class="recycleFormRow">
+            <label>サイズ<select id="recycleSize"></select></label
+            ><label
+              >受付区分<select id="recycleMode">
+                <option value="normal">配送・買取・持込</option>
+                <option value="dispose">処分のみ</option>
+              </select></label
+            >
+          </div>
+          <label
+            >メーカー<input
+              id="recycleMakerSearch"
+              placeholder="メーカー名・ブランド名・コード"
+          /></label>
+          <div id="recycleMakerResults" class="recycleMakerResults"></div>
+          <div id="recyclePricePreview" class="recyclePricePreview">
+            メーカーを選択してください
+          </div>
+          <button id="addRecycleItem" class="addRecycleItem" disabled>
+            この家電を追加
+          </button>
+        </section>
+        <section class="recycleCart">
+          <div class="recycleCartHead">
+            <b>選択中</b><button id="clearRecycleCart">すべて削除</button>
+          </div>
+          <div id="recycleCartList"></div>
+          <div id="recycleTotals" class="recycleTotals"></div>
+          <button id="recycleToSlip" class="recycleToSlip" disabled>
+            NEXT伝票へ
+          </button>
+        </section>
+      </main>
+      <main id="storeView" class="screen nativeScreen">
+        <section class="nativeHead">
+          <div>
+            <h1>販売</h1>
+            <p id="storeSync">在庫連動</p>
+          </div>
+          <div class="storeHeadActions">
+            <button id="openPublicShop" type="button">販売ページ</button
+            ><button data-blue="store">現行販売</button>
+          </div>
+        </section>
+        <div id="salesFulfillment" class="salesFulfillment"></div>
+        <div class="salesSearch">
+          <input
+            id="salesSearch"
+            placeholder="在庫番号・メーカー・型番を検索"
+          />
+        </div>
+        <div id="salesFilters" class="salesFilters"></div>
+        <div class="salesSort">
+          <span id="salesCount">0件</span
+          ><select id="salesSort">
+            <option value="updated">最近更新</option>
+            <option value="priceAsc">価格が安い</option>
+            <option value="priceDesc">価格が高い</option>
+            <option value="yearDesc">年式が新しい</option>
+          </select>
+        </div>
+        <div id="salesList" class="salesList"></div>
+      </main>
+      <main id="module" class="screen">
+        <div class="modulebar">
+          <button id="back">‹</button>
+          <div><b id="moduleTitle"></b><small>現行Blue互換モード</small></div>
+          <button id="newSlip">NEXT伝票</button>
+        </div>
+        <iframe id="frame"></iframe>
+      </main>
+      <nav class="nav" aria-label="メインメニュー">
+        <button class="active" data-tab="home" aria-label="今日">
+          <span class="navIcon"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M3 10.7 12 3l9 7.7v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.2v-6.4H9.4V21H4.2A1.2 1.2 0 0 1 3 19.8z"
+              /></svg></span
+          ><b>今日</b>
+        </button>
+        <button data-tab="schedule" aria-label="予定">
+          <span class="navIcon"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path
+                d="M8 3v4M16 3v4M3 10h18M7 14h3M14 14h3M7 18h3"
+              /></svg></span
+          ><b>予定</b>
+        </button>
+        <button data-tab="assessment" aria-label="査定">
+          <span class="navIcon"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M4 5.5A1.5 1.5 0 0 1 5.5 4H13l7 7-8.5 8.5a1.7 1.7 0 0 1-2.4 0L4.5 14.9A1.7 1.7 0 0 1 4 13.7z"
+              />
+              <circle cx="8" cy="8" r="1.3" />
+              <path d="M11 11.2h5M13.5 9v4.4" /></svg></span
+          ><b>査定</b>
+        </button>
+        <button data-tab="slips" aria-label="伝票">
+          <span class="navIcon"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 4h8l1 2h2a1 1 0 0 1 1 1v13H4V7a1 1 0 0 1 1-1h2z" />
+              <path d="M8 4v3h8V4M8 11h8M8 15h8" /></svg></span
+          ><b>伝票</b>
+        </button>
+        <button data-tab="inventory" aria-label="在庫">
+          <span class="navIcon"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m4 7 8-4 8 4-8 4z" />
+              <path d="M4 7v10l8 4 8-4V7M12 11v10" /></svg></span
+          ><b>在庫</b>
+        </button>
+      </nav>
+    </div>
+    <div id="appointmentDetailModal" class="overlay">
+      <section class="compactSheet appointmentDetailSheet">
+        <div class="sheetGrabber"></div>
+        <header>
+          <div>
+            <b id="appointmentDetailTitle">予定詳細</b
+            ><small id="appointmentDetailSub"></small>
+          </div>
+          <button data-close="appointmentDetailModal">×</button>
+        </header>
+        <div class="body">
+          <div id="appointmentDetailType" class="appointmentTypeBadge"></div>
+          <div class="appointmentDetailGrid">
+            <div><span>時間</span><b id="appointmentDetailTime"></b></div>
+            <div><span>担当</span><b id="appointmentDetailStaff"></b></div>
+            <div><span>電話</span><b id="appointmentDetailPhone"></b></div>
+            <div><span>住所</span><b id="appointmentDetailAddress"></b></div>
+          </div>
+          <div id="appointmentDetailRef" class="appointmentDetailRef"></div>
+          <label class="appointmentDetailNoteLabel"
+            >備考<textarea
+              id="appointmentDetailNote"
+              rows="4"
+              placeholder="搬出条件、駐車、追加確認事項など"
+            ></textarea>
+          </label>
+          <div class="appointmentDetailActions">
+            <button id="appointmentDetailTel" type="button">TEL</button
+            ><button id="appointmentDetailMap" type="button">訪問</button
+            ><button id="appointmentDetailSlip" class="primary" type="button">
+              伝票
+            </button>
+          </div>
+          <button
+            id="saveAppointmentNote"
+            class="saveAppointmentNote"
+            type="button"
+          >
+            備考を保存</button
+          ><small
+            id="appointmentNoteState"
+            class="appointmentNoteState"
+          ></small>
+        </div>
       </section>
-      <section class="recycleCart"><div class="recycleCartHead"><b>選択中</b><button id="clearRecycleCart">すべて削除</button></div><div id="recycleCartList"></div><div id="recycleTotals" class="recycleTotals"></div><button id="recycleToSlip" class="recycleToSlip" disabled>NEXT伝票へ</button></section>
-    </main>
-    <main id="storeView" class="screen nativeScreen"><section class="nativeHead"><div><h1>販売</h1><p id="storeSync">在庫連動</p></div><div class="storeHeadActions"><button id="openPublicShop" type="button">販売ページ</button><button data-blue="store">現行販売</button></div></section>
-      <div id="salesFulfillment" class="salesFulfillment"></div><div class="salesSearch"><input id="salesSearch" placeholder="在庫番号・メーカー・型番を検索"></div>
-      <div id="salesFilters" class="salesFilters"></div>
-      <div class="salesSort"><span id="salesCount">0件</span><select id="salesSort"><option value="updated">最近更新</option><option value="priceAsc">価格が安い</option><option value="priceDesc">価格が高い</option><option value="yearDesc">年式が新しい</option></select></div>
-      <div id="salesList" class="salesList"></div>
-    </main>
-    <main id="module" class="screen"><div class="modulebar"><button id="back">‹</button><div><b id="moduleTitle"></b><small>現行Blue互換モード</small></div><button id="newSlip">NEXT伝票</button></div><iframe id="frame"></iframe></main>
-<nav class="nav" aria-label="メインメニュー">
-  <button class="active" data-tab="home" aria-label="今日">
-    <span class="navIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.7 12 3l9 7.7v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.2v-6.4H9.4V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><b>今日</b>
-  </button>
-  <button data-tab="schedule" aria-label="予定">
-    <span class="navIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M7 14h3M14 14h3M7 18h3"/></svg></span><b>予定</b>
-  </button>
-  <button data-tab="assessment" aria-label="査定">
-    <span class="navIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H13l7 7-8.5 8.5a1.7 1.7 0 0 1-2.4 0L4.5 14.9A1.7 1.7 0 0 1 4 13.7z"/><circle cx="8" cy="8" r="1.3"/><path d="M11 11.2h5M13.5 9v4.4"/></svg></span><b>査定</b>
-  </button>
-  <button data-tab="slips" aria-label="伝票">
-    <span class="navIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l1 2h2a1 1 0 0 1 1 1v13H4V7a1 1 0 0 1 1-1h2z"/><path d="M8 4v3h8V4M8 11h8M8 15h8"/></svg></span><b>伝票</b>
-  </button>
-  <button data-tab="inventory" aria-label="在庫">
-    <span class="navIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></svg></span><b>在庫</b>
-  </button>
-</nav></div>
-<div id="appointmentDetailModal" class="overlay"><section class="compactSheet appointmentDetailSheet"><div class="sheetGrabber"></div><header><div><b id="appointmentDetailTitle">予定詳細</b><small id="appointmentDetailSub"></small></div><button data-close="appointmentDetailModal">×</button></header><div class="body"><div id="appointmentDetailType" class="appointmentTypeBadge"></div><div class="appointmentDetailGrid"><div><span>時間</span><b id="appointmentDetailTime"></b></div><div><span>担当</span><b id="appointmentDetailStaff"></b></div><div><span>電話</span><b id="appointmentDetailPhone"></b></div><div><span>住所</span><b id="appointmentDetailAddress"></b></div></div><div id="appointmentDetailRef" class="appointmentDetailRef"></div><label class="appointmentDetailNoteLabel">備考<textarea id="appointmentDetailNote" rows="4" placeholder="搬出条件、駐車、追加確認事項など"></textarea></label><div class="appointmentDetailActions"><button id="appointmentDetailTel" type="button">TEL</button><button id="appointmentDetailMap" type="button">訪問</button><button id="appointmentDetailSlip" class="primary" type="button">伝票</button></div><button id="saveAppointmentNote" class="saveAppointmentNote" type="button">備考を保存</button><small id="appointmentNoteState" class="appointmentNoteState"></small></div></section></div>
-<div id="dayScheduleModal" class="overlay"><section class="compactSheet dayScheduleSheet"><div class="sheetGrabber"></div><header><div><b id="dayScheduleTitle">予定一覧</b><div id="dayScheduleStaff" class="detailStaffRow"></div></div><button data-close="dayScheduleModal">×</button></header><div class="body"><div id="dayScheduleList"></div><button id="dayScheduleAdd" class="dayScheduleAdd" type="button">＋ この日に予定を追加</button></div></section></div>
-<div id="saleFlowModal" class="overlay"><section class="compactSheet saleFlowSheet"><header><div><b id="saleFlowTitle">売約登録</b><small id="saleFlowSub"></small></div><button data-close="saleFlowModal">×</button></header><div class="body"><label>お客様名<input id="saleCustomerName" placeholder="購入者名"></label><label>販売価格<input id="saleActualPrice" inputmode="numeric" placeholder="0"></label><label>メモ<textarea id="saleFlowNote" rows="3" placeholder="取置き・配送・引渡し予定など"></textarea></label><div class="saleFlowEmployee"><b>担当者</b><div id="saleFlowEmployees" class="processEmployeeList"></div></div><div class="saleFlowActions"><button id="saveReserved" type="button">売約済みにする</button><button id="saveDelivered" class="primary" type="button">引渡し完了</button></div></div></section></div><div id="globalSearchModal" class="overlay"><section class="compactSheet searchSheet"><header><div><b>全体検索</b><small>顧客・案件・伝票・在庫</small></div><button data-close="globalSearchModal">×</button></header><div class="body"><input id="globalSearchInput" class="globalSearchInput" placeholder="名前・電話・型番・番号を入力" autocomplete="off"><div id="globalSearchMeta" class="globalSearchMeta"></div><div id="globalSearchResults" class="globalSearchResults"></div></div></section></div>
-    <div id="drawer" class="overlay"><section><header><b>その他</b><button data-close="drawer">×</button></header><button data-tab="recycle">♻️ リサイクル料金</button><button data-tab="store">🛒 販売</button><button data-tab="settings">⚙️ 設定</button><button id="manualSlip">＋ NEXT伝票を手入力</button><div class="apiPanel"><b>Green共有API</b><span id="apiState">状態確認中…</span><input id="apiUrlInput" placeholder="Green専用API URL（未設定でOK）"><div><button id="saveApiUrl" type="button">URL保存</button><button id="testApiUrl" type="button">接続確認</button><button id="syncQueue" type="button">同期待ちを送信</button></div><small id="apiResult"></small></div><p>既存Blue・LINE・Webhook・本番データは変更しません。</p></section></div>
-<div id="slip" class="overlay"><section class="sheet"><header><div><b>NEXT伝票</b><small id="saveState">端末へ自動保存</small></div><button data-close="slip">×</button></header><div class="body"><div class="common"><label>お名前<input id="name"></label><label>電話<input id="phone"></label><label>住所<input id="address"></label><label>メール<input id="email"></label></div><div class="services"><b>今回の業務</b><div id="serviceButtons"></div></div><div id="serviceArea"></div><div class="total"><span>差引</span><b id="total">¥0</b></div></div><footer><button id="customerPreview">お客様確認</button><button id="saveDraft">下書き保存</button></footer></section></div>
-<div id="preview" class="overlay"><section class="sheet preview"><header><div><b>お客様確認</b><small id="previewStatus">内容をご確認ください</small></div><button data-close="preview">×</button></header><div class="body"><div id="previewBody"></div><section class="signatureBox"><h3>お客様サイン</h3><p>内容・金額を確認後、枠内にサインしてください。</p><canvas id="signatureCanvas" class="signatureCanvas"></canvas><div class="signatureActions"><button id="clearSignature" type="button">サインを消す</button></div></section><div id="confirmedPanel" class="confirmedPanel hidden"></div><div class="confirmActions"><button id="finalizeConfirmation" class="finalize" type="button">✓ 確認・署名を確定</button><button id="printPreview" type="button">PDF表示・印刷</button></div><div class="confirmActions"><button id="bluePdfSend" type="button">現行BlueでPDF送信</button></div><div class="printOnly">この控えは発行時点のスナップショットです。</div></div></section></div><div id="phoneAssessmentModal" class="overlay"><section class="compactSheet phoneAssessmentSheet"><header><div><b>電話査定</b><small>電話受付をNEXT案件として保存</small></div><button data-close="phoneAssessmentModal">×</button></header><div class="body">
-      <div class="phoneAssessGrid"><label>お名前<input id="paName" autocomplete="name"></label><label>電話<input id="paPhone" type="tel" autocomplete="tel"></label></div>
-      <label>住所<input id="paAddress" autocomplete="street-address"></label>
-      <div class="phoneAssessGrid"><label>商品カテゴリ<input id="paCategory" list="paCategoryList" placeholder="冷蔵庫など"></label><label>メーカー<input id="paMaker" placeholder="Panasonicなど"></label></div>
-      <div class="phoneAssessGrid"><label>型番<input id="paModel" placeholder="型番"></label><label>年式<input id="paYear" inputmode="numeric" placeholder="2023"></label></div>
-      <datalist id="paCategoryList"><option>エアコン</option><option>冷蔵庫</option><option>洗濯機</option><option>TV</option><option>電子レンジ</option><option>その他家電</option></datalist>
-      <label>概算査定額<input id="paEstimate" inputmode="numeric" placeholder="0"></label>
-      <label>メモ<textarea id="paNote" rows="3" placeholder="状態・搬出条件・希望など"></textarea></label>
-      <div id="paError" class="phoneAssessError hidden"></div>
-      <div class="phoneAssessActions"><button id="savePhoneAssessment" type="button">査定として保存</button><button id="savePhoneAndVisit" class="primary" type="button">保存して訪問予定へ</button></div>
-    </div></section></div>
-    <div id="appointmentModal" class="overlay"><section class="compactSheet appointmentSheet"><header><div><b id="appointmentModalTitle">予定を追加</b><small id="appointmentEditState">NEXT Green</small></div><button data-close="appointmentModal">×</button></header><div class="body">
-      <div class="apptFormGrid"><label>日付<input id="apptDate" type="date"></label><label>区分<select id="apptCategory"><option>買取</option><option>工事</option><option>配送</option><option>リサイクル</option><option>見積</option><option>販売</option><option>その他</option></select></label></div>
-      <div class="apptFormGrid"><label>開始<input id="apptStart" type="time"></label><label>終了<input id="apptEnd" type="time"></label></div>
-      <label>お客様・件名<input id="apptCustomer" placeholder="例：山田様"></label>
-      <label>住所<input id="apptAddress" placeholder="訪問先住所"></label>
-      <div class="apptFormGrid"><label>電話<input id="apptPhone" type="tel"></label><label>受付/伝票番号<input id="apptRef" placeholder="KR- / UT-"></label></div>
-      <label>メモ<textarea id="apptNote" rows="3"></textarea></label>
-      <div class="apptAssigneeBlock"><b>担当者</b><div id="apptEmployees" class="apptEmployees"></div></div>
-      <div id="apptConflict" class="apptConflict hidden"></div>
-      <button id="saveAppointment" class="saveAppointment" type="button">予定を保存</button>
-    </div></section></div>
-    <div id="inventoryDetailModal" class="overlay"><section class="detailSheet"><header><div><b id="detailInventoryNo">在庫詳細</b><small id="detailInventoryName"></small></div><button id="closeInventoryDetail" type="button">×</button></header><div class="body">
-      <section class="detailHero"><div><span id="detailStage" class="stageBadge"></span><b id="detailMainName"></b><small id="detailMeta"></small></div><button id="detailProcessBtn" class="primaryCompact" type="button">工程変更</button></section>
-      <div id="detailTrail" class="detailTrail"></div>
-      <section class="detailQuick"><button id="detailAddPhoto" type="button">📷 写真追加</button><button id="detailAddTest" type="button">✓ テスト結果</button><button id="detailSourceSlip" type="button">📄 元伝票</button><button id="detailPdf" type="button">PDF</button></section>
-      <input id="detailPhotoInput" type="file" accept="image/*" capture="environment" class="hidden">
-      <section class="detailBlock"><div class="detailBlockHead"><b>写真</b><span id="detailPhotoCount">0</span></div><div id="detailPhotos" class="detailPhotos"></div></section>
-      <section class="detailBlock"><div class="detailBlockHead"><b>テスト履歴</b><span id="detailTestCount">0</span></div><div id="detailTests" class="detailTests"></div></section><section id="detailSalesPrep" class="detailBlock salesPrepBlock"><div class="detailBlockHead"><b>販売準備</b><span id="detailSalesState">未設定</span></div><div class="salesPrepGrid"><label>販売価格<input id="detailSalePrice" inputmode="numeric" placeholder="0"></label><label>保管場所<input id="detailSaleLocation" placeholder="店頭 / 倉庫A-1"></label></div><label>販売メモ<textarea id="detailSaleNote" rows="2" placeholder="付属品・傷・販売時の注意"></textarea></label><div class="salesPrepActions"><button id="detailPrepComplete" type="button">販売準備完了</button><button id="detailStartSale" class="primary" type="button">販売開始</button></div><small id="detailSaleHint">テスト後に価格と保管場所を確認して販売へ進めます。</small></section><section id="detailEcListing" class="detailBlock ecListingBlock"><div class="detailBlockHead"><b>EC掲載</b><span id="detailEcState">非公開</span></div><div id="detailEcChecklist" class="ecChecklist"></div><label>商品名<input id="detailEcTitle" placeholder="販売ページの商品名"></label><label>説明<textarea id="detailEcDescription" rows="6" placeholder="商品説明"></textarea></label><div class="ecListingActions"><button id="detailEcSave" type="button">下書き保存</button><button id="detailEcPreview" type="button">プレビュー</button><button id="detailEcPublish" class="primary" type="button">公開</button><button id="detailEcUnpublish" type="button">非公開</button></div><small>販売開始では下書きになります。写真・テスト・価格・商品情報を確認してから公開します。</small></section>
-      <section class="detailBlock"><div class="detailBlockHead"><b>工程履歴</b><button id="detailAllHistory" type="button">履歴</button></div><div id="detailHistory" class="detailHistory"></div></section>
-      <section class="detailBlock detailLinkBlock"><b>QR直開きURL</b><code id="detailDirectUrl"></code><button id="detailShareUrl" type="button">共有 / コピー</button></section>
-    </div></section></div>
-    <div id="testModal" class="overlay"><section class="compactSheet"><header><b>テスト結果</b><button data-close="testModal">×</button></header><div class="body"><div id="testResultButtons" class="testResultButtons"><button data-result="OK">OK</button><button data-result="NG">NG</button><button data-result="要確認">要確認</button></div><label class="testNoteLabel">メモ<textarea id="testNote" rows="3" placeholder="動作・異音・冷却など"></textarea></label><div id="testEmployeeList" class="processEmployeeList"></div><button id="saveTestResult" class="saveTestResult" type="button" disabled>結果を保存</button></div></section></div>
-    <div id="processModal" class="overlay"><section class="compactSheet processSheet"><header><div><b id="processTitle">工程変更</b><small id="processSub"></small></div><button data-close="processModal">×</button></header><div class="body"><div id="processStageList" class="processStageList"></div><div id="processEmployeeStep" class="processEmployeeStep hidden"><div class="processStepHead"><b id="selectedProcessLabel"></b><span>担当者を選択</span></div><div id="processEmployeeList" class="processEmployeeList"></div></div><div id="processHistoryDetail" class="processHistoryDetail"></div></div></section></div><div id="meModal" class="overlay"><section class="compactSheet"><header><b>この端末の「自分」</b><button data-close="meModal">×</button></header><div class="body"><p class="meHelp">「自分の作業中」の表示に使います。この端末ごとに保存されます。</p><div id="meEmployeeList" class="processEmployeeList"></div></div></section></div><div id="listModal" class="overlay"><section class="compactSheet"><header><b id="listTitle">一覧</b><button data-close="listModal">×</button></header><div id="listBody" class="body"></div></section></div>
-<script src="./draft-db.js"></script><script src="./green-api.js"></script><script src="./core.js"></script><script src="./schedule.js"></script><script src="./appointments-ui.js"></script><script src="./inventory.js"></script><script src="./home-field.js"></script><script src="./assessment.js"></script><script src="./phone-assessment.js"></script><script src="./slips.js"></script><script src="./recycle.js"></script><script src="./sales.js"></script><script src="./home-fulfillment.js"></script><script src="./global-search.js"></script><script src="./slip.js"></script><script src="./workflow-router.js"></script></body></html>
+    </div>
+    <div id="dayScheduleModal" class="overlay">
+      <section class="compactSheet dayScheduleSheet">
+        <div class="sheetGrabber"></div>
+        <header>
+          <div>
+            <b id="dayScheduleTitle">予定一覧</b>
+            <div id="dayScheduleStaff" class="detailStaffRow"></div>
+          </div>
+          <button data-close="dayScheduleModal">×</button>
+        </header>
+        <div class="body">
+          <div id="dayScheduleList"></div>
+          <button id="dayScheduleAdd" class="dayScheduleAdd" type="button">
+            ＋ この日に予定を追加
+          </button>
+        </div>
+      </section>
+    </div>
+    <div id="saleFlowModal" class="overlay">
+      <section class="compactSheet saleFlowSheet">
+        <header>
+          <div>
+            <b id="saleFlowTitle">売約登録</b><small id="saleFlowSub"></small>
+          </div>
+          <button data-close="saleFlowModal">×</button>
+        </header>
+        <div class="body">
+          <label
+            >お客様名<input
+              id="saleCustomerName"
+              placeholder="購入者名" /></label
+          ><label
+            >販売価格<input
+              id="saleActualPrice"
+              inputmode="numeric"
+              placeholder="0" /></label
+          ><label
+            >メモ<textarea
+              id="saleFlowNote"
+              rows="3"
+              placeholder="取置き・配送・引渡し予定など"
+            ></textarea>
+          </label>
+          <div class="saleFlowEmployee">
+            <b>担当者</b>
+            <div id="saleFlowEmployees" class="processEmployeeList"></div>
+          </div>
+          <div class="saleFlowActions">
+            <button id="saveReserved" type="button">売約済みにする</button
+            ><button id="saveDelivered" class="primary" type="button">
+              引渡し完了
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div id="globalSearchModal" class="overlay">
+      <section class="compactSheet searchSheet">
+        <header>
+          <div><b>全体検索</b><small>顧客・案件・伝票・在庫</small></div>
+          <button data-close="globalSearchModal">×</button>
+        </header>
+        <div class="body">
+          <input
+            id="globalSearchInput"
+            class="globalSearchInput"
+            placeholder="名前・電話・型番・番号を入力"
+            autocomplete="off"
+          />
+          <div id="globalSearchMeta" class="globalSearchMeta"></div>
+          <div id="globalSearchResults" class="globalSearchResults"></div>
+        </div>
+      </section>
+    </div>
+    <div id="drawer" class="overlay">
+      <section>
+        <header><b>その他</b><button data-close="drawer">×</button></header>
+        <button data-tab="recycle">♻️ リサイクル料金</button
+        ><button data-tab="store">🛒 販売</button
+        ><button data-tab="settings">⚙️ 設定</button
+        ><button id="manualSlip">＋ NEXT伝票を手入力</button>
+        <div class="apiPanel">
+          <b>Green共有API</b><span id="apiState">状態確認中…</span
+          ><input
+            id="apiUrlInput"
+            placeholder="Green専用API URL（未設定でOK）"
+          />
+          <div>
+            <button id="saveApiUrl" type="button">URL保存</button
+            ><button id="testApiUrl" type="button">接続確認</button
+            ><button id="syncQueue" type="button">同期待ちを送信</button>
+          </div>
+          <small id="apiResult"></small>
+        </div>
+        <p>既存Blue・LINE・Webhook・本番データは変更しません。</p>
+      </section>
+    </div>
+    <div id="slip" class="overlay">
+      <section class="sheet">
+        <header>
+          <div><b>NEXT伝票</b><small id="saveState">端末へ自動保存</small></div>
+          <button data-close="slip">×</button>
+        </header>
+        <div class="body">
+          <div class="common">
+            <label>お名前<input id="name" /></label
+            ><label>電話<input id="phone" /></label
+            ><label>住所<input id="address" /></label
+            ><label>メール<input id="email" /></label>
+          </div>
+          <div class="services">
+            <b>今回の業務</b>
+            <div id="serviceButtons"></div>
+          </div>
+          <div id="serviceArea"></div>
+          <div class="total"><span>差引</span><b id="total">¥0</b></div>
+        </div>
+        <footer>
+          <button id="customerPreview">お客様確認</button
+          ><button id="saveDraft">下書き保存</button>
+        </footer>
+      </section>
+    </div>
+    <div id="assessmentOpsModal" class="overlay assessmentOpsOverlay">
+      <section class="assessmentOpsSheet">
+        <header>
+          <div>
+            <b id="assessmentOpsTitle">査定業務</b
+            ><small id="assessmentOpsSub">Blue本番と直接同期</small>
+          </div>
+          <div class="assessmentOpsHeaderActions">
+            <button
+              id="assessmentOpsReload"
+              type="button"
+              aria-label="再読み込み"
+            >
+              ↻</button
+            ><button
+              id="assessmentOpsClose"
+              type="button"
+              data-close="assessmentOpsModal"
+              aria-label="閉じる"
+            >
+              ×
+            </button>
+          </div>
+        </header>
+        <div class="assessmentOpsTrust">
+          <span></span><b>旧ダッシュボードの実データを操作中</b
+          ><small
+            >査定額・訪問日時・顧客送信・履歴は従来のスプレッドシートとLINE経路を使用します。</small
+          >
+        </div>
+        <div id="assessmentOpsLoading" class="assessmentOpsLoading">
+          <b>査定画面を接続しています</b
+          ><span>案件データを安全に読み込み中…</span>
+        </div>
+        <iframe
+          id="assessmentOpsFrame"
+          title="査定ダッシュボード同期画面"
+        ></iframe>
+      </section>
+    </div>
+    <div id="preview" class="overlay">
+      <section class="sheet preview">
+        <header>
+          <div>
+            <b>お客様確認</b
+            ><small id="previewStatus">内容をご確認ください</small>
+          </div>
+          <button data-close="preview">×</button>
+        </header>
+        <div class="body">
+          <div id="previewBody"></div>
+          <section class="signatureBox">
+            <h3>お客様サイン</h3>
+            <p>内容・金額を確認後、枠内にサインしてください。</p>
+            <canvas id="signatureCanvas" class="signatureCanvas"></canvas>
+            <div class="signatureActions">
+              <button id="clearSignature" type="button">サインを消す</button>
+            </div>
+          </section>
+          <div id="confirmedPanel" class="confirmedPanel hidden"></div>
+          <div class="confirmActions">
+            <button id="finalizeConfirmation" class="finalize" type="button">
+              ✓ 確認・署名を確定</button
+            ><button id="printPreview" type="button">PDF表示・印刷</button>
+          </div>
+          <div class="confirmActions">
+            <button id="bluePdfSend" type="button">現行BlueでPDF送信</button>
+          </div>
+          <div class="printOnly">
+            この控えは発行時点のスナップショットです。
+          </div>
+        </div>
+      </section>
+    </div>
+    <div id="phoneAssessmentModal" class="overlay">
+      <section class="compactSheet phoneAssessmentSheet">
+        <header>
+          <div><b>電話査定</b><small>電話受付をNEXT案件として保存</small></div>
+          <button data-close="phoneAssessmentModal">×</button>
+        </header>
+        <div class="body">
+          <div class="phoneAssessGrid">
+            <label>お名前<input id="paName" autocomplete="name" /></label
+            ><label
+              >電話<input id="paPhone" type="tel" autocomplete="tel"
+            /></label>
+          </div>
+          <label
+            >住所<input id="paAddress" autocomplete="street-address"
+          /></label>
+          <div class="phoneAssessGrid">
+            <label
+              >商品カテゴリ<input
+                id="paCategory"
+                list="paCategoryList"
+                placeholder="冷蔵庫など" /></label
+            ><label
+              >メーカー<input id="paMaker" placeholder="Panasonicなど"
+            /></label>
+          </div>
+          <div class="phoneAssessGrid">
+            <label>型番<input id="paModel" placeholder="型番" /></label
+            ><label
+              >年式<input id="paYear" inputmode="numeric" placeholder="2023"
+            /></label>
+          </div>
+          <datalist id="paCategoryList">
+            <option>エアコン</option>
+            <option>冷蔵庫</option>
+            <option>洗濯機</option>
+            <option>TV</option>
+            <option>電子レンジ</option>
+            <option>その他家電</option>
+          </datalist>
+          <label
+            >概算査定額<input
+              id="paEstimate"
+              inputmode="numeric"
+              placeholder="0"
+          /></label>
+          <label
+            >メモ<textarea
+              id="paNote"
+              rows="3"
+              placeholder="状態・搬出条件・希望など"
+            ></textarea>
+          </label>
+          <div id="paError" class="phoneAssessError hidden"></div>
+          <div class="phoneAssessActions">
+            <button id="savePhoneAssessment" type="button">
+              査定として保存</button
+            ><button id="savePhoneAndVisit" class="primary" type="button">
+              保存して訪問予定へ
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div id="appointmentModal" class="overlay">
+      <section class="compactSheet appointmentSheet">
+        <header>
+          <div>
+            <b id="appointmentModalTitle">予定を追加</b
+            ><small id="appointmentEditState">NEXT Green</small>
+          </div>
+          <button data-close="appointmentModal">×</button>
+        </header>
+        <div class="body">
+          <div class="apptFormGrid">
+            <label>日付<input id="apptDate" type="date" /></label
+            ><label
+              >区分<select id="apptCategory">
+                <option>買取</option>
+                <option>工事</option>
+                <option>配送</option>
+                <option>リサイクル</option>
+                <option>見積</option>
+                <option>販売</option>
+                <option>その他</option>
+              </select></label
+            >
+          </div>
+          <div class="apptFormGrid">
+            <label>開始<input id="apptStart" type="time" /></label
+            ><label>終了<input id="apptEnd" type="time" /></label>
+          </div>
+          <label
+            >お客様・件名<input id="apptCustomer" placeholder="例：山田様"
+          /></label>
+          <label>住所<input id="apptAddress" placeholder="訪問先住所" /></label>
+          <div class="apptFormGrid">
+            <label>電話<input id="apptPhone" type="tel" /></label
+            ><label
+              >受付/伝票番号<input id="apptRef" placeholder="KR- / UT-"
+            /></label>
+          </div>
+          <label>メモ<textarea id="apptNote" rows="3"></textarea></label>
+          <div class="apptAssigneeBlock">
+            <b>担当者</b>
+            <div id="apptEmployees" class="apptEmployees"></div>
+          </div>
+          <div id="apptConflict" class="apptConflict hidden"></div>
+          <button id="saveAppointment" class="saveAppointment" type="button">
+            予定を保存
+          </button>
+        </div>
+      </section>
+    </div>
+    <div id="inventoryDetailModal" class="overlay">
+      <section class="detailSheet">
+        <header>
+          <div>
+            <b id="detailInventoryNo">在庫詳細</b
+            ><small id="detailInventoryName"></small>
+          </div>
+          <button id="closeInventoryDetail" type="button">×</button>
+        </header>
+        <div class="body">
+          <section class="detailHero">
+            <div>
+              <span id="detailStage" class="stageBadge"></span
+              ><b id="detailMainName"></b><small id="detailMeta"></small>
+            </div>
+            <button id="detailProcessBtn" class="primaryCompact" type="button">
+              工程変更
+            </button>
+          </section>
+          <div id="detailTrail" class="detailTrail"></div>
+          <section class="detailQuick">
+            <button id="detailAddPhoto" type="button">📷 写真追加</button
+            ><button id="detailAddTest" type="button">✓ テスト結果</button
+            ><button id="detailSourceSlip" type="button">📄 元伝票</button
+            ><button id="detailPdf" type="button">PDF</button>
+          </section>
+          <input
+            id="detailPhotoInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            class="hidden"
+          />
+          <section class="detailBlock">
+            <div class="detailBlockHead">
+              <b>写真</b><span id="detailPhotoCount">0</span>
+            </div>
+            <div id="detailPhotos" class="detailPhotos"></div>
+          </section>
+          <section class="detailBlock">
+            <div class="detailBlockHead">
+              <b>テスト履歴</b><span id="detailTestCount">0</span>
+            </div>
+            <div id="detailTests" class="detailTests"></div>
+          </section>
+          <section id="detailSalesPrep" class="detailBlock salesPrepBlock">
+            <div class="detailBlockHead">
+              <b>販売準備</b><span id="detailSalesState">未設定</span>
+            </div>
+            <div class="salesPrepGrid">
+              <label
+                >販売価格<input
+                  id="detailSalePrice"
+                  inputmode="numeric"
+                  placeholder="0" /></label
+              ><label
+                >保管場所<input
+                  id="detailSaleLocation"
+                  placeholder="店頭 / 倉庫A-1"
+              /></label>
+            </div>
+            <label
+              >販売メモ<textarea
+                id="detailSaleNote"
+                rows="2"
+                placeholder="付属品・傷・販売時の注意"
+              ></textarea>
+            </label>
+            <div class="salesPrepActions">
+              <button id="detailPrepComplete" type="button">販売準備完了</button
+              ><button id="detailStartSale" class="primary" type="button">
+                販売開始
+              </button>
+            </div>
+            <small id="detailSaleHint"
+              >テスト後に価格と保管場所を確認して販売へ進めます。</small
+            >
+          </section>
+          <section id="detailEcListing" class="detailBlock ecListingBlock">
+            <div class="detailBlockHead">
+              <b>EC掲載</b><span id="detailEcState">非公開</span>
+            </div>
+            <div id="detailEcChecklist" class="ecChecklist"></div>
+            <label
+              >商品名<input
+                id="detailEcTitle"
+                placeholder="販売ページの商品名" /></label
+            ><label
+              >説明<textarea
+                id="detailEcDescription"
+                rows="6"
+                placeholder="商品説明"
+              ></textarea>
+            </label>
+            <div class="ecListingActions">
+              <button id="detailEcSave" type="button">下書き保存</button
+              ><button id="detailEcPreview" type="button">プレビュー</button
+              ><button id="detailEcPublish" class="primary" type="button">
+                公開</button
+              ><button id="detailEcUnpublish" type="button">非公開</button>
+            </div>
+            <small
+              >販売開始では下書きになります。写真・テスト・価格・商品情報を確認してから公開します。</small
+            >
+          </section>
+          <section class="detailBlock">
+            <div class="detailBlockHead">
+              <b>工程履歴</b
+              ><button id="detailAllHistory" type="button">履歴</button>
+            </div>
+            <div id="detailHistory" class="detailHistory"></div>
+          </section>
+          <section class="detailBlock detailLinkBlock">
+            <b>QR直開きURL</b><code id="detailDirectUrl"></code
+            ><button id="detailShareUrl" type="button">共有 / コピー</button>
+          </section>
+        </div>
+      </section>
+    </div>
+    <div id="testModal" class="overlay">
+      <section class="compactSheet">
+        <header>
+          <b>テスト結果</b><button data-close="testModal">×</button>
+        </header>
+        <div class="body">
+          <div id="testResultButtons" class="testResultButtons">
+            <button data-result="OK">OK</button
+            ><button data-result="NG">NG</button
+            ><button data-result="要確認">要確認</button>
+          </div>
+          <label class="testNoteLabel"
+            >メモ<textarea
+              id="testNote"
+              rows="3"
+              placeholder="動作・異音・冷却など"
+            ></textarea>
+          </label>
+          <div id="testEmployeeList" class="processEmployeeList"></div>
+          <button
+            id="saveTestResult"
+            class="saveTestResult"
+            type="button"
+            disabled
+          >
+            結果を保存
+          </button>
+        </div>
+      </section>
+    </div>
+    <div id="processModal" class="overlay">
+      <section class="compactSheet processSheet">
+        <header>
+          <div>
+            <b id="processTitle">工程変更</b><small id="processSub"></small>
+          </div>
+          <button data-close="processModal">×</button>
+        </header>
+        <div class="body">
+          <div id="processStageList" class="processStageList"></div>
+          <div id="processEmployeeStep" class="processEmployeeStep hidden">
+            <div class="processStepHead">
+              <b id="selectedProcessLabel"></b><span>担当者を選択</span>
+            </div>
+            <div id="processEmployeeList" class="processEmployeeList"></div>
+          </div>
+          <div id="processHistoryDetail" class="processHistoryDetail"></div>
+        </div>
+      </section>
+    </div>
+    <div id="meModal" class="overlay">
+      <section class="compactSheet">
+        <header>
+          <b>この端末の「自分」</b><button data-close="meModal">×</button>
+        </header>
+        <div class="body">
+          <p class="meHelp">
+            「自分の作業中」の表示に使います。この端末ごとに保存されます。
+          </p>
+          <div id="meEmployeeList" class="processEmployeeList"></div>
+        </div>
+      </section>
+    </div>
+    <div id="listModal" class="overlay">
+      <section class="compactSheet">
+        <header>
+          <b id="listTitle">一覧</b><button data-close="listModal">×</button>
+        </header>
+        <div id="listBody" class="body"></div>
+      </section>
+    </div>
+    <script src="./draft-db.js"></script>
+    <script src="./green-api.js"></script>
+    <script src="./core.js"></script>
+    <script src="./schedule.js"></script>
+    <script src="./appointments-ui.js"></script>
+    <script src="./inventory.js"></script>
+    <script src="./home-field.js"></script>
+    <script src="./assessment.js"></script>
+    <script src="./phone-assessment.js"></script>
+    <script src="./slips.js"></script>
+    <script src="./recycle.js"></script>
+    <script src="./sales.js"></script>
+    <script src="./home-fulfillment.js"></script>
+    <script src="./global-search.js"></script>
+    <script src="./slip.js"></script>
+    <script src="./workflow-router.js"></script>
+  </body>
+</html>

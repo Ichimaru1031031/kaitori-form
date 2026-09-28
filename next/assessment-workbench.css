@@ -1,0 +1,261 @@
+.assessmentSourceBar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 9px;
+  padding: 9px 10px;
+  border: 1px solid #cfe0da;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f7fbf9, #edf6f2);
+}
+
+.assessmentSourceDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2f9868;
+  box-shadow: 0 0 0 5px #d8eee3;
+}
+
+.assessmentSourceBar b,
+.assessmentSourceBar small {
+  display: block;
+}
+
+.assessmentSourceBar b {
+  color: #244a3c;
+  font-size: 11px;
+}
+
+.assessmentSourceBar small {
+  margin-top: 2px;
+  color: #6a7b74;
+  font-size: 9px;
+}
+
+.assessmentSourceBar em {
+  border-radius: 999px;
+  background: #fff;
+  color: #527066;
+  padding: 4px 7px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.assessmentSourceBar em.connected {
+  background: #dff3e7;
+  color: #1e7048;
+}
+
+.assessmentCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.assessmentCard::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #8ba69d;
+  content: "";
+}
+
+.assessmentCard[data-group="action"]::before {
+  background: #cf6658;
+}
+
+.assessmentCard[data-group="wait"]::before {
+  background: #d29b3d;
+}
+
+.assessmentCard[data-group="confirmed"]::before {
+  background: #3b8c65;
+}
+
+.assessmentActions .operate {
+  background: #315f54 !important;
+  border-color: #315f54 !important;
+  color: #fff !important;
+}
+
+.assessmentOpsOverlay {
+  z-index: 120;
+  align-items: stretch;
+  justify-content: center;
+  padding: 10px;
+  background: #10251ecc;
+  backdrop-filter: blur(8px);
+}
+
+.assessmentOpsOverlay.on {
+  display: flex;
+}
+
+.assessmentOpsSheet {
+  position: relative;
+  width: min(1180px, 100%);
+  height: min(920px, calc(100dvh - 20px));
+  overflow: hidden;
+  border: 1px solid #d5e3dd;
+  border-radius: 20px;
+  background: #f4f8f6;
+  box-shadow: 0 24px 70px #07150f70;
+}
+
+.assessmentOpsSheet > header {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px 0 17px;
+  border-bottom: 1px solid #d9e4df;
+  background: #fff;
+}
+
+.assessmentOpsSheet > header b,
+.assessmentOpsSheet > header small {
+  display: block;
+}
+
+.assessmentOpsSheet > header b {
+  color: #213d33;
+  font-size: 15px;
+}
+
+.assessmentOpsSheet > header small {
+  margin-top: 2px;
+  color: #6c7d76;
+  font-size: 9px;
+}
+
+.assessmentOpsHeaderActions {
+  display: flex;
+  gap: 7px;
+}
+
+.assessmentOpsHeaderActions button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d4e0db;
+  border-radius: 11px;
+  background: #f5f8f7;
+  color: #39584d;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.assessmentOpsTrust {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 15px;
+  border-bottom: 1px solid #d5e3dd;
+  background: #e9f4ef;
+  color: #315d4d;
+}
+
+.assessmentOpsTrust > span {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #2d9464;
+}
+
+.assessmentOpsTrust b {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.assessmentOpsTrust small {
+  min-width: 0;
+  overflow: hidden;
+  color: #61776e;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#assessmentOpsFrame {
+  width: 100%;
+  height: calc(100% - 100px);
+  border: 0;
+  background: #fff;
+}
+
+.assessmentOpsLoading {
+  position: absolute;
+  z-index: 2;
+  inset: 100px 0 0;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  text-align: center;
+  background: linear-gradient(145deg, #f2f8f5, #fff);
+  color: #31574a;
+  transition: opacity 0.18s ease;
+}
+
+.assessmentOpsLoading span {
+  color: #71827b;
+  font-size: 10px;
+}
+
+.assessmentOpsLoading.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .assessmentHeadActions {
+    max-width: 68%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .assessmentHeadActions button {
+    padding: 6px 7px !important;
+    font-size: 9px !important;
+  }
+
+  .assessmentSourceBar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .assessmentSourceBar em {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .assessmentOpsOverlay {
+    padding: 0;
+  }
+
+  .assessmentOpsSheet {
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .assessmentOpsTrust {
+    height: 38px;
+  }
+
+  .assessmentOpsTrust small {
+    display: none;
+  }
+
+  #assessmentOpsFrame {
+    height: calc(100% - 96px);
+  }
+
+  .assessmentOpsLoading {
+    inset: 96px 0 0;
+  }
+}
