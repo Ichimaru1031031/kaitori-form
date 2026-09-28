@@ -108,30 +108,14 @@
         }),
     );
   }
-  function loadBlueFrame(force) {
-    const frame = K.$("#assessmentOpsFrame");
-    if (!frame) return;
-    if (!frame.getAttribute("src") || force) {
-      K.$("#assessmentOpsLoading")?.classList.remove("hide");
-      const u = new URL(BLUE_DASHBOARD);
-      u.searchParams.set("embed", "1");
-      u.searchParams.set("_next_assessment", Date.now());
-      frame.src = u.toString();
-      return;
-    }
-  }
   K.openAssessmentOps = (caseInfo) => {
     activeBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
       .replace(/^BLUE-CASE-/, "")
       .replace(/^BLUE-SLIP-CASE-/, "");
-    K.$("#assessmentOpsTitle").textContent = caseInfo?.name
-      ? caseInfo.name + " 様の査定"
-      : "査定ダッシュボード";
-    K.$("#assessmentOpsSub").textContent = activeBlueCase
-      ? activeBlueCase + "・下の一覧から同じ受付番号を選択"
-      : "Blue本番と直接同期";
-    K.overlay("assessmentOpsModal").classList.add("on");
-    loadBlueFrame(false);
+    const u = new URL(BLUE_DASHBOARD);
+    if (activeBlueCase) u.searchParams.set("case", activeBlueCase);
+    u.searchParams.set("from", "next");
+    window.location.assign(u.toString());
   };
   function refreshBlueList() {
     const state = K.$("#assessmentBridgeState");
@@ -244,14 +228,4 @@
   });
   K.$("#openAssessmentDashboard").onclick = () => K.openAssessmentOps(null);
   K.$("#refreshAssessment").onclick = refreshBlueList;
-  K.$("#assessmentOpsReload").onclick = () => loadBlueFrame(true);
-  K.$("#assessmentOpsClose").addEventListener("click", refreshBlueList);
-  K.overlay("assessmentOpsModal").addEventListener("click", (event) => {
-    if (event.target !== K.overlay("assessmentOpsModal")) return;
-    K.overlay("assessmentOpsModal").classList.remove("on");
-    refreshBlueList();
-  });
-  K.$("#assessmentOpsFrame").addEventListener("load", () => {
-    K.$("#assessmentOpsLoading")?.classList.add("hide");
-  });
 })();

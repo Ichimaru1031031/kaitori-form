@@ -106,11 +106,12 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
   assert.match(assessment, /K\.casesNow\(\)/);
 });
 
-test("NEXT assessment opens the existing Blue dashboard for authoritative writes", () => {
-  assert.match(html, /id="assessmentOpsModal"/);
-  assert.match(html, /id="assessmentOpsFrame"/);
+test("NEXT assessment opens the existing Blue dashboard directly for authoritative writes", () => {
   assert.match(assessment, /const BLUE_DASHBOARD = K\.C\.assessment/);
-  assert.match(assessment, /frame\.src = u\.toString\(\)/);
+  assert.match(assessment, /u\.searchParams\.set\("case", activeBlueCase\)/);
+  assert.match(assessment, /window\.location\.assign\(u\.toString\(\)\)/);
+  assert.doesNotMatch(assessment, /assessmentOpsModal/);
+  assert.doesNotMatch(assessment, /assessmentOpsFrame/);
   assert.match(assessment, /K\.requestBlueCases\?\.\(\)/);
   assert.doesNotMatch(assessment, /saveAndSend(?:Estimate|Visit|Combined)/);
 });
