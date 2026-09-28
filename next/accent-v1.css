@@ -1,0 +1,70 @@
+/* NEXT accent tune: slightly more vivid green without losing glass/neutral UI */
+:root{
+  --g:#478071;
+  --g-dark:#2f6658;
+}
+
+/* primary actions */
+.createSlipPrimary,
+.primaryCompact,
+.saveTestResult,
+.salesPrepActions .primary,
+.phoneAssessActions .primary,
+.saveAppointment,
+.saleFlowActions .primary,
+.salesActions .deliver,
+.sheet footer button:last-child,
+.editor .save{
+  background:linear-gradient(180deg,#5a9684,#3f7c6b)!important;
+  border-color:#3f7c6b!important;
+  color:#fff!important;
+}
+
+/* softer primary buttons */
+.fieldAction.primary,
+.assessmentActions .next,
+.salesActions .reserve{
+  background:#e3f2ed!important;
+  color:#236452!important;
+  border-color:#a9d1c3!important;
+}
+
+/* active chips / filters */
+.inventoryFilters button.active,
+.processEmployeeList button.current,
+.services button.active,
+.apptEmployees button.active,
+.workflowFilters button.active,
+.salesFilters button.active,
+.recycleTypeChips button.active{
+  background:#4f8878!important;
+  border-color:#4f8878!important;
+  color:#fff!important;
+}
+
+/* nav selection: preserve glass, add a little more green */
+.nav button.active{
+  background:linear-gradient(180deg,rgba(187,225,211,.50),rgba(155,204,187,.32))!important;
+  color:#1f6250!important;
+  box-shadow:inset 0 0 0 1px rgba(50,123,99,.18),0 2px 8px rgba(48,82,70,.06)!important;
+}
+
+/* small green status/action accents */
+.homeWorkStage,
+.stageBadge{
+  color:#285f50!important;
+}
+.fieldDayDots i.active{
+  background:#4b8a76!important;
+}
+.generatedInventoryLinks button{
+  color:#286653!important;
+  border-color:#9fcbbb!important;
+  background:#f4fbf8!important;
+}
+
+/* keep vivid green restrained to interactive UI */
+a:focus-visible,button:focus-visible{
+  outline:2px solid rgba(57,132,106,.42);
+  outline-offset:2px;
+}
