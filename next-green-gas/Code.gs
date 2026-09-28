@@ -200,6 +200,45 @@ function writeIdempotency_(key,op,entityId,result){
   });
 }
 
+function syncEcForSale_(entityId,inv,saleObj,p,now){
+  const row=findRow_("EC_LISTINGS","inventoryId",entityId);
+  const prev=row?rowObject_(sh_("EC_LISTINGS"),row):{};
+  const saleRow=findRow_("SALES","inventoryId",entityId);
+  let status="非公開";
+  if(String(saleObj.status)==="販売中"){
+    if(String(prev.status)==="公開") status="公開";
+    else {
+      const requested=String(p.ecStatus||saleObj.ecStatus||prev.status||"下書き");
+      status=requested==="公開"?"公開":"下書き";
+    }
+  }
+  const title=String(p.ecTitle||saleObj.ecTitle||prev.title||[inv.maker,inv.model].filter(Boolean).join(" / ")||inv.category||"");
+  const description=String(p.ecDescription||saleObj.ecDescription||prev.description||"");
+  const obj={
+    listingId:prev.listingId||("LIST-"+entityId),
+    inventoryId:entityId,
+    inventoryNo:inv.inventoryNo||"",
+    status:status,
+    title:title,
+    description:description,
+    salePrice:Number(saleObj.salePrice||inv.salePrice||0),
+    publishedAt:status==="公開"?(prev.publishedAt||now):"",
+    updatedAt:now,
+    displayOrder:Number(prev.displayOrder||0),
+    employeeId:p.employeeId||saleObj.employeeId||"",
+    employeeName:p.employeeName||saleObj.employeeName||"",
+    photoIdsJson:prev.photoIdsJson||"[]",
+    source:prev.source||"NEXT"
+  };
+  if(row) updateRow_("EC_LISTINGS",row,obj); else appendObject_("EC_LISTINGS",obj);
+  if(saleRow) updateRow_("SALES",saleRow,{
+    ecTitle:title,ecDescription:description,ecStatus:status,
+    storageLocation:p.storageLocation||saleObj.storageLocation||inv.storageLocation||"",
+    updatedAt:now
+  });
+  return {listingId:obj.listingId,status:status,title:title,salePrice:obj.salePrice};
+}
+
 function opEcListingUpsert_(entityId,p,key){
   const now=String(p.updatedAt||new Date().toISOString());
   const invRow=findRow_("INVENTORY","inventoryId",entityId);
