@@ -115,7 +115,7 @@ test("NEXT assessment opens the Blue dashboard in a clean NEXT portal", () => {
   assert.match(assessmentPortal, /const BLUE_DASHBOARD =/);
   assert.match(assessment, /u\.searchParams\.set\("case", activeBlueCase\)/);
   assert.match(assessment, /window\.location\.assign\(u\.toString\(\)\)/);
-  assert.match(assessmentPortal, /--gas-banner-height: 48px/);
+  assert.match(assessmentPortal, /--gas-banner-height: 0px/);
   assert.match(assessmentPortal, /--legacy-menu-left: 82px/);
   assert.match(assessmentPortal, /--legacy-menu-bottom: 76px/);
   assert.match(
