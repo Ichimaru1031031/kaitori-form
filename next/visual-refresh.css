@@ -1,0 +1,108 @@
+/* NEXT visual refresh: higher contrast, neutral canvas, standard calendar grid, glass nav */
+:root{
+  --g:#4b6f67;
+  --g-dark:#35564f;
+  --bg:#f4f5f5;
+  --card:#ffffff;
+  --ink:#202825;
+  --muted:#66706c;
+  --line:#d8ddda;
+  --soft:#e9efec;
+  --red:#a9473f;
+  --amber:#8b6514;
+  --blue:#3c6497;
+}
+body{background:var(--bg);color:var(--ink)}
+.top{background:rgba(246,247,247,.9);border-bottom-color:#dde2df}
+.metrics button:nth-child(1){background:#f9e7e5!important;color:#993d35!important;border-color:#e1b3ad!important}
+.metrics button:nth-child(2){background:#fff0c9!important;color:#7e5a10!important;border-color:#e3c671!important}
+.metrics button:nth-child(3){background:#e7eef9!important;color:#355f97!important;border-color:#b9c9e1!important}
+.metrics button{box-shadow:none!important}
+.compat{display:flex!important;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px!important;margin-top:10px!important;border-radius:11px!important;background:#fff!important}
+.compat>div{padding:0!important;border:0!important}
+.compat>div b{font-size:11px}
+.compat>div span{font-size:9px!important}
+.compatOpen{margin:0!important;padding:6px 8px!important;font-size:9px!important}
+
+/* Standard, easy-to-scan calendar grid */
+.calendarLegend{display:flex;gap:5px;overflow:auto;padding:0 0 6px;scrollbar-width:none}
+.calendarLegend .legend{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px;border:1px solid transparent}
+.calendarLegend .purchase{background:#dcefe5;color:#235f43;border-color:#9fc9b2}
+.calendarLegend .work{background:#fae8d4;color:#8a4c18;border-color:#e5b47f}
+.calendarLegend .delivery{background:#e1ebf8;color:#315f94;border-color:#a9c1df}
+.calendarLegend .recycle{background:#ece4f6;color:#66458d;border-color:#c6b0df}
+.calendarLegend .estimate{background:#e7ebee;color:#4f5b64;border-color:#bfc7cd}
+.weekHead{gap:0!important;margin-bottom:0!important;background:#edf0ee;border:1px solid #cfd5d2;border-bottom:0}
+.weekHead span{padding:6px 2px!important;color:#4d5854!important;font-size:10px!important;border-right:1px solid #d5dad7}
+.weekHead span:last-child{border-right:0}
+.calendarGrid{gap:0!important;border-left:1px solid #cfd5d2;border-top:1px solid #cfd5d2;background:#fff}
+.dayCell{
+  min-height:90px!important;
+  border:0!important;
+  border-right:1px solid #cfd5d2!important;
+  border-bottom:1px solid #cfd5d2!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  padding:5px!important;
+  background:#fff!important;
+}
+.dayCell.outside{opacity:.48!important;background:#f6f7f7!important}
+.dayCell.today{background:#f3f7f5!important;box-shadow:inset 0 0 0 2px #7f9e94!important}
+.dayNum{font-size:12px!important;color:#303936}
+.attendees{color:#65716c!important;font-size:8px!important}
+.calEvent{
+  border-radius:4px!important;
+  padding:3px 5px!important;
+  margin-top:3px!important;
+  font-weight:800!important;
+  border-left:4px solid #8b9893!important;
+  color:#33403b!important;
+  background:#edf0ef!important;
+}
+.calEvent.purchase{background:#dcefe5!important;color:#235f43!important;border-left-color:#3e8b64!important}
+.calEvent.work{background:#fae8d4!important;color:#824814!important;border-left-color:#d17a2d!important}
+.calEvent.delivery{background:#e1ebf8!important;color:#2f5b8f!important;border-left-color:#4d7db8!important}
+.calEvent.recycle{background:#ece4f6!important;color:#624486!important;border-left-color:#835aad!important}
+.calEvent.estimate{background:#e7ebee!important;color:#4c5861!important;border-left-color:#66727b!important}
+.calEvent.sale{background:#f2e2ee!important;color:#7b436d!important;border-left-color:#a45d91!important}
+.calEvent.blocked{background:#f8e0df!important;color:#923c36!important;border-left-color:#bc5a52!important}
+.calEvent.other{background:#ecefed!important;color:#4f5955!important;border-left-color:#7d8984!important}
+
+/* Money-management-app inspired translucent floating bottom navigation */
+.nav{
+  bottom:calc(7px + env(safe-area-inset-bottom))!important;
+  width:min(620px,calc(100vw - 16px))!important;
+  padding:5px!important;
+  border-radius:18px!important;
+  background:rgba(250,251,251,.82)!important;
+  border:1px solid rgba(123,139,132,.24)!important;
+  box-shadow:0 10px 28px rgba(35,47,43,.16)!important;
+  backdrop-filter:blur(22px) saturate(160%)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(160%)!important;
+}
+.nav button{
+  color:#737f7a!important;
+  min-height:44px!important;
+  border-radius:13px!important;
+  padding:4px 2px!important;
+  background:transparent!important;
+  transition:background .14s,color .14s,transform .14s!important;
+}
+.nav button span,.nav button{font-size:16px!important}
+.nav b{font-size:9px!important;margin-top:1px!important;font-weight:850!important}
+.nav button.active{
+  background:rgba(72,104,95,.14)!important;
+  color:#2e554b!important;
+  box-shadow:inset 0 0 0 1px rgba(72,104,95,.13)!important;
+}
+.nav button:active{transform:scale(.97)}
+.stageBadge{background:#e7ece9!important;color:#394b45!important;border:1px solid #cfd8d4}
+.inventoryFilters button.active,.processEmployeeList button.current{background:#667d76!important;color:#fff!important;border-color:#667d76!important}
+
+@media(max-width:600px){
+  .dayCell{min-height:78px!important;padding:4px!important}
+  .calendarLegend{padding-bottom:5px}
+  .calendarLegend .legend{font-size:8px;padding:3px 6px}
+  .nav{width:calc(100vw - 10px)!important;bottom:calc(4px + env(safe-area-inset-bottom))!important;padding:4px!important;border-radius:16px!important}
+  .nav button{min-height:42px!important}
+}
