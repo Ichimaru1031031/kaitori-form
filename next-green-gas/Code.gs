@@ -78,7 +78,8 @@ function buildSnapshot_() {
     inventoryPhotos:"INVENTORY_PHOTO_LOG",
     finalizedSlips:"NEXT_FINALIZED_SLIPS",
     inventoryArchive:"INVENTORY_ARCHIVE",
-    salesArchive:"SALES_ARCHIVE"
+    salesArchive:"SALES_ARCHIVE",
+    ecListings:"EC_LISTINGS"
   };
   const out = {
     schemaVersion:3,
@@ -131,6 +132,7 @@ function dispatch_(op, entityId, p, key) {
     case "appointment-note-update": return opAppointmentNoteUpdate_(entityId,p,key);
     case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
     case "inventory-archive": return opInventoryArchive_(entityId,p,key);
+    case "ec-listing-upsert": return opEcListingUpsert_(entityId,p,key);
     case "case-upsert": return opCaseUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
   }
@@ -286,6 +288,7 @@ function opInventoryArchive_(entityId,p,key){
   });
   updateRow_("INVENTORY",invRow,{stage:"販売完了",nextAction:"アーカイブ済み",assignedEmployeeId:employeeName,updatedAt:now,archivedAt:now});
   if(saleRow) updateRow_("SALES",saleRow,{status:"販売完了",employeeId:employeeId,employeeName:employeeName,updatedAt:now});
+  hideEcListing_(entityId,now);
   appendObject_("INVENTORY_PROCESS_LOG",{
     logId:p.processLogId||("PROC-"+Utilities.getUuid()),inventoryId:entityId,inventoryNo:inv.inventoryNo||"",
     stage:"販売完了",stageLabel:"販売完了",employeeId:employeeId,employeeName:employeeName,completedAt:now,
@@ -335,8 +338,9 @@ function opInventorySaleUpdate_(entityId,p,key){
     employeeId:p.employeeId||"",employeeName:p.employeeName||"",completedAt:now,
     source:"NEXT",idempotencyKey:key,note:p.notes||""
   });
+  const ecListing=syncEcForSale_(entityId,inv,saleObj,p,now);
   audit_("inventory",entityId,"sale-update",saleObj,"NEXT");
-  return {inventoryId:entityId,inventoryNo:inventoryNo,status:stage,salePrice:Number(p.salePrice||0),updatedAt:now};
+  return {inventoryId:entityId,inventoryNo:inventoryNo,status:stage,salePrice:Number(p.salePrice||0),ecListing:ecListing,updatedAt:now};
 }
 
 function opInventoryProcess_(entityId,p,key){
