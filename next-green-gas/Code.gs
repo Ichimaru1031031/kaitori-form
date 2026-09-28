@@ -70,6 +70,7 @@ function buildSnapshot_() {
     serviceOrders:"SERVICE_ORDERS",
     lineItems:"LINE_ITEMS",
     documents:"DOCUMENTS",
+    sales:"SALES",
     modelMaster:"MODEL_MASTER",
     processMaster:"INVENTORY_PROCESS_MASTER",
     processLogs:"INVENTORY_PROCESS_LOG",
@@ -125,6 +126,7 @@ function dispatch_(op, entityId, p, key) {
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
+    case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
     case "case-upsert": return opCaseUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
   }
@@ -238,6 +240,49 @@ function opAppointmentUpsert_(entityId,p,key){
   if(row) updateRow_("APPOINTMENTS",row,obj); else appendObject_("APPOINTMENTS",obj);
   audit_("appointment",entityId,row?"update":"create",obj,"NEXT");
   return {appointmentId:entityId,saved:true,updatedAt:now};
+}
+
+function opInventorySaleUpdate_(entityId,p,key){
+  const now=String(p.updatedAt||new Date().toISOString()),stage=String(p.status||"販売準備完了");
+  const next=String(p.nextAction||(stage==="販売中"?"問い合わせ対応・売約登録":"販売を開始する"));
+  const invRow=findRow_("INVENTORY","inventoryId",entityId);
+  if(!invRow) throw new Error("INVENTORY_NOT_FOUND:"+entityId);
+  const inv=rowObject_(sh_("INVENTORY"),invRow),inventoryNo=String(p.inventoryNo||inv.inventoryNo||"");
+  updateRow_("INVENTORY",invRow,{
+    salePrice:Number(p.salePrice||0),
+    storageLocation:p.storageLocation||inv.storageLocation||"",
+    stage:stage,
+    nextAction:next,
+    assignedEmployeeId:p.employeeName||p.employeeId||"",
+    updatedAt:now
+  });
+  const saleRow=findRow_("SALES","inventoryId",entityId);
+  const saleObj={
+    saleId:p.saleId||("SALE-"+entityId),
+    inventoryId:entityId,
+    inventoryNo:inventoryNo,
+    status:stage,
+    customerName:"",
+    salePrice:Number(p.salePrice||0),
+    employeeId:p.employeeId||"",
+    employeeName:p.employeeName||"",
+    reservedAt:saleRow?rowObject_(sh_("SALES"),saleRow).reservedAt||"":"",
+    soldAt:saleRow?rowObject_(sh_("SALES"),saleRow).soldAt||"":"",
+    deliveredAt:saleRow?rowObject_(sh_("SALES"),saleRow).deliveredAt||"":"",
+    notes:p.notes||"",
+    source:"NEXT",
+    idempotencyKey:key,
+    updatedAt:now
+  };
+  if(saleRow) updateRow_("SALES",saleRow,saleObj); else appendObject_("SALES",saleObj);
+  appendObject_("INVENTORY_PROCESS_LOG",{
+    logId:p.processLogId||("PROC-"+Utilities.getUuid()),
+    inventoryId:entityId,inventoryNo:inventoryNo,stage:stage,stageLabel:stage,
+    employeeId:p.employeeId||"",employeeName:p.employeeName||"",completedAt:now,
+    source:"NEXT",idempotencyKey:key,note:p.notes||""
+  });
+  audit_("inventory",entityId,"sale-update",saleObj,"NEXT");
+  return {inventoryId:entityId,inventoryNo:inventoryNo,status:stage,salePrice:Number(p.salePrice||0),updatedAt:now};
 }
 
 function opInventoryProcess_(entityId,p,key){
