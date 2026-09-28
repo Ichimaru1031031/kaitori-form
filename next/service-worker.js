@@ -1,4 +1,4 @@
-const CACHE = "kr-next-green-v56";
+const CACHE = "kr-next-green-v57";
 const SHELL = [
   "./",
   "./index.html",
@@ -29,12 +29,12 @@ const SHELL = [
   "./ui-v5.css",
   "./draft-db.js",
   "./green-api.js",
-  "./core.js",
+  "./core.js?v=8",
   "./schedule.js",
   "./appointments-ui.js",
   "./inventory.js",
   "./home-field.js",
-  "./assessment.js",
+  "./assessment.js?v=3",
   "./phone-assessment.js",
   "./slips.js",
   "./recycle.js",
