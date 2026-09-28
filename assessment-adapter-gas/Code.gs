@@ -13,6 +13,31 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+function doPost(e) {
+  const requestId = String((e && e.parameter && e.parameter.requestId) || "");
+  const operation = String((e && e.parameter && e.parameter.operation) || "");
+  let payload = {};
+  let body;
+  try {
+    payload = JSON.parse(String((e && e.parameter && e.parameter.payload) || "{}"));
+    const result = operation === "pair"
+      ? adapterPair(payload.code)
+      : adapterRequest(String((e && e.parameter && e.parameter.token) || ""), operation, payload);
+    body = { type: "kr-assessment-adapter-response", requestId: requestId, result: result };
+  } catch (error) {
+    body = {
+      type: "kr-assessment-adapter-response",
+      requestId: requestId,
+      error: String(error && error.message || error),
+    };
+  }
+  const template = HtmlService.createTemplateFromFile("BridgeResponse");
+  template.responseJson = JSON.stringify(body).replace(/</g, "\\u003c");
+  return template.evaluate()
+    .setTitle("Kaitori Rescue NEXT Assessment Response")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 function adapterPair(code) {
   const cache = CacheService.getScriptCache();
   const rateKey = "pair:" + hash_(String(code || "").slice(0, 4));
