@@ -1,0 +1,1 @@
+window.KR_SHOP_API_URL="";

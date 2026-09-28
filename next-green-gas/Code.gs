@@ -14,6 +14,7 @@ function doGet(e) {
   }
   if (action === "snapshot") return json_(buildSnapshot_());
   if (action === "catalog") return json_(buildPublicCatalog_());
+  if (action === "checkout-confirm") return json_(confirmStripeCheckout_(String((e && e.parameter && e.parameter.session_id) || "")));
   if (action === "ping") return json_({ok:true, service:"kaitori-rescue-next-green", time:new Date().toISOString()});
   return json_({ok:true, action:action, readOnly:false});
 }
@@ -81,7 +82,8 @@ function buildSnapshot_() {
     finalizedSlips:"NEXT_FINALIZED_SLIPS",
     inventoryArchive:"INVENTORY_ARCHIVE",
     salesArchive:"SALES_ARCHIVE",
-    ecListings:"EC_LISTINGS"
+    ecListings:"EC_LISTINGS",
+    checkouts:"CHECKOUTS"
   };
   const out = {
     schemaVersion:3,
@@ -135,6 +137,8 @@ function dispatch_(op, entityId, p, key) {
     case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
     case "inventory-archive": return opInventoryArchive_(entityId,p,key);
     case "ec-listing-upsert": return opEcListingUpsert_(entityId,p,key);
+    case "checkout-create": return opCheckoutCreate_(entityId,p,key);
+    case "checkout-confirm": return confirmStripeCheckout_(String(p.sessionId||entityId||""));
     case "case-upsert": return opCaseUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
   }
@@ -228,6 +232,7 @@ function opEcListingUpsert_(entityId,p,key){
   return {inventoryId:entityId,listingId:obj.listingId,status:status,title:obj.title,salePrice:obj.salePrice,photos:publicPhotos,updatedAt:now};
 }
 function buildPublicCatalog_(){
+  releaseExpiredCheckouts_();
   const listings=sheetObjects_("EC_LISTINGS").filter(function(x){return String(x.status)==="公開";});
   const inventory=sheetObjects_("INVENTORY"),sales=sheetObjects_("SALES");
   const invMap={};inventory.forEach(function(x){invMap[x.inventoryId]=x;});
@@ -290,6 +295,198 @@ function ensurePublicEcPhotos_(inventoryId,previousJson){
     }catch(err){}
   });
   return out;
+}
+
+function settingValue_(key,fallback){
+  const row=findRow_("SETTINGS","key",key);
+  if(!row)return fallback;
+  const obj=rowObject_(sh_("SETTINGS"),row);
+  return obj.value===undefined||obj.value===""?fallback:obj.value;
+}
+function settingNumber_(key,fallback){
+  const n=Number(settingValue_(key,fallback));
+  return Number.isFinite(n)?n:Number(fallback||0);
+}
+function stripeSecret_(){
+  const v=PropertiesService.getScriptProperties().getProperty("STRIPE_SECRET_KEY");
+  if(!v)throw new Error("STRIPE_NOT_CONFIGURED");
+  return v;
+}
+function stripeFetch_(path,options){
+  const opt=options||{};
+  opt.muteHttpExceptions=true;
+  opt.headers=Object.assign({},opt.headers||{},{"Authorization":"Bearer "+stripeSecret_()});
+  const res=UrlFetchApp.fetch("https://api.stripe.com"+path,opt);
+  const text=res.getContentText();
+  let data={};try{data=JSON.parse(text)}catch(_e){data={raw:text};}
+  if(res.getResponseCode()<200||res.getResponseCode()>=300)throw new Error("STRIPE_"+res.getResponseCode()+":"+(data.error&&data.error.message||text));
+  return data;
+}
+function checkoutRowsOpen_(){
+  return rowsBy_("CHECKOUTS","status","open");
+}
+function releaseExpiredCheckouts_(){
+  const now=Date.now();
+  checkoutRowsOpen_().forEach(function(r){
+    const exp=Date.parse(String(r.obj.expiresAt||""));
+    if(!exp||exp>now)return;
+    updateRow_("CHECKOUTS",r.row,{status:"expired",lastError:"",});
+    const listingIds=parseJsonArray_(r.obj.listingIdsJson);
+    listingIds.forEach(function(listingId){
+      const lr=findRow_("EC_LISTINGS","listingId",listingId);
+      if(!lr)return;
+      const listing=rowObject_(sh_("EC_LISTINGS"),lr);
+      const invRow=findRow_("INVENTORY","inventoryId",listing.inventoryId);
+      const inv=invRow?rowObject_(sh_("INVENTORY"),invRow):{};
+      if(String(listing.status)==="決済中" && String(inv.stage)==="販売中"){
+        updateRow_("EC_LISTINGS",lr,{status:"公開",updatedAt:new Date().toISOString()});
+      }
+    });
+  });
+}
+function shippingFeeFor_(option){
+  const o=String(option||"pickup");
+  if(o==="pickup")return settingNumber_("shop.shipping.pickup",0);
+  if(o==="nagareyama")return settingNumber_("shop.shipping.nagareyama",2200);
+  if(o==="kashiwa")return settingNumber_("shop.shipping.kashiwa",3000);
+  if(o==="other")throw new Error("DELIVERY_QUOTE_REQUIRED");
+  throw new Error("INVALID_DELIVERY_OPTION");
+}
+function opCheckoutCreate_(entityId,p,key){
+  releaseExpiredCheckouts_();
+  const listingIds=Array.isArray(p.listingIds)?p.listingIds.map(String).filter(Boolean):[];
+  if(!listingIds.length)throw new Error("EMPTY_CART");
+  if(listingIds.length>20)throw new Error("TOO_MANY_ITEMS");
+  const listings=[],inventoryIds=[];
+  let subtotal=0;
+  listingIds.forEach(function(listingId){
+    const row=findRow_("EC_LISTINGS","listingId",listingId);
+    if(!row)throw new Error("LISTING_NOT_FOUND:"+listingId);
+    const x=rowObject_(sh_("EC_LISTINGS"),row);
+    if(String(x.status)!=="公開")throw new Error("LISTING_NOT_AVAILABLE:"+listingId);
+    const invRow=findRow_("INVENTORY","inventoryId",x.inventoryId);
+    if(!invRow)throw new Error("INVENTORY_NOT_FOUND:"+x.inventoryId);
+    const inv=rowObject_(sh_("INVENTORY"),invRow);
+    if(String(inv.stage)!=="販売中")throw new Error("INVENTORY_NOT_SELLING:"+x.inventoryId);
+    const price=Number(x.salePrice||inv.salePrice||0);
+    if(!(price>0))throw new Error("INVALID_PRICE:"+listingId);
+    listings.push({row:row,obj:x,inv:inv,price:price});
+    inventoryIds.push(String(x.inventoryId));
+    subtotal+=price;
+  });
+  const deliveryOption=String(p.deliveryOption||"pickup");
+  const shippingFee=shippingFeeFor_(deliveryOption);
+  const total=subtotal+shippingFee;
+  const now=new Date(),expires=new Date(now.getTime()+30*60*1000);
+  const checkoutId=String(entityId||("CHK-"+Utilities.getUuid().replace(/-/g,"").slice(0,10).toUpperCase()));
+  const success=PropertiesService.getScriptProperties().getProperty("SHOP_SUCCESS_URL")||"https://ichimaru1031031.github.io/kaitori-form/next/shop/?success=1&session_id={CHECKOUT_SESSION_ID}";
+  const cancel=PropertiesService.getScriptProperties().getProperty("SHOP_CANCEL_URL")||"https://ichimaru1031031.github.io/kaitori-form/next/shop/?cancel=1";
+  const payload={
+    mode:"payment",
+    locale:"ja",
+    success_url:success,
+    cancel_url:cancel,
+    client_reference_id:checkoutId,
+    "phone_number_collection[enabled]":"true",
+    "metadata[checkout_id]":checkoutId,
+    "metadata[inventory_ids]":inventoryIds.join(","),
+    "metadata[listing_ids]":listingIds.join(","),
+    "metadata[delivery_option]":deliveryOption,
+    expires_at:String(Math.floor(expires.getTime()/1000))
+  };
+  if(p.customerEmail)payload.customer_email=String(p.customerEmail);
+  if(deliveryOption!=="pickup")payload["shipping_address_collection[allowed_countries][0]"]="JP";
+  listings.forEach(function(x,i){
+    payload["line_items["+i+"][price_data][currency]"]="jpy";
+    payload["line_items["+i+"][price_data][product_data][name]"]=String(x.obj.title||[x.inv.maker,x.inv.model].filter(Boolean).join(" / ")||x.inv.category||"中古家電");
+    payload["line_items["+i+"][price_data][unit_amount]"]=String(Math.round(x.price));
+    payload["line_items["+i+"][quantity]"]="1";
+  });
+  if(shippingFee>0){
+    const i=listings.length;
+    payload["line_items["+i+"][price_data][currency]"]="jpy";
+    payload["line_items["+i+"][price_data][product_data][name]"]="配送費";
+    payload["line_items["+i+"][price_data][unit_amount]"]=String(Math.round(shippingFee));
+    payload["line_items["+i+"][quantity]"]="1";
+  }
+  const session=stripeFetch_("/v1/checkout/sessions",{method:"post",payload:payload});
+  appendObject_("CHECKOUTS",{
+    checkoutId:checkoutId,
+    stripeSessionId:session.id||"",
+    status:"open",
+    listingIdsJson:JSON.stringify(listingIds),
+    inventoryIdsJson:JSON.stringify(inventoryIds),
+    amountSubtotal:subtotal,
+    shippingFee:shippingFee,
+    amountTotal:total,
+    deliveryOption:deliveryOption,
+    customerEmail:p.customerEmail||"",
+    createdAt:now.toISOString(),
+    expiresAt:expires.toISOString(),
+    paidAt:"",
+    lastError:""
+  });
+  listings.forEach(function(x){updateRow_("EC_LISTINGS",x.row,{status:"決済中",updatedAt:now.toISOString()});});
+  audit_("checkout",checkoutId,"create",{stripeSessionId:session.id,listingIds:listingIds,inventoryIds:inventoryIds,total:total,deliveryOption:deliveryOption},"NEXT");
+  return {checkoutId:checkoutId,sessionId:session.id,url:session.url,expiresAt:expires.toISOString(),amountSubtotal:subtotal,shippingFee:shippingFee,amountTotal:total};
+}
+function confirmStripeCheckout_(sessionId){
+  if(!sessionId)throw new Error("SESSION_ID_REQUIRED");
+  const session=stripeFetch_("/v1/checkout/sessions/"+encodeURIComponent(sessionId),{method:"get"});
+  const row=findRow_("CHECKOUTS","stripeSessionId",sessionId);
+  if(!row)return {sessionId:sessionId,paymentStatus:session.payment_status||"",known:false};
+  const co=rowObject_(sh_("CHECKOUTS"),row);
+  if(String(co.status)==="paid")return {sessionId:sessionId,paymentStatus:"paid",known:true,alreadyConfirmed:true};
+  const listingIds=parseJsonArray_(co.listingIdsJson),inventoryIds=parseJsonArray_(co.inventoryIdsJson);
+  if(String(session.payment_status)==="paid"){
+    const now=new Date().toISOString(),customer=(session.customer_details&&session.customer_details.name)||(session.customer_details&&session.customer_details.email)||"EC購入";
+    inventoryIds.forEach(function(inventoryId){
+      const ir=findRow_("INVENTORY","inventoryId",inventoryId);
+      if(ir){
+        const inv=rowObject_(sh_("INVENTORY"),ir);
+        updateRow_("INVENTORY",ir,{stage:"売約済み",nextAction:"引渡し日時を確認",assignedEmployeeId:"EC決済",updatedAt:now});
+        appendObject_("INVENTORY_PROCESS_LOG",{
+          logId:"PROC-"+Utilities.getUuid(),
+          inventoryId:inventoryId,
+          inventoryNo:inv.inventoryNo||"",
+          stage:"売約済み",
+          stageLabel:"売約済み",
+          employeeId:"",
+          employeeName:"EC決済",
+          completedAt:now,
+          source:"STRIPE",
+          idempotencyKey:"stripe:"+sessionId,
+          note:"Stripe Checkout支払完了"
+        });
+      }
+      const sr=findRow_("SALES","inventoryId",inventoryId);
+      const salePrice=(function(){const lr=findRow_("EC_LISTINGS","inventoryId",inventoryId);return lr?Number(rowObject_(sh_("EC_LISTINGS"),lr).salePrice||0):0;})();
+      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",source:"STRIPE",updatedAt:now};
+      if(sr)updateRow_("SALES",sr,saleObj);
+      else{
+        const ir2=findRow_("INVENTORY","inventoryId",inventoryId),inv2=ir2?rowObject_(sh_("INVENTORY"),ir2):{};
+        appendObject_("SALES",Object.assign({saleId:"SALE-"+inventoryId,inventoryId:inventoryId,inventoryNo:inv2.inventoryNo||"",deliveredAt:"",notes:"",idempotencyKey:"stripe:"+sessionId},saleObj));
+      }
+    });
+    listingIds.forEach(function(listingId){
+      const lr=findRow_("EC_LISTINGS","listingId",listingId);
+      if(lr)updateRow_("EC_LISTINGS",lr,{status:"非公開",updatedAt:now});
+    });
+    updateRow_("CHECKOUTS",row,{status:"paid",paidAt:now,lastError:""});
+    audit_("checkout",co.checkoutId||sessionId,"paid",{sessionId:sessionId,inventoryIds:inventoryIds,listingIds:listingIds},"STRIPE");
+    return {sessionId:sessionId,paymentStatus:"paid",known:true,inventoryIds:inventoryIds};
+  }
+  const expired=String(session.status)==="expired" || Date.parse(String(co.expiresAt||""))<=Date.now();
+  if(expired){
+    updateRow_("CHECKOUTS",row,{status:"expired",lastError:""});
+    listingIds.forEach(function(listingId){
+      const lr=findRow_("EC_LISTINGS","listingId",listingId);
+      if(!lr)return;
+      const listing=rowObject_(sh_("EC_LISTINGS"),lr),ir=findRow_("INVENTORY","inventoryId",listing.inventoryId),inv=ir?rowObject_(sh_("INVENTORY"),ir):{};
+      if(String(inv.stage)==="販売中")updateRow_("EC_LISTINGS",lr,{status:"公開",updatedAt:new Date().toISOString()});
+    });
+  }
+  return {sessionId:sessionId,paymentStatus:session.payment_status||"",known:true,status:expired?"expired":String(session.status||"open")};
 }
 
 function opCaseUpsert_(entityId,p,key){
