@@ -111,8 +111,18 @@
     activeBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
       .replace(/^BLUE-CASE-/, "")
       .replace(/^BLUE-SLIP-CASE-/, "");
-    const u = new URL("./assessment-portal.html", window.location.href);
+    const isAppleMobile =
+      /iPad|iPhone|iPod/.test(navigator.userAgent || "") ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const u = new URL(
+      isAppleMobile ? K.C.assessment : "./assessment-portal.html",
+      window.location.href,
+    );
     if (activeBlueCase) u.searchParams.set("case", activeBlueCase);
+    if (isAppleMobile) {
+      u.searchParams.set("embed", "1");
+      u.searchParams.set("from", "next");
+    }
     window.location.assign(u.toString());
   };
   function refreshBlueList() {

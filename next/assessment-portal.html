@@ -137,6 +137,13 @@
           dashboard.searchParams.set("case", caseId);
           document.querySelector("#caseLabel").textContent = caseId + " ・ Blue本番データ";
         }
+        const isAppleMobile =
+          /iPad|iPhone|iPod/.test(navigator.userAgent || "") ||
+          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        if (isAppleMobile) {
+          location.replace(dashboard.toString());
+          return;
+        }
         const frame = document.querySelector("#assessmentFrame");
         frame.addEventListener("load", () => document.querySelector("#loading").classList.add("hide"));
         frame.src = dashboard.toString();

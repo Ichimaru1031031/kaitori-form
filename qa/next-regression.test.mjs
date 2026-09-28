@@ -112,7 +112,11 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 
 test("NEXT assessment opens the Blue dashboard in a clean NEXT portal", () => {
   assert.match(assessment, /\.\/assessment-portal\.html/);
+  assert.match(assessment, /iPad\|iPhone\|iPod/);
+  assert.match(assessment, /isAppleMobile \? K\.C\.assessment/);
+  assert.match(assessment, /u\.searchParams\.set\("embed", "1"\)/);
   assert.match(assessmentPortal, /const BLUE_DASHBOARD =/);
+  assert.match(assessmentPortal, /location\.replace\(dashboard\.toString\(\)\)/);
   assert.match(assessment, /u\.searchParams\.set\("case", activeBlueCase\)/);
   assert.match(assessment, /window\.location\.assign\(u\.toString\(\)\)/);
   assert.match(assessmentPortal, /--gas-banner-height: 0px/);
