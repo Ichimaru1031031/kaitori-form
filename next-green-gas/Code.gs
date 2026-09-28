@@ -76,7 +76,9 @@ function buildSnapshot_() {
     processLogs:"INVENTORY_PROCESS_LOG",
     inventoryTests:"INVENTORY_TEST_LOG",
     inventoryPhotos:"INVENTORY_PHOTO_LOG",
-    finalizedSlips:"NEXT_FINALIZED_SLIPS"
+    finalizedSlips:"NEXT_FINALIZED_SLIPS",
+    inventoryArchive:"INVENTORY_ARCHIVE",
+    salesArchive:"SALES_ARCHIVE"
   };
   const out = {
     schemaVersion:3,
@@ -128,6 +130,7 @@ function dispatch_(op, entityId, p, key) {
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
     case "appointment-note-update": return opAppointmentNoteUpdate_(entityId,p,key);
     case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
+    case "inventory-archive": return opInventoryArchive_(entityId,p,key);
     case "case-upsert": return opCaseUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
   }
@@ -250,6 +253,46 @@ function opAppointmentUpsert_(entityId,p,key){
   if(row) updateRow_("APPOINTMENTS",row,obj); else appendObject_("APPOINTMENTS",obj);
   audit_("appointment",entityId,row?"update":"create",obj,"NEXT");
   return {appointmentId:entityId,saved:true,updatedAt:now};
+}
+
+function opInventoryArchive_(entityId,p,key){
+  const now=String(p.archivedAt||new Date().toISOString()),invRow=findRow_("INVENTORY","inventoryId",entityId);
+  if(!invRow) throw new Error("INVENTORY_NOT_FOUND:"+entityId);
+  const inv=rowObject_(sh_("INVENTORY"),invRow),saleRow=findRow_("SALES","inventoryId",entityId),sale=saleRow?rowObject_(sh_("SALES"),saleRow):{};
+  if(String(inv.archivedAt||"")) return {inventoryId:entityId,inventoryNo:inv.inventoryNo||"",archivedAt:inv.archivedAt,alreadyArchived:true};
+  const photos=rowsBy_("INVENTORY_PHOTO_LOG","inventoryId",entityId).map(x=>x.obj);
+  const tests=rowsBy_("INVENTORY_TEST_LOG","inventoryId",entityId).map(x=>x.obj);
+  const processes=rowsBy_("INVENTORY_PROCESS_LOG","inventoryId",entityId).map(x=>x.obj);
+  const archiveId="ARCH-"+Utilities.getUuid();
+  const employeeId=String(p.employeeId||sale.employeeId||"");
+  const employeeName=String(p.employeeName||sale.employeeName||inv.assignedEmployeeId||"");
+  const notes=String(p.notes||sale.notes||"");
+  const snapshot={inventory:inv,sale:sale,photos:photos,tests:tests,processes:processes};
+  appendObject_("INVENTORY_ARCHIVE",{
+    archiveId:archiveId,inventoryId:entityId,inventoryNo:inv.inventoryNo||"",
+    sourceServiceOrderId:inv.sourceServiceOrderId||"",sourceLineItemId:inv.sourceLineItemId||"",
+    category:inv.category||"",maker:inv.maker||"",model:inv.model||"",year:inv.year||"",spec:inv.spec||"",
+    purchasePrice:Number(inv.purchasePrice||0),salePrice:Number(sale.salePrice||inv.salePrice||0),
+    finalStage:"販売完了",customerName:sale.customerName||"",employeeId:employeeId,employeeName:employeeName,
+    reservedAt:sale.reservedAt||"",soldAt:sale.soldAt||"",deliveredAt:sale.deliveredAt||"",
+    archivedAt:now,storageLocation:inv.storageLocation||"",photoCount:photos.length,testCount:tests.length,
+    processCount:processes.length,notes:notes,snapshotJson:snapshot
+  });
+  appendObject_("SALES_ARCHIVE",{
+    archiveId:archiveId,saleId:sale.saleId||("SALE-"+entityId),inventoryId:entityId,inventoryNo:inv.inventoryNo||"",
+    customerName:sale.customerName||"",salePrice:Number(sale.salePrice||inv.salePrice||0),
+    employeeId:employeeId,employeeName:employeeName,reservedAt:sale.reservedAt||"",soldAt:sale.soldAt||"",
+    deliveredAt:sale.deliveredAt||"",notes:notes,source:"NEXT",archivedAt:now,snapshotJson:sale
+  });
+  updateRow_("INVENTORY",invRow,{stage:"販売完了",nextAction:"アーカイブ済み",assignedEmployeeId:employeeName,updatedAt:now,archivedAt:now});
+  if(saleRow) updateRow_("SALES",saleRow,{status:"販売完了",employeeId:employeeId,employeeName:employeeName,updatedAt:now});
+  appendObject_("INVENTORY_PROCESS_LOG",{
+    logId:p.processLogId||("PROC-"+Utilities.getUuid()),inventoryId:entityId,inventoryNo:inv.inventoryNo||"",
+    stage:"販売完了",stageLabel:"販売完了",employeeId:employeeId,employeeName:employeeName,completedAt:now,
+    source:"NEXT",idempotencyKey:key,note:notes||"販売完了アーカイブ"
+  });
+  audit_("inventory",entityId,"archive",{archiveId:archiveId,archivedAt:now},"NEXT");
+  return {inventoryId:entityId,inventoryNo:inv.inventoryNo||"",archiveId:archiveId,status:"販売完了",archivedAt:now};
 }
 
 function opInventorySaleUpdate_(entityId,p,key){
