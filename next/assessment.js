@@ -5,7 +5,8 @@
     query = "",
     loaded = false,
     activeBlueCase = "",
-    blueFrameReady = false;
+    blueFrameReady = false,
+    blueCaseTimer = 0;
   async function ensureCustomers() {
     if (loaded) return;
     if (Array.isArray(K.customers) && K.customers.length) {
@@ -119,6 +120,17 @@
       );
     } catch {}
   }
+  function focusBlueCaseWhenReady() {
+    clearInterval(blueCaseTimer);
+    if (!activeBlueCase) return;
+    let attempts = 0;
+    postBlueCase();
+    blueCaseTimer = setInterval(() => {
+      postBlueCase();
+      attempts++;
+      if (attempts >= 20) clearInterval(blueCaseTimer);
+    }, 750);
+  }
   function loadBlueFrame(force) {
     const frame = K.$("#assessmentOpsFrame");
     if (!frame) return;
@@ -146,8 +158,7 @@
     K.overlay("assessmentOpsModal").classList.add("on");
     loadBlueFrame(false);
     if (blueFrameReady && activeBlueCase) {
-      postBlueCase();
-      setTimeout(postBlueCase, 250);
+      focusBlueCaseWhenReady();
     }
   };
   function refreshBlueList() {
@@ -271,7 +282,6 @@
   K.$("#assessmentOpsFrame").addEventListener("load", () => {
     blueFrameReady = true;
     K.$("#assessmentOpsLoading")?.classList.add("hide");
-    postBlueCase();
-    if (activeBlueCase) setTimeout(postBlueCase, 500);
+    focusBlueCaseWhenReady();
   });
 })();
