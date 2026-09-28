@@ -12,6 +12,7 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   if (action === "snapshot") return json_(buildSnapshot_());
+  if (action === "catalog") return json_(buildPublicCatalog_());
   if (action === "ping") return json_({ok:true, service:"kaitori-rescue-next-green", time:new Date().toISOString()});
   return json_({ok:true, action:action, readOnly:false});
 }
@@ -191,6 +192,69 @@ function writeIdempotency_(key,op,entityId,result){
     key:key, operation:op, entityId:entityId,
     resultJson:result, createdAt:new Date().toISOString(), expiresAt:""
   });
+}
+
+function opEcListingUpsert_(entityId,p,key){
+  const now=String(p.updatedAt||new Date().toISOString());
+  const invRow=findRow_("INVENTORY","inventoryId",entityId);
+  if(!invRow) throw new Error("INVENTORY_NOT_FOUND:"+entityId);
+  const inv=rowObject_(sh_("INVENTORY"),invRow);
+  const saleRow=findRow_("SALES","inventoryId",entityId);
+  const sale=saleRow?rowObject_(sh_("SALES"),saleRow):{};
+  const status=String(p.status||"下書き");
+  const row=findRow_("EC_LISTINGS","inventoryId",entityId);
+  const prev=row?rowObject_(sh_("EC_LISTINGS"),row):{};
+  const obj={
+    listingId:p.listingId||prev.listingId||("LIST-"+entityId),
+    inventoryId:entityId,
+    inventoryNo:inv.inventoryNo||"",
+    status:status,
+    title:p.title||prev.title||[inv.maker,inv.model].filter(Boolean).join(" / ")||inv.category||"",
+    description:p.description||prev.description||"",
+    salePrice:Number(p.salePrice||sale.salePrice||inv.salePrice||0),
+    publishedAt:status==="公開"?(prev.publishedAt||now):"",
+    updatedAt:now,
+    displayOrder:Number(p.displayOrder||prev.displayOrder||0),
+    employeeId:p.employeeId||"",
+    employeeName:p.employeeName||"",
+    photoIdsJson:p.photoIdsJson||prev.photoIdsJson||inv.photoIdsJson||"[]",
+    source:"NEXT"
+  };
+  if(row) updateRow_("EC_LISTINGS",row,obj); else appendObject_("EC_LISTINGS",obj);
+  if(saleRow) updateRow_("SALES",saleRow,{ecTitle:obj.title,ecDescription:obj.description,ecStatus:status,updatedAt:now});
+  audit_("ec-listing",entityId,"upsert",obj,"NEXT");
+  return {inventoryId:entityId,listingId:obj.listingId,status:status,title:obj.title,salePrice:obj.salePrice,updatedAt:now};
+}
+
+function buildPublicCatalog_(){
+  const listings=sheetObjects_("EC_LISTINGS").filter(function(x){return String(x.status)==="公開";});
+  const inventory=sheetObjects_("INVENTORY"),photos=sheetObjects_("INVENTORY_PHOTO_LOG"),sales=sheetObjects_("SALES");
+  const invMap={};inventory.forEach(function(x){invMap[x.inventoryId]=x;});
+  const saleMap={};sales.forEach(function(x){saleMap[x.inventoryId]=x;});
+  return {
+    ok:true,
+    generatedAt:new Date().toISOString(),
+    items:listings.map(function(x){
+      const inv=invMap[x.inventoryId]||{},sale=saleMap[x.inventoryId]||{};
+      const photoRows=photos.filter(function(p){return p.inventoryId===x.inventoryId && p.remoteRef;});
+      return {
+        listingId:x.listingId||"",
+        inventoryId:x.inventoryId||"",
+        inventoryNo:x.inventoryNo||inv.inventoryNo||"",
+        title:x.title||[inv.maker,inv.model].filter(Boolean).join(" / ")||inv.category||"",
+        description:x.description||"",
+        salePrice:Number(x.salePrice||sale.salePrice||inv.salePrice||0),
+        category:inv.category||"",
+        maker:inv.maker||"",
+        model:inv.model||"",
+        year:inv.year||"",
+        spec:inv.spec||"",
+        photos:photoRows.map(function(p){return p.remoteRef;}),
+        publishedAt:x.publishedAt||"",
+        updatedAt:x.updatedAt||""
+      };
+    }).sort(function(a,b){return String(b.updatedAt).localeCompare(String(a.updatedAt));})
+  };
 }
 
 function opCaseUpsert_(entityId,p,key){
