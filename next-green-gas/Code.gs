@@ -2,7 +2,8 @@ const CONFIG = Object.freeze({
   SPREADSHEET_ID: "1QbzjKm0jamTreE-WzI5JJnPU9nqNc44ysoGRRZLnXW4",
   PHOTO_FOLDER_ID: "1TbGZiErj5n50mGT3YcbfoAyOMeTk3867",
   SIGNATURE_FOLDER_ID: "12gjaJIQfpaA8O5Hx48fti81-6Sv4Q_JS",
-  PDF_FOLDER_ID: "1yX4yIKWfvfIgPGEaFRRGb1K83zMpRnYN"
+  PDF_FOLDER_ID: "1yX4yIKWfvfIgPGEaFRRGb1K83zMpRnYN",
+  EC_PUBLIC_PHOTO_FOLDER_ID: "1Z0G83AZE_qHCjwT1MLRPYazjK4nVGb0J"
 });
 
 function doGet(e) {
@@ -204,6 +205,7 @@ function opEcListingUpsert_(entityId,p,key){
   const status=String(p.status||"下書き");
   const row=findRow_("EC_LISTINGS","inventoryId",entityId);
   const prev=row?rowObject_(sh_("EC_LISTINGS"),row):{};
+  const publicPhotos=status==="公開"?ensurePublicEcPhotos_(entityId,prev.photoIdsJson):parseJsonArray_(prev.photoIdsJson);
   const obj={
     listingId:p.listingId||prev.listingId||("LIST-"+entityId),
     inventoryId:entityId,
@@ -217,18 +219,17 @@ function opEcListingUpsert_(entityId,p,key){
     displayOrder:Number(p.displayOrder||prev.displayOrder||0),
     employeeId:p.employeeId||"",
     employeeName:p.employeeName||"",
-    photoIdsJson:p.photoIdsJson||prev.photoIdsJson||inv.photoIdsJson||"[]",
+    photoIdsJson:JSON.stringify(publicPhotos),
     source:"NEXT"
   };
   if(row) updateRow_("EC_LISTINGS",row,obj); else appendObject_("EC_LISTINGS",obj);
   if(saleRow) updateRow_("SALES",saleRow,{ecTitle:obj.title,ecDescription:obj.description,ecStatus:status,updatedAt:now});
   audit_("ec-listing",entityId,"upsert",obj,"NEXT");
-  return {inventoryId:entityId,listingId:obj.listingId,status:status,title:obj.title,salePrice:obj.salePrice,updatedAt:now};
+  return {inventoryId:entityId,listingId:obj.listingId,status:status,title:obj.title,salePrice:obj.salePrice,photos:publicPhotos,updatedAt:now};
 }
-
 function buildPublicCatalog_(){
   const listings=sheetObjects_("EC_LISTINGS").filter(function(x){return String(x.status)==="公開";});
-  const inventory=sheetObjects_("INVENTORY"),photos=sheetObjects_("INVENTORY_PHOTO_LOG"),sales=sheetObjects_("SALES");
+  const inventory=sheetObjects_("INVENTORY"),sales=sheetObjects_("SALES");
   const invMap={};inventory.forEach(function(x){invMap[x.inventoryId]=x;});
   const saleMap={};sales.forEach(function(x){saleMap[x.inventoryId]=x;});
   return {
@@ -236,7 +237,7 @@ function buildPublicCatalog_(){
     generatedAt:new Date().toISOString(),
     items:listings.map(function(x){
       const inv=invMap[x.inventoryId]||{},sale=saleMap[x.inventoryId]||{};
-      const photoRows=photos.filter(function(p){return p.inventoryId===x.inventoryId && p.remoteRef;});
+      const publicPhotos=parseJsonArray_(x.photoIdsJson);
       return {
         listingId:x.listingId||"",
         inventoryId:x.inventoryId||"",
@@ -249,12 +250,46 @@ function buildPublicCatalog_(){
         model:inv.model||"",
         year:inv.year||"",
         spec:inv.spec||"",
-        photos:photoRows.map(function(p){return p.remoteRef;}),
+        photos:publicPhotos.map(function(p){return p.url||p;}).filter(Boolean),
         publishedAt:x.publishedAt||"",
         updatedAt:x.updatedAt||""
       };
     }).sort(function(a,b){return String(b.updatedAt).localeCompare(String(a.updatedAt));})
   };
+}
+
+function driveFileIdFromUrl_(v){
+  const s=String(v||"");
+  let m=s.match(/\/d\/([A-Za-z0-9_-]{20,})/); if(m) return m[1];
+  m=s.match(/[?&]id=([A-Za-z0-9_-]{20,})/); if(m) return m[1];
+  if(/^[A-Za-z0-9_-]{20,}$/.test(s)) return s;
+  return "";
+}
+function parseJsonArray_(v){
+  try{const x=JSON.parse(String(v||"[]"));return Array.isArray(x)?x:[];}catch(_e){return [];}
+}
+function ensurePublicEcPhotos_(inventoryId,previousJson){
+  const prev=parseJsonArray_(previousJson),bySource={};
+  prev.forEach(function(x){if(x&&x.sourceId)bySource[x.sourceId]=x;});
+  const photos=sheetObjects_("INVENTORY_PHOTO_LOG").filter(function(p){return p.inventoryId===inventoryId && p.remoteRef;});
+  const folder=DriveApp.getFolderById(CONFIG.EC_PUBLIC_PHOTO_FOLDER_ID),out=[];
+  photos.forEach(function(p){
+    const sourceId=driveFileIdFromUrl_(p.remoteRef);
+    if(!sourceId)return;
+    if(bySource[sourceId]){out.push(bySource[sourceId]);return;}
+    try{
+      const src=DriveApp.getFileById(sourceId);
+      const copy=src.makeCopy("EC_"+inventoryId+"_"+src.getName(),folder);
+      copy.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+      out.push({
+        sourceId:sourceId,
+        publicId:copy.getId(),
+        url:"https://drive.google.com/uc?export=view&id="+copy.getId(),
+        name:copy.getName()
+      });
+    }catch(err){}
+  });
+  return out;
 }
 
 function opCaseUpsert_(entityId,p,key){
