@@ -22,6 +22,10 @@ const assessment = await readFile(
   new URL("../next/assessment.js", import.meta.url),
   "utf8",
 );
+const assessmentPortal = await readFile(
+  new URL("../next/assessment-portal.html", import.meta.url),
+  "utf8",
+);
 const inventory = await readFile(
   new URL("../next/inventory.js", import.meta.url),
   "utf8",
@@ -106,10 +110,18 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
   assert.match(assessment, /K\.casesNow\(\)/);
 });
 
-test("NEXT assessment opens the existing Blue dashboard directly for authoritative writes", () => {
-  assert.match(assessment, /const BLUE_DASHBOARD = K\.C\.assessment/);
+test("NEXT assessment opens the Blue dashboard in a clean NEXT portal", () => {
+  assert.match(assessment, /\.\/assessment-portal\.html/);
+  assert.match(assessmentPortal, /const BLUE_DASHBOARD =/);
   assert.match(assessment, /u\.searchParams\.set\("case", activeBlueCase\)/);
   assert.match(assessment, /window\.location\.assign\(u\.toString\(\)\)/);
+  assert.match(assessmentPortal, /--gas-banner-height: 48px/);
+  assert.match(assessmentPortal, /--legacy-menu-left: 82px/);
+  assert.match(assessmentPortal, /--legacy-menu-bottom: 76px/);
+  assert.match(
+    assessmentPortal,
+    /dashboard\.searchParams\.set\("embed", "1"\)/,
+  );
   assert.doesNotMatch(assessment, /assessmentOpsModal/);
   assert.doesNotMatch(assessment, /assessmentOpsFrame/);
   assert.match(assessment, /K\.requestBlueCases\?\.\(\)/);

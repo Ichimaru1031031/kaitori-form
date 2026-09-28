@@ -1,6 +1,5 @@
 (() => {
   const K = window.KRN;
-  const BLUE_DASHBOARD = K.C.assessment;
   let filter = "all",
     query = "",
     loaded = false,
@@ -112,9 +111,8 @@
     activeBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
       .replace(/^BLUE-CASE-/, "")
       .replace(/^BLUE-SLIP-CASE-/, "");
-    const u = new URL(BLUE_DASHBOARD);
+    const u = new URL("./assessment-portal.html", window.location.href);
     if (activeBlueCase) u.searchParams.set("case", activeBlueCase);
-    u.searchParams.set("from", "next");
     window.location.assign(u.toString());
   };
   function refreshBlueList() {
