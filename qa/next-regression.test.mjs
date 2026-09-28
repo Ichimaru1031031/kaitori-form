@@ -110,8 +110,7 @@ test("NEXT assessment opens the existing Blue dashboard for authoritative writes
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsFrame"/);
   assert.match(assessment, /const BLUE_DASHBOARD = K\.C\.assessment/);
-  assert.match(assessment, /type: "kr-open-assessment-case"/);
-  assert.match(assessment, /caseId: activeBlueCase/);
+  assert.match(assessment, /frame\.src = u\.toString\(\)/);
   assert.match(assessment, /K\.requestBlueCases\?\.\(\)/);
   assert.doesNotMatch(assessment, /saveAndSend(?:Estimate|Visit|Combined)/);
 });

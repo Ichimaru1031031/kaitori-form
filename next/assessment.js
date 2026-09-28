@@ -4,9 +4,7 @@
   let filter = "all",
     query = "",
     loaded = false,
-    activeBlueCase = "",
-    blueFrameReady = false,
-    blueCaseTimer = 0;
+    activeBlueCase = "";
   async function ensureCustomers() {
     if (loaded) return;
     if (Array.isArray(K.customers) && K.customers.length) {
@@ -110,32 +108,10 @@
         }),
     );
   }
-  function postBlueCase() {
-    const frame = K.$("#assessmentOpsFrame");
-    if (!frame || !frame.contentWindow || !activeBlueCase) return;
-    try {
-      frame.contentWindow.postMessage(
-        { type: "kr-open-assessment-case", caseId: activeBlueCase },
-        "*",
-      );
-    } catch {}
-  }
-  function focusBlueCaseWhenReady() {
-    clearInterval(blueCaseTimer);
-    if (!activeBlueCase) return;
-    let attempts = 0;
-    postBlueCase();
-    blueCaseTimer = setInterval(() => {
-      postBlueCase();
-      attempts++;
-      if (attempts >= 20) clearInterval(blueCaseTimer);
-    }, 750);
-  }
   function loadBlueFrame(force) {
     const frame = K.$("#assessmentOpsFrame");
     if (!frame) return;
     if (!frame.getAttribute("src") || force) {
-      blueFrameReady = false;
       K.$("#assessmentOpsLoading")?.classList.remove("hide");
       const u = new URL(BLUE_DASHBOARD);
       u.searchParams.set("embed", "1");
@@ -143,7 +119,6 @@
       frame.src = u.toString();
       return;
     }
-    if (blueFrameReady) postBlueCase();
   }
   K.openAssessmentOps = (caseInfo) => {
     activeBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
@@ -153,13 +128,10 @@
       ? caseInfo.name + " 様の査定"
       : "査定ダッシュボード";
     K.$("#assessmentOpsSub").textContent = activeBlueCase
-      ? activeBlueCase + "・Blue本番と直接同期"
+      ? activeBlueCase + "・下の一覧から同じ受付番号を選択"
       : "Blue本番と直接同期";
     K.overlay("assessmentOpsModal").classList.add("on");
     loadBlueFrame(false);
-    if (blueFrameReady && activeBlueCase) {
-      focusBlueCaseWhenReady();
-    }
   };
   function refreshBlueList() {
     const state = K.$("#assessmentBridgeState");
@@ -280,8 +252,6 @@
     refreshBlueList();
   });
   K.$("#assessmentOpsFrame").addEventListener("load", () => {
-    blueFrameReady = true;
     K.$("#assessmentOpsLoading")?.classList.add("hide");
-    focusBlueCaseWhenReady();
   });
 })();
