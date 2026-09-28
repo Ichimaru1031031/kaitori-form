@@ -1,0 +1,80 @@
+/* NEXT design v2: stronger scanability + glass navigation */
+:root{
+ --g:#4d746a;--g-dark:#31594f;--bg:#f3f5f4;--card:#fff;--ink:#1c2522;--muted:#5f6b67;--line:#cfd6d2;
+}
+body{background:var(--bg)}
+/* Bottom glass navigation */
+.nav{
+  background:rgba(248,251,250,.60)!important;
+  border:1px solid rgba(255,255,255,.76)!important;
+  box-shadow:0 9px 30px rgba(31,46,41,.17),inset 0 0 0 1px rgba(105,128,120,.12)!important;
+  backdrop-filter:blur(28px) saturate(180%)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(180%)!important;
+  padding:4px 5px!important;
+  border-radius:20px!important;
+}
+.nav button{
+  color:#68756f!important;
+  min-height:48px!important;
+  padding:4px 2px 3px!important;
+  border-radius:14px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:1px!important;
+}
+.nav .navIcon{display:grid!important;place-items:center!important;width:25px;height:25px}
+.nav .navIcon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.nav b{font-size:9.5px!important;line-height:1.05!important;font-weight:800!important}
+.nav button.active{
+  background:rgba(194,218,209,.42)!important;
+  color:#28594c!important;
+  box-shadow:inset 0 0 0 1px rgba(58,101,89,.13),0 1px 6px rgba(44,73,65,.05)!important;
+}
+.nav button.active .navIcon{transform:translateY(-.5px)}
+/* Standard calendar: clearer borders, business type by color */
+.weekHead{border-color:#bec7c2!important;background:#e9edeb!important}
+.weekHead span{color:#39443f!important;border-right-color:#c5cdc9!important;font-weight:900!important}
+.calendarGrid{border-left-color:#bec7c2!important;border-top-color:#bec7c2!important}
+.dayCell{border-right-color:#bec7c2!important;border-bottom-color:#bec7c2!important;background:#fff!important}
+.dayCell.outside{background:#f1f3f2!important;opacity:.62!important}
+.dayCell.today{background:#f0f6f3!important;box-shadow:inset 0 0 0 2px #6d978a!important}
+.calEvent{font-weight:900!important;border-left-width:4px!important}
+.calEvent.purchase{background:#d6eee1!important;color:#195f40!important;border-left-color:#27825a!important}
+.calEvent.work{background:#fae1c6!important;color:#7b4212!important;border-left-color:#cf7020!important}
+.calEvent.delivery{background:#dbe8f7!important;color:#274f82!important;border-left-color:#3f75b2!important}
+.calEvent.recycle{background:#e8def4!important;color:#5b397e!important;border-left-color:#7650a1!important}
+.calEvent.estimate{background:#e2e7ea!important;color:#414e56!important;border-left-color:#59656d!important}
+.calEvent.sale{background:#f0dbe8!important;color:#73375f!important;border-left-color:#9a4d7c!important}
+.calendarLegend .purchase{background:#d6eee1!important;color:#195f40!important;border-color:#91c7aa!important}
+.calendarLegend .work{background:#fae1c6!important;color:#7b4212!important;border-color:#dfaa72!important}
+.calendarLegend .delivery{background:#dbe8f7!important;color:#274f82!important;border-color:#9ebcdd!important}
+.calendarLegend .recycle{background:#e8def4!important;color:#5b397e!important;border-color:#bea7d8!important}
+.calendarLegend .estimate{background:#e2e7ea!important;color:#414e56!important;border-color:#b5c0c6!important}
+/* Slip hierarchy: customer first, ID second */
+.slipCustomerName{font-size:15px!important;line-height:1.2!important;font-weight:950!important;color:#1d2723!important}
+.slipId{font-size:9px!important;color:#7a8580!important;margin-top:3px!important;font-weight:750!important;letter-spacing:.01em}
+.slipTop em{font-size:9px!important}
+.slipServices{font-size:10px!important;color:#56635e!important;margin-top:5px!important}
+/* Home: after-purchase workflow */
+.homeWorkSection{margin-top:13px}
+.homeWorkHead{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:6px}
+.homeWorkHead h2{font-size:16px;margin:0}
+.homeWorkHead p{font-size:9px;color:var(--muted);margin:2px 0 0}
+.homeWorkHead button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 9px;font-size:9px;font-weight:900}
+.homeStoreWork{display:grid;gap:5px}
+.homeWorkItem{width:100%;border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 9px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;text-align:left;color:var(--ink)}
+.homeWorkItem strong,.homeWorkItem span,.homeWorkItem small{display:block}
+.homeWorkItem strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.homeWorkItem span{font-size:9px;color:var(--muted);margin-top:2px}
+.homeWorkItem small{font-size:8px;color:#66746f;margin-top:2px}
+.homeWorkStage{align-self:center;font-size:9px!important;font-weight:900!important;color:#31594f!important;background:#e8f0ed;padding:5px 7px;border-radius:999px;white-space:nowrap}
+.homeWorkEmpty{font-size:10px;color:var(--muted);border:1px dashed #c5cfca;background:#fafbfa;border-radius:10px;padding:10px}
+.myWorkSection{margin-bottom:2px}
+@media(max-width:600px){
+ .nav{width:calc(100vw - 12px)!important;bottom:calc(4px + env(safe-area-inset-bottom))!important}
+ .nav button{min-height:46px!important}
+ .nav .navIcon svg{width:22px;height:22px}
+ .dayCell{min-height:80px!important}
+}
