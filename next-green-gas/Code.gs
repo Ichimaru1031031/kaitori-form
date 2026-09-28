@@ -72,7 +72,10 @@ function buildSnapshot_() {
     documents:"DOCUMENTS",
     modelMaster:"MODEL_MASTER",
     processMaster:"INVENTORY_PROCESS_MASTER",
-    processLogs:"INVENTORY_PROCESS_LOG"
+    processLogs:"INVENTORY_PROCESS_LOG",
+    inventoryTests:"INVENTORY_TEST_LOG",
+    inventoryPhotos:"INVENTORY_PHOTO_LOG",
+    finalizedSlips:"NEXT_FINALIZED_SLIPS"
   };
   const out = {
     schemaVersion:3,
