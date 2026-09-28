@@ -478,7 +478,9 @@ function confirmStripeCheckout_(sessionId){
       const listing=lr?rowObject_(sh_("EC_LISTINGS"),lr):{};
       const salePrice=Number(listing.salePrice||inv.salePrice||0);
       const noteText=["EC決済",deliveryLabel,shippingAddress].filter(Boolean).join(" / ");
-      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",notes:noteText,source:"STRIPE",updatedAt:now};
+      const customerPhone=(session.customer_details&&session.customer_details.phone)||"";
+      const customerEmail=(session.customer_details&&session.customer_details.email)||String(co.customerEmail||"");
+      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",notes:noteText,source:"STRIPE",updatedAt:now,deliveryOption:deliveryOption,shippingAddress:shippingAddress,customerPhone:customerPhone,customerEmail:customerEmail};
       if(sr)updateRow_("SALES",sr,saleObj);
       else{
         appendObject_("SALES",Object.assign({saleId:"SALE-"+inventoryId,inventoryId:inventoryId,inventoryNo:inv.inventoryNo||"",deliveredAt:"",idempotencyKey:"stripe:"+sessionId},saleObj));
