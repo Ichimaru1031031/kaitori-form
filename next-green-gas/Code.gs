@@ -304,21 +304,24 @@ function opVisitStart_(entityId,p,key){
 function opFinalizeSlip_(entityId,p,key){
   const confirmedAt=String(p.confirmedAt||new Date().toISOString());
   const version=Number(p.version||1);
+  const links=ensureFinalizedEntities_(p,confirmedAt);
+  const linked=Object.assign({},p,{caseId:links.caseId,sourceServiceOrderId:links.serviceOrderId});
   let signatureFileId="",signatureFileUrl="";
   if(p.signatureDataUrl){
     const m=String(p.signatureDataUrl).match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
     if(m){
-      const blob=Utilities.newBlob(Utilities.base64Decode(m[2]),m[1],"signature_"+entityId+"_v"+version+".png");
+      const blob=Utilities.newBlob(Utilities.base64Decode(m[2]),m[1],"signature_"+links.serviceOrderId+"_v"+version+".png");
       const file=DriveApp.getFolderById(CONFIG.SIGNATURE_FOLDER_ID).createFile(blob);
       signatureFileId=file.getId(); signatureFileUrl=file.getUrl();
     }
   }
-  const pdf=createCustomerPdf_(p,signatureFileUrl);
+  const inventoryLinks=ensureLineItemsAndInventory_(links.serviceOrderId,linked.payload||{},confirmedAt);
+  const pdf=createCustomerPdf_(linked,signatureFileUrl);
   appendObject_("NEXT_FINALIZED_SLIPS",{
     snapshotId:p.id||entityId,
     draftId:p.draftId||"",
-    caseId:p.caseId||"",
-    sourceServiceOrderId:p.sourceServiceOrderId||"",
+    caseId:links.caseId,
+    sourceServiceOrderId:links.serviceOrderId,
     version:version,
     confirmedAt:confirmedAt,
     total:Number(p.total||0),
@@ -333,8 +336,8 @@ function opFinalizeSlip_(entityId,p,key){
   });
   appendObject_("DOCUMENTS",{
     documentId:"NEXTDOC-"+Utilities.getUuid(),
-    caseId:p.caseId||"",
-    serviceOrderId:p.sourceServiceOrderId||"",
+    caseId:links.caseId,
+    serviceOrderId:links.serviceOrderId,
     type:"customer-copy",
     version:version,
     fileId:pdf.fileId,
@@ -347,12 +350,186 @@ function opFinalizeSlip_(entityId,p,key){
     status:"issued",
     snapshotHash:p.hash||""
   });
-  if(p.sourceServiceOrderId){
-    const row=findRow_("SERVICE_ORDERS","serviceOrderId",p.sourceServiceOrderId);
-    if(row) updateRow_("SERVICE_ORDERS",row,{customerConfirmed:true,confirmedAt:confirmedAt,signatureFileId:signatureFileId,latestPdfId:pdf.fileId,updatedAt:confirmedAt});
+  const soRow=findRow_("SERVICE_ORDERS","serviceOrderId",links.serviceOrderId);
+  if(soRow) updateRow_("SERVICE_ORDERS",soRow,{
+    customerConfirmed:true,
+    confirmedAt:confirmedAt,
+    signatureFileId:signatureFileId,
+    latestPdfId:pdf.fileId,
+    status:"お客様確認済み",
+    updatedAt:confirmedAt
+  });
+  audit_("service-order",links.serviceOrderId,"finalize-slip",{snapshotId:p.id,version:version,pdfFileId:pdf.fileId,inventory:inventoryLinks},"NEXT");
+  return {
+    snapshotId:p.id||entityId,
+    caseId:links.caseId,
+    serviceOrderId:links.serviceOrderId,
+    version:version,
+    pdfFileId:pdf.fileId,
+    pdfFileUrl:pdf.fileUrl,
+    signatureFileId:signatureFileId,
+    inventory:inventoryLinks
+  };
+}
+
+function nextId_(prefix){
+  return prefix+"-"+Utilities.getUuid().replace(/-/g,"").slice(0,8).toUpperCase();
+}
+function ensureFinalizedEntities_(p,confirmedAt){
+  const payload=p.payload||{},customer=payload.customer||{},selected=payload.selected||[];
+  let caseId=String(p.caseId||"").trim(),customerId="";
+  if(caseId){
+    const row=findRow_("CASES","caseId",caseId);
+    if(row) customerId=String(rowObject_(sh_("CASES"),row).customerId||"");
   }
-  audit_("service-order",p.sourceServiceOrderId||entityId,"finalize-slip",{snapshotId:p.id,version:version,pdfFileId:pdf.fileId},"NEXT");
-  return {snapshotId:p.id||entityId,version:version,pdfFileId:pdf.fileId,pdfFileUrl:pdf.fileUrl,signatureFileId:signatureFileId};
+  if(!customerId && customer.phone){
+    const row=findRow_("CUSTOMERS","phone",String(customer.phone).replace(/\D/g,""));
+    if(row) customerId=String(rowObject_(sh_("CUSTOMERS"),row).customerId||"");
+  }
+  if(!customerId){
+    customerId=nextId_("NEXT-CUST");
+    appendObject_("CUSTOMERS",{
+      customerId:customerId,name:customer.name||"",phone:String(customer.phone||"").replace(/\D/g,""),email:customer.email||"",
+      postalCode:"",address:customer.address||"",preferredContact:"",lineUserId:"",source:"next",
+      blueReceptionId:"",createdAt:confirmedAt,updatedAt:confirmedAt
+    });
+  }
+  const hasPurchase=selected.indexOf("purchase")!==-1;
+  if(!caseId){
+    caseId=nextId_("NEXT-CASE");
+    appendObject_("CASES",{
+      caseId:caseId,customerId:customerId,status:hasPurchase?"買取確定":"伝票確定",
+      nextAction:hasPurchase?"在庫工程へ":"完了確認",source:"next",blueReceptionId:"",
+      title:(customer.name||"")+"様",summary:summaryFromPayload_(payload),assignedEmployeeIds:"[]",
+      requestedDatesJson:"[]",confirmedDate:"",confirmedStart:"",confirmedEnd:"",notes:"",
+      createdAt:confirmedAt,updatedAt:confirmedAt
+    });
+  }else{
+    const row=findRow_("CASES","caseId",caseId);
+    if(row) updateRow_("CASES",row,{
+      customerId:customerId,
+      status:hasPurchase?"買取確定":"伝票確定",
+      nextAction:hasPurchase?"在庫工程へ":"完了確認",
+      summary:summaryFromPayload_(payload),
+      updatedAt:confirmedAt
+    });
+  }
+  let serviceOrderId=String(p.sourceServiceOrderId||"").trim();
+  if(!serviceOrderId) serviceOrderId=newServiceOrderId_();
+  const totals=totalsFromPayload_(payload);
+  const soRow=findRow_("SERVICE_ORDERS","serviceOrderId",serviceOrderId);
+  const so={
+    serviceOrderId:serviceOrderId,caseId:caseId,appointmentId:"",customerId:customerId,
+    status:"お客様確認済み",selectedServicesJson:JSON.stringify(selected),paymentMethod:payload.paymentMethod||"",
+    salesWorkTotal:totals.salesWorkTotal,purchaseTotal:totals.purchaseTotal,recycleTotal:totals.recycleTotal,
+    deliveryTotal:totals.deliveryTotal,netTotal:Number(p.total||totals.netTotal),customerConfirmed:true,
+    confirmedAt:confirmedAt,signatureFileId:"",latestPdfId:"",
+    createdAt:soRow?rowObject_(sh_("SERVICE_ORDERS"),soRow).createdAt||confirmedAt:confirmedAt,updatedAt:confirmedAt
+  };
+  if(soRow) updateRow_("SERVICE_ORDERS",soRow,so); else appendObject_("SERVICE_ORDERS",so);
+  return {caseId:caseId,customerId:customerId,serviceOrderId:serviceOrderId};
+}
+function newServiceOrderId_(){
+  for(let i=0;i<30;i++){
+    const id="UT-N"+Utilities.getUuid().replace(/-/g,"").slice(0,6).toUpperCase();
+    if(!findRow_("SERVICE_ORDERS","serviceOrderId",id)) return id;
+  }
+  throw new Error("SERVICE_ORDER_ID_EXHAUSTED");
+}
+function summaryFromPayload_(payload){
+  const out=[];
+  const labels={purchase:"買取",work:"工事",delivery:"配送",recycle:"リサイクル",estimate:"見積",sale:"販売"};
+  (payload.selected||[]).forEach(function(k){
+    const rows=(payload.items&&payload.items[k])||[];
+    if(rows.length) out.push((labels[k]||k)+" "+rows.length+"件");
+  });
+  return out.join(" / ");
+}
+function totalsFromPayload_(payload){
+  const items=payload.items||{};
+  function sum(k){return (items[k]||[]).reduce(function(a,x){return a+Number(x.amount||0);},0);}
+  const purchase=sum("purchase"),recycle=sum("recycle"),delivery=sum("delivery");
+  const salesWork=sum("work")+sum("sale")+sum("estimate");
+  return {purchaseTotal:purchase,recycleTotal:recycle,deliveryTotal:delivery,salesWorkTotal:salesWork,netTotal:salesWork+recycle+delivery-purchase};
+}
+function rowsBy_(name,key,value){
+  const s=sh_(name),h=headers_(s),ci=h.indexOf(key),out=[];
+  if(ci<0) return out;
+  const lr=s.getLastRow(); if(lr<2) return out;
+  const vals=s.getRange(2,1,lr-1,h.length).getValues();
+  vals.forEach(function(v,i){
+    if(String(v[ci])===String(value)){
+      const o={};h.forEach(function(k,j){o[k]=v[j];});
+      out.push({row:i+2,obj:o});
+    }
+  });
+  return out;
+}
+function ensureLineItemsAndInventory_(serviceOrderId,payload,confirmedAt){
+  const existing=rowsBy_("LINE_ITEMS","serviceOrderId",serviceOrderId);
+  const selected=payload.selected||[],items=payload.items||{},created=[],all=[];
+  let seq=0;
+  selected.forEach(function(serviceType){
+    (items[serviceType]||[]).forEach(function(x){
+      seq++;
+      const itemNo=String(seq);
+      let match=existing.find(function(r){return String(r.obj.serviceType)===String(serviceType)&&String(r.obj.itemNo)===itemNo;});
+      let lineItemId=match?String(match.obj.lineItemId||""):nextId_("NEXT-LINE");
+      let inventoryId=match?String(match.obj.inventoryId||""):"";
+      if(!match){
+        appendObject_("LINE_ITEMS",{
+          lineItemId:lineItemId,serviceOrderId:serviceOrderId,serviceType:serviceType,itemNo:itemNo,
+          category:x.category||"",maker:x.maker||"",model:x.model||"",year:x.year||"",spec:x.spec||"",
+          quantity:Number(x.quantity||1),unitAmount:Number(x.amount||0),amount:Number(x.amount||0),
+          purchaseResult:serviceType==="purchase"?"買取した":"",workCode:x.workCode||"",
+          recycleMakerCode:x.recycleMakerCode||"",recycleItemCode:x.recycleItemCode||"",
+          inventoryId:"",photoIdsJson:"[]",notes:x.note||"",createdAt:confirmedAt,updatedAt:confirmedAt
+        });
+        match={row:findRow_("LINE_ITEMS","lineItemId",lineItemId),obj:{inventoryId:""}};
+      }
+      if(serviceType==="purchase"){
+        if(!inventoryId){
+          const inv=createInventoryFromItem_(serviceOrderId,lineItemId,x,confirmedAt);
+          inventoryId=inv.inventoryId;
+          if(match.row) updateRow_("LINE_ITEMS",match.row,{inventoryId:inventoryId,updatedAt:confirmedAt});
+          created.push(inv);
+        }
+        const invRow=findRow_("INVENTORY","inventoryId",inventoryId);
+        const invObj=invRow?rowObject_(sh_("INVENTORY"),invRow):{};
+        all.push({inventoryId:inventoryId,inventoryNo:invObj.inventoryNo||""});
+      }
+    });
+  });
+  return all.length?all:created;
+}
+function createInventoryFromItem_(serviceOrderId,lineItemId,x,confirmedAt){
+  const inventoryId=nextId_("NEXT-INV"),inventoryNo=newInventoryNo_(x.category||"");
+  appendObject_("INVENTORY",{
+    inventoryId:inventoryId,inventoryNo:inventoryNo,sourceServiceOrderId:serviceOrderId,sourceLineItemId:lineItemId,
+    category:x.category||"",maker:x.maker||"",model:x.model||"",year:x.year||"",spec:x.spec||"",
+    purchasePrice:Number(x.amount||0),salePrice:0,stage:"買取済み",nextAction:"分解清掃を行う",
+    storageLocation:"",assignedEmployeeId:"",photoIdsJson:"[]",qrToken:Utilities.getUuid(),
+    updatedAt:confirmedAt,archivedAt:""
+  });
+  appendObject_("INVENTORY_PROCESS_LOG",{
+    logId:nextId_("PROC"),inventoryId:inventoryId,inventoryNo:inventoryNo,stage:"買取済み",stageLabel:"買取済み",
+    employeeId:"",employeeName:"",completedAt:confirmedAt,source:"NEXT",idempotencyKey:"",note:"NEXT伝票確定で在庫自動生成"
+  });
+  return {inventoryId:inventoryId,inventoryNo:inventoryNo};
+}
+function newInventoryNo_(category){
+  const s=String(category||"").toUpperCase();
+  let prefix="OT";
+  if(/エアコン|AIR/.test(s)) prefix="AC";
+  else if(/冷蔵|FRIDGE/.test(s)) prefix="RF";
+  else if(/洗濯|WASH/.test(s)) prefix="WM";
+  else if(/TV|テレビ/.test(s)) prefix="TV";
+  else if(/電子レンジ|MICRO/.test(s)) prefix="MW";
+  for(let i=0;i<50;i++){
+    const no=prefix+"-"+String(Math.floor(1000+Math.random()*9000));
+    if(!findRow_("INVENTORY","inventoryNo",no)) return no;
+  }
+  return prefix+"-"+Utilities.getUuid().replace(/-/g,"").slice(0,6).toUpperCase();
 }
 
 function createCustomerPdf_(snap,signatureUrl){
