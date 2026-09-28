@@ -14,12 +14,19 @@ const greenGas = await readFile(new URL("../next-green-gas/Code.gs", import.meta
 
 test("appointment cards show a start and end time range", () => {
   assert.match(core, /x\.startTime\s*\+\s*"〜"\s*\+\s*x\.endTime/);
-  assert.match(schedule, /e\.startTime\+"〜"\+e\.endTime/);
+  assert.match(schedule, /e\.startTime\s*\+\s*"〜"\s*\+\s*e\.endTime/);
 });
 
 test("the day sheet retains the downward swipe close gesture", () => {
-  assert.match(appointments, /if\(dy>72\)close\(\)/);
-  assert.match(appointments, /Math\.abs\(dx\)>Math\.abs\(raw\)\*1\.15/);
+  assert.match(appointments, /if \(dy > 72\) close\(\)/);
+  assert.match(appointments, /Math\.abs\(dx\) > Math\.abs\(raw\) \* 1\.15/);
+});
+
+test("absent staff use the red chip without a redundant rest prefix", () => {
+  assert.match(schedule, /x\.state === "absent"\s*\? "absent"/);
+  assert.match(appointments, /x\.state === "absent"\s*\? "absent"/);
+  assert.doesNotMatch(schedule, /x\.state === "absent" \? "休 "/);
+  assert.doesNotMatch(appointments, /x\.state === "absent" \? "休 "/);
 });
 
 test("slip confirmation resolves the Green result before advancing the appointment", () => {
@@ -48,4 +55,11 @@ test("native assessment, inventory, and sales controls bind without startup erro
   assert.match(html, /id="detailEcPreview"/);
   assert.doesNotMatch(inventory, /K\.\$\("#(?:testResultButtons|testEmployeeList) button"\)\.forEach/);
   assert.doesNotMatch(sales, /K\.\$\("#(?:salesFilters|salesFulfillment) button"\)\.forEach/);
+});
+
+test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
+  assert.match(core, /request: "customers"/);
+  assert.match(core, /d\.type === "kr-hub-customer-cases"/);
+  assert.match(core, /K\.liveCases = Array\.isArray\(d\.payload\)/);
+  assert.match(assessment, /K\.casesNow\(\)/);
 });

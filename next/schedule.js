@@ -1,23 +1,510 @@
-(()=>{const K=window.KRN;let monthCursor=new Date(),localAppointments=[],loadedLocal=false,lastSelectedDate="",editingAppointment=null,seedCaseId="",selectedEmployees=new Set(),conflictAck=false;
-function regularDays(e){try{return JSON.parse(e.regularWeekdaysJson||"[]")}catch{return[]}}
-async function ensureLocal(){if(loadedLocal)return;localAppointments=await KRDB.listAppointments().catch(()=>[]);loadedLocal=true}
-function mergedAppointments(){const m=new Map();for(const a of K.snap.appointments||[])m.set(a.appointmentId,a);for(const a of localAppointments)m.set(a.appointmentId,a);return[...m.values()].filter(x=>x.status!=="deleted")}
-K.getAppointments=mergedAppointments;
-function attendanceInfo(date){const weekday=K.jpDay(date),key=K.keyDate(date),map=new Map();for(const e of K.snap.employees||[]){if(String(e.active).toLowerCase()==="false")continue;if(regularDays(e).includes(weekday))map.set(e.name,{name:e.name,state:"working",kind:"regular"})}const ovs=mergedAppointments().filter(a=>a.date===key&&["休み","出勤"].includes(a.category));for(const o of ovs){const raw=String(o.customerName||o.title||"").replace(/^(休み|出勤)\s*/,"").replace(/様$/,"").trim();if(!raw)continue;if(o.category==="休み")map.set(raw,{name:raw,state:"absent",kind:"off"});else map.set(raw,{name:raw,state:"working",kind:"extra"})}const rows=[...map.values()];rows.sort((a,b)=>{if(a.state!==b.state)return a.state==="absent"?-1:1;if(a.kind!==b.kind)return a.kind==="regular"?-1:1;return a.name.localeCompare(b.name,"ja")});return rows}
-function attendance(date){return attendanceInfo(date).filter(x=>x.state==="working").map(x=>x.name)}
-function staffRowHtml(date){const shown=attendanceInfo(date).slice(0,3);return '<div class="dayStaffRow">'+shown.map(x=>'<span class="staffChip '+(x.state==="absent"?"absent":x.kind==="extra"?"extra":"working")+'">'+K.esc((x.state==="absent"?"休 ":x.kind==="extra"?"出 ":"")+x.name)+'</span>').join("")+'</div>'}
-function weeks(cursor){const first=new Date(cursor.getFullYear(),cursor.getMonth(),1),last=new Date(cursor.getFullYear(),cursor.getMonth()+1,0),start=new Date(first);while(start.getDay()!==1)start.setDate(start.getDate()-1);const out=[];let cur=new Date(start);while(cur<=last||out.length<4){const w=[];for(let i=0;i<7;i++){const d=new Date(cur);d.setDate(cur.getDate()+i);if(d.getDay()!==4)w.push(d)}out.push(w);cur.setDate(cur.getDate()+7);if(cur>last&&cur.getDay()===1)break}return out}
-function eventClass(c){const s=String(c||"");if(s.includes("買取"))return"purchase";if(s.includes("工事"))return"work";if(s.includes("配送"))return"delivery";if(s.includes("リサイクル")||s.includes("収集"))return"recycle";if(s.includes("見積"))return"estimate";if(s.includes("販売")||s.includes("引渡"))return"sale";if(s.includes("予約不可"))return"blocked";return"other"}
-function timeMin(v){const m=String(v||"").match(/^(\d{1,2}):(\d{2})$/);return m?(+m[1]*60+ +m[2]):null}
-function overlaps(a,b){const as=timeMin(a.startTime),ae=timeMin(a.endTime),bs=timeMin(b.startTime),be=timeMin(b.endTime);if(as==null||ae==null||bs==null||be==null)return false;return as<be&&bs<ae}
-function conflictRows(candidate){return mergedAppointments().filter(x=>x.appointmentId!==candidate.appointmentId&&x.date===candidate.date&&!["休み","出勤"].includes(x.category)&&overlaps(x,candidate))}
-K.renderCalendar=async()=>{if(!K.$("#calendarGrid"))return;await ensureLocal();K.$("#monthLabel").textContent=monthCursor.getFullYear()+"年 "+(monthCursor.getMonth()+1)+"月";const g=K.$("#calendarGrid");g.innerHTML="";const today=K.keyDate(new Date()),all=mergedAppointments();for(const week of weeks(monthCursor)){for(const d of week){const key=K.keyDate(d),inside=d.getMonth()===monthCursor.getMonth(),events=all.filter(a=>a.date===key&&!["休み","出勤"].includes(a.category));const cell=document.createElement("button");cell.className="dayCell"+(inside?"":" outside")+(key===today?" today":"");const att=attendance(d);cell.innerHTML='<div class="dayTop"><span class="dayNum">'+d.getDate()+'</span></div>'+staffRowHtml(d)+events.slice(0,3).map(e=>'<div class="calEvent '+eventClass(e.category)+'">'+K.esc((e.startTime&&e.endTime?(e.startTime+"〜"+e.endTime+" "):e.startTime?(e.startTime+" "):"")+e.category+" "+(e.customerName||e.title||""))+(e.localOnly?'<span class="localEventMark">NEXT</span>':'')+'</div>').join("")+(events.length>3?'<div class="moreEvent">+'+(events.length-3)+'件</div>':"");cell.onclick=()=>{lastSelectedDate=key;renderDay(key,d)};g.appendChild(cell)}}};
-function renderDay(key,d){const events=mergedAppointments().filter(a=>a.date===key&&!["休み","出勤"].includes(a.category)).sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime))),ai=attendanceInfo(d);if(K.openDaySchedulePopup){K.openDaySchedulePopup({key,date:d,events,staff:ai,onAdd:()=>openEditor(null,key),onEdit:e=>openEditor(e,e.date)});return}const box=K.$("#dayDetail");box.innerHTML='<div class="dayDetailTitle"><div><b>'+(d.getMonth()+1)+'/'+d.getDate()+'（'+K.jpDay(d)+'）</b><div class="detailStaffRow">'+ai.map(x=>'<span class="staffChip '+(x.state==="absent"?"absent":x.kind==="extra"?"extra":"working")+'">'+K.esc(x.name)+'</span>').join("")+'</div></div></div>';const add=document.createElement("button");add.className="miniBtn";add.textContent="＋ この日に予定";add.onclick=()=>openEditor(null,key);box.querySelector(".dayDetailTitle").appendChild(add);if(!events.length){box.innerHTML+='<div class="empty">予定なし</div>';return}events.forEach(e=>{const wrap=document.createElement("div");wrap.className="dayEvent";const card=K.apptCard(e);if(e.localOnly){const edit=document.createElement("button");edit.type="button";edit.className="localAppointmentEdit";edit.textContent="予定編集";edit.onclick=ev=>{ev.stopPropagation();openEditor(e,e.date)};card.querySelector(".cardmain")?.appendChild(edit)}wrap.appendChild(card);box.appendChild(wrap)})}
-function employeeButtons(){const box=K.$("#apptEmployees");box.innerHTML="";for(const e of K.snap.employees||[]){if(String(e.active).toLowerCase()==="false")continue;const b=document.createElement("button");b.type="button";b.textContent=e.name;b.classList.toggle("active",selectedEmployees.has(e.employeeId));b.onclick=()=>{selectedEmployees.has(e.employeeId)?selectedEmployees.delete(e.employeeId):selectedEmployees.add(e.employeeId);employeeButtons();resetConflict()};box.appendChild(b)}}
-function resetConflict(){conflictAck=false;K.$("#apptConflict").classList.add("hidden");K.$("#saveAppointment").classList.remove("warning");K.$("#saveAppointment").textContent="予定を保存"}
-function openEditor(appt,date){editingAppointment=appt||null;seedCaseId=appt?.caseId||"";selectedEmployees=new Set();if(appt){try{for(const id of JSON.parse(appt.assignedEmployeeIds||"[]"))selectedEmployees.add(id)}catch{}}const now=new Date(),def=date||appt?.date||K.keyDate(now);K.$("#appointmentModalTitle").textContent=appt?"予定を編集":"予定を追加";K.$("#appointmentEditState").textContent=appt?.localOnly?"NEXT予定":"NEXT Green";K.$("#apptDate").value=def;K.$("#apptCategory").value=appt?.category||"買取";K.$("#apptStart").value=appt?.startTime||"10:00";K.$("#apptEnd").value=appt?.endTime||"12:00";K.$("#apptCustomer").value=appt?.customerName||appt?.title||"";K.$("#apptAddress").value=appt?.address||"";K.$("#apptPhone").value=appt?.phone||"";K.$("#apptRef").value=appt?.serviceOrderId||appt?.sourceRef||appt?.blueScheduleId||"";K.$("#apptNote").value=appt?.notes||"";employeeButtons();resetConflict();K.overlay("appointmentModal").classList.add("on")}
-function openFromCase(seed){editingAppointment=null;seedCaseId=seed?.caseId||"";selectedEmployees=new Set();const def=seed?.date||K.keyDate(new Date());K.$("#appointmentModalTitle").textContent="出張予定を作成";K.$("#appointmentEditState").textContent="査定から引継ぎ";K.$("#apptDate").value=def;K.$("#apptCategory").value=seed?.category||"買取";K.$("#apptStart").value=seed?.startTime||"10:00";K.$("#apptEnd").value=seed?.endTime||"12:00";K.$("#apptCustomer").value=seed?.name||"";K.$("#apptAddress").value=seed?.address||"";K.$("#apptPhone").value=seed?.phone||"";K.$("#apptRef").value=seed?.ref||"";K.$("#apptNote").value=seed?.notes||"";employeeButtons();resetConflict();K.overlay("appointmentModal").classList.add("on")}
-K.openAppointmentFromCase=openFromCase;K.openAppointmentById=id=>{const a=mergedAppointments().find(x=>x.appointmentId===id);K.openTab("schedule");if(a)setTimeout(()=>K.openAppointmentDetail&&K.openAppointmentDetail(a),40)};
-function candidate(){const now=new Date().toISOString(),ref=K.$("#apptRef").value.trim(),name=K.$("#apptCustomer").value.trim();return{appointmentId:editingAppointment?.appointmentId||("NEXT-APT-"+crypto.randomUUID()),caseId:editingAppointment?.caseId||seedCaseId||"",date:K.$("#apptDate").value,startTime:K.$("#apptStart").value,endTime:K.$("#apptEnd").value,category:K.$("#apptCategory").value,title:(K.$("#apptCategory").value+" "+name).trim(),customerName:name,phone:K.$("#apptPhone").value.trim(),address:K.$("#apptAddress").value.trim(),assignedEmployeeIds:JSON.stringify([...selectedEmployees]),status:"next-local",callStatus:editingAppointment?.callStatus||"",callAt:editingAppointment?.callAt||"",blueScheduleId:editingAppointment?.blueScheduleId||"",serviceOrderId:ref.startsWith("UT-")?ref:"",sourceRef:ref&&!ref.startsWith("UT-")?ref:(editingAppointment?.sourceRef||""),notes:K.$("#apptNote").value.trim(),createdAt:editingAppointment?.createdAt||now,updatedAt:now,localOnly:true}}
-async function saveAppointment(){const x=candidate();if(!x.date||!x.startTime||!x.endTime||!x.customerName){K.$("#apptConflict").textContent="日付・開始・終了・お客様/件名を入力してください。";K.$("#apptConflict").classList.remove("hidden");return}if(timeMin(x.endTime)<=timeMin(x.startTime)){K.$("#apptConflict").textContent="終了時間は開始時間より後にしてください。";K.$("#apptConflict").classList.remove("hidden");return}const conflicts=conflictRows(x);if(conflicts.length&&!conflictAck){K.$("#apptConflict").innerHTML='<b>同時間帯に '+conflicts.length+'件の予定があります。</b><br>'+conflicts.slice(0,3).map(y=>K.esc((y.startTime||"")+" "+(y.category||"")+" "+(y.customerName||y.title||""))).join("<br>")+'<br>問題なければもう一度「それでも保存」を押してください。';K.$("#apptConflict").classList.remove("hidden");K.$("#saveAppointment").classList.add("warning");K.$("#saveAppointment").textContent="重複あり・それでも保存";conflictAck=true;return}await KRDB.putAppointment(x);const i=localAppointments.findIndex(a=>a.appointmentId===x.appointmentId);if(i>=0)localAppointments[i]=x;else localAppointments.push(x);if(x.caseId&&!["休み","出勤"].includes(x.category)&&K.updateLocalCase){const next=x.category==="買取"?"訪問・買取伝票作成":x.category==="工事"?"訪問・工事伝票作成":x.category+"対応";await K.updateLocalCase(x.caseId,{status:"✅ 訪問日時確定",nextAction:next,confirmedDate:x.date,confirmedStart:x.startTime,confirmedEnd:x.endTime,assignedEmployeeIds:x.assignedEmployeeIds,updatedAt:x.updatedAt})}await(window.KRAPI?KRAPI.run("appointment-upsert",x.appointmentId,x):KRDB.enqueue({id:"sync-"+x.appointmentId+"-"+Date.now(),operation:"appointment-upsert",entityId:x.appointmentId,payload:x,status:"pending",attempts:0,createdAt:x.updatedAt}));K.overlay("appointmentModal").classList.remove("on");window.dispatchEvent(new CustomEvent("kr-next-appointment-saved",{detail:x}));K.renderCalendar();K.renderHome&&K.renderHome();if(lastSelectedDate===x.date){const d=new Date(x.date+"T00:00:00");renderDay(x.date,d)}}
-["apptDate","apptCategory","apptStart","apptEnd","apptCustomer","apptAddress","apptPhone","apptRef","apptNote"].forEach(id=>K.$("#"+id).addEventListener("input",resetConflict));K.$("#addAppointment").onclick=()=>openEditor(null,lastSelectedDate||K.keyDate(new Date()));K.$("#saveAppointment").onclick=saveAppointment;K.$("#prevMonth").onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()-1,1);K.renderCalendar();K.$("#dayDetail").innerHTML=""};K.$("#nextMonth").onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()+1,1);K.renderCalendar();K.$("#dayDetail").innerHTML=""};ensureLocal();})();
+(() => {
+  const K = window.KRN;
+  let monthCursor = new Date(),
+    localAppointments = [],
+    loadedLocal = false,
+    lastSelectedDate = "",
+    editingAppointment = null,
+    seedCaseId = "",
+    selectedEmployees = new Set(),
+    conflictAck = false;
+  function regularDays(e) {
+    try {
+      return JSON.parse(e.regularWeekdaysJson || "[]");
+    } catch {
+      return [];
+    }
+  }
+  async function ensureLocal() {
+    if (loadedLocal) return;
+    localAppointments = await KRDB.listAppointments().catch(() => []);
+    loadedLocal = true;
+  }
+  function mergedAppointments() {
+    const m = new Map();
+    for (const a of K.snap.appointments || []) m.set(a.appointmentId, a);
+    for (const a of localAppointments) m.set(a.appointmentId, a);
+    return [...m.values()].filter((x) => x.status !== "deleted");
+  }
+  K.getAppointments = mergedAppointments;
+  function attendanceInfo(date) {
+    const weekday = K.jpDay(date),
+      key = K.keyDate(date),
+      map = new Map();
+    for (const e of K.snap.employees || []) {
+      if (String(e.active).toLowerCase() === "false") continue;
+      if (regularDays(e).includes(weekday))
+        map.set(e.name, { name: e.name, state: "working", kind: "regular" });
+    }
+    const ovs = mergedAppointments().filter(
+      (a) => a.date === key && ["休み", "出勤"].includes(a.category),
+    );
+    for (const o of ovs) {
+      const raw = String(o.customerName || o.title || "")
+        .replace(/^(休み|出勤)\s*/, "")
+        .replace(/様$/, "")
+        .trim();
+      if (!raw) continue;
+      if (o.category === "休み")
+        map.set(raw, { name: raw, state: "absent", kind: "off" });
+      else map.set(raw, { name: raw, state: "working", kind: "extra" });
+    }
+    const rows = [...map.values()];
+    rows.sort((a, b) => {
+      if (a.state !== b.state) return a.state === "absent" ? -1 : 1;
+      if (a.kind !== b.kind) return a.kind === "regular" ? -1 : 1;
+      return a.name.localeCompare(b.name, "ja");
+    });
+    return rows;
+  }
+  function attendance(date) {
+    return attendanceInfo(date)
+      .filter((x) => x.state === "working")
+      .map((x) => x.name);
+  }
+  function staffRowHtml(date) {
+    const shown = attendanceInfo(date).slice(0, 3);
+    return (
+      '<div class="dayStaffRow">' +
+      shown
+        .map(
+          (x) =>
+            '<span class="staffChip ' +
+            (x.state === "absent"
+              ? "absent"
+              : x.kind === "extra"
+                ? "extra"
+                : "working") +
+            '">' +
+            K.esc(
+              (x.kind === "extra" ? "出 " : "") +
+                x.name,
+            ) +
+            "</span>",
+        )
+        .join("") +
+      "</div>"
+    );
+  }
+  function weeks(cursor) {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1),
+      last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0),
+      start = new Date(first);
+    while (start.getDay() !== 1) start.setDate(start.getDate() - 1);
+    const out = [];
+    let cur = new Date(start);
+    while (cur <= last || out.length < 4) {
+      const w = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(cur);
+        d.setDate(cur.getDate() + i);
+        if (d.getDay() !== 4) w.push(d);
+      }
+      out.push(w);
+      cur.setDate(cur.getDate() + 7);
+      if (cur > last && cur.getDay() === 1) break;
+    }
+    return out;
+  }
+  function eventClass(c) {
+    const s = String(c || "");
+    if (s.includes("買取")) return "purchase";
+    if (s.includes("工事")) return "work";
+    if (s.includes("配送")) return "delivery";
+    if (s.includes("リサイクル") || s.includes("収集")) return "recycle";
+    if (s.includes("見積")) return "estimate";
+    if (s.includes("販売") || s.includes("引渡")) return "sale";
+    if (s.includes("予約不可")) return "blocked";
+    return "other";
+  }
+  function timeMin(v) {
+    const m = String(v || "").match(/^(\d{1,2}):(\d{2})$/);
+    return m ? +m[1] * 60 + +m[2] : null;
+  }
+  function overlaps(a, b) {
+    const as = timeMin(a.startTime),
+      ae = timeMin(a.endTime),
+      bs = timeMin(b.startTime),
+      be = timeMin(b.endTime);
+    if (as == null || ae == null || bs == null || be == null) return false;
+    return as < be && bs < ae;
+  }
+  function conflictRows(candidate) {
+    return mergedAppointments().filter(
+      (x) =>
+        x.appointmentId !== candidate.appointmentId &&
+        x.date === candidate.date &&
+        !["休み", "出勤"].includes(x.category) &&
+        overlaps(x, candidate),
+    );
+  }
+  K.renderCalendar = async () => {
+    if (!K.$("#calendarGrid")) return;
+    await ensureLocal();
+    K.$("#monthLabel").textContent =
+      monthCursor.getFullYear() + "年 " + (monthCursor.getMonth() + 1) + "月";
+    const g = K.$("#calendarGrid");
+    g.innerHTML = "";
+    const today = K.keyDate(new Date()),
+      all = mergedAppointments();
+    for (const week of weeks(monthCursor)) {
+      for (const d of week) {
+        const key = K.keyDate(d),
+          inside = d.getMonth() === monthCursor.getMonth(),
+          events = all.filter(
+            (a) => a.date === key && !["休み", "出勤"].includes(a.category),
+          );
+        const cell = document.createElement("button");
+        cell.className =
+          "dayCell" +
+          (inside ? "" : " outside") +
+          (key === today ? " today" : "");
+        const att = attendance(d);
+        cell.innerHTML =
+          '<div class="dayTop"><span class="dayNum">' +
+          d.getDate() +
+          "</span></div>" +
+          staffRowHtml(d) +
+          events
+            .slice(0, 3)
+            .map(
+              (e) =>
+                '<div class="calEvent ' +
+                eventClass(e.category) +
+                '">' +
+                K.esc(
+                  (e.startTime && e.endTime
+                    ? e.startTime + "〜" + e.endTime + " "
+                    : e.startTime
+                      ? e.startTime + " "
+                      : "") +
+                    e.category +
+                    " " +
+                    (e.customerName || e.title || ""),
+                ) +
+                (e.localOnly
+                  ? '<span class="localEventMark">NEXT</span>'
+                  : "") +
+                "</div>",
+            )
+            .join("") +
+          (events.length > 3
+            ? '<div class="moreEvent">+' + (events.length - 3) + "件</div>"
+            : "");
+        cell.onclick = () => {
+          lastSelectedDate = key;
+          renderDay(key, d);
+        };
+        g.appendChild(cell);
+      }
+    }
+  };
+  function renderDay(key, d) {
+    const events = mergedAppointments()
+        .filter((a) => a.date === key && !["休み", "出勤"].includes(a.category))
+        .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime))),
+      ai = attendanceInfo(d);
+    if (K.openDaySchedulePopup) {
+      K.openDaySchedulePopup({
+        key,
+        date: d,
+        events,
+        staff: ai,
+        onAdd: () => openEditor(null, key),
+        onEdit: (e) => openEditor(e, e.date),
+      });
+      return;
+    }
+    const box = K.$("#dayDetail");
+    box.innerHTML =
+      '<div class="dayDetailTitle"><div><b>' +
+      (d.getMonth() + 1) +
+      "/" +
+      d.getDate() +
+      "（" +
+      K.jpDay(d) +
+      '）</b><div class="detailStaffRow">' +
+      ai
+        .map(
+          (x) =>
+            '<span class="staffChip ' +
+            (x.state === "absent"
+              ? "absent"
+              : x.kind === "extra"
+                ? "extra"
+                : "working") +
+            '">' +
+            K.esc(x.name) +
+            "</span>",
+        )
+        .join("") +
+      "</div></div></div>";
+    const add = document.createElement("button");
+    add.className = "miniBtn";
+    add.textContent = "＋ この日に予定";
+    add.onclick = () => openEditor(null, key);
+    box.querySelector(".dayDetailTitle").appendChild(add);
+    if (!events.length) {
+      box.innerHTML += '<div class="empty">予定なし</div>';
+      return;
+    }
+    events.forEach((e) => {
+      const wrap = document.createElement("div");
+      wrap.className = "dayEvent";
+      const card = K.apptCard(e);
+      if (e.localOnly) {
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "localAppointmentEdit";
+        edit.textContent = "予定編集";
+        edit.onclick = (ev) => {
+          ev.stopPropagation();
+          openEditor(e, e.date);
+        };
+        card.querySelector(".cardmain")?.appendChild(edit);
+      }
+      wrap.appendChild(card);
+      box.appendChild(wrap);
+    });
+  }
+  function employeeButtons() {
+    const box = K.$("#apptEmployees");
+    box.innerHTML = "";
+    for (const e of K.snap.employees || []) {
+      if (String(e.active).toLowerCase() === "false") continue;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = e.name;
+      b.classList.toggle("active", selectedEmployees.has(e.employeeId));
+      b.onclick = () => {
+        selectedEmployees.has(e.employeeId)
+          ? selectedEmployees.delete(e.employeeId)
+          : selectedEmployees.add(e.employeeId);
+        employeeButtons();
+        resetConflict();
+      };
+      box.appendChild(b);
+    }
+  }
+  function resetConflict() {
+    conflictAck = false;
+    K.$("#apptConflict").classList.add("hidden");
+    K.$("#saveAppointment").classList.remove("warning");
+    K.$("#saveAppointment").textContent = "予定を保存";
+  }
+  function openEditor(appt, date) {
+    editingAppointment = appt || null;
+    seedCaseId = appt?.caseId || "";
+    selectedEmployees = new Set();
+    if (appt) {
+      try {
+        for (const id of JSON.parse(appt.assignedEmployeeIds || "[]"))
+          selectedEmployees.add(id);
+      } catch {}
+    }
+    const now = new Date(),
+      def = date || appt?.date || K.keyDate(now);
+    K.$("#appointmentModalTitle").textContent = appt
+      ? "予定を編集"
+      : "予定を追加";
+    K.$("#appointmentEditState").textContent = appt?.localOnly
+      ? "NEXT予定"
+      : "NEXT Green";
+    K.$("#apptDate").value = def;
+    K.$("#apptCategory").value = appt?.category || "買取";
+    K.$("#apptStart").value = appt?.startTime || "10:00";
+    K.$("#apptEnd").value = appt?.endTime || "12:00";
+    K.$("#apptCustomer").value = appt?.customerName || appt?.title || "";
+    K.$("#apptAddress").value = appt?.address || "";
+    K.$("#apptPhone").value = appt?.phone || "";
+    K.$("#apptRef").value =
+      appt?.serviceOrderId || appt?.sourceRef || appt?.blueScheduleId || "";
+    K.$("#apptNote").value = appt?.notes || "";
+    employeeButtons();
+    resetConflict();
+    K.overlay("appointmentModal").classList.add("on");
+  }
+  function openFromCase(seed) {
+    editingAppointment = null;
+    seedCaseId = seed?.caseId || "";
+    selectedEmployees = new Set();
+    const def = seed?.date || K.keyDate(new Date());
+    K.$("#appointmentModalTitle").textContent = "出張予定を作成";
+    K.$("#appointmentEditState").textContent = "査定から引継ぎ";
+    K.$("#apptDate").value = def;
+    K.$("#apptCategory").value = seed?.category || "買取";
+    K.$("#apptStart").value = seed?.startTime || "10:00";
+    K.$("#apptEnd").value = seed?.endTime || "12:00";
+    K.$("#apptCustomer").value = seed?.name || "";
+    K.$("#apptAddress").value = seed?.address || "";
+    K.$("#apptPhone").value = seed?.phone || "";
+    K.$("#apptRef").value = seed?.ref || "";
+    K.$("#apptNote").value = seed?.notes || "";
+    employeeButtons();
+    resetConflict();
+    K.overlay("appointmentModal").classList.add("on");
+  }
+  K.openAppointmentFromCase = openFromCase;
+  K.openAppointmentById = (id) => {
+    const a = mergedAppointments().find((x) => x.appointmentId === id);
+    K.openTab("schedule");
+    if (a)
+      setTimeout(
+        () => K.openAppointmentDetail && K.openAppointmentDetail(a),
+        40,
+      );
+  };
+  function candidate() {
+    const now = new Date().toISOString(),
+      ref = K.$("#apptRef").value.trim(),
+      name = K.$("#apptCustomer").value.trim();
+    return {
+      appointmentId:
+        editingAppointment?.appointmentId || "NEXT-APT-" + crypto.randomUUID(),
+      caseId: editingAppointment?.caseId || seedCaseId || "",
+      date: K.$("#apptDate").value,
+      startTime: K.$("#apptStart").value,
+      endTime: K.$("#apptEnd").value,
+      category: K.$("#apptCategory").value,
+      title: (K.$("#apptCategory").value + " " + name).trim(),
+      customerName: name,
+      phone: K.$("#apptPhone").value.trim(),
+      address: K.$("#apptAddress").value.trim(),
+      assignedEmployeeIds: JSON.stringify([...selectedEmployees]),
+      status: "next-local",
+      callStatus: editingAppointment?.callStatus || "",
+      callAt: editingAppointment?.callAt || "",
+      blueScheduleId: editingAppointment?.blueScheduleId || "",
+      serviceOrderId: ref.startsWith("UT-") ? ref : "",
+      sourceRef:
+        ref && !ref.startsWith("UT-")
+          ? ref
+          : editingAppointment?.sourceRef || "",
+      notes: K.$("#apptNote").value.trim(),
+      createdAt: editingAppointment?.createdAt || now,
+      updatedAt: now,
+      localOnly: true,
+    };
+  }
+  async function saveAppointment() {
+    const x = candidate();
+    if (!x.date || !x.startTime || !x.endTime || !x.customerName) {
+      K.$("#apptConflict").textContent =
+        "日付・開始・終了・お客様/件名を入力してください。";
+      K.$("#apptConflict").classList.remove("hidden");
+      return;
+    }
+    if (timeMin(x.endTime) <= timeMin(x.startTime)) {
+      K.$("#apptConflict").textContent =
+        "終了時間は開始時間より後にしてください。";
+      K.$("#apptConflict").classList.remove("hidden");
+      return;
+    }
+    const conflicts = conflictRows(x);
+    if (conflicts.length && !conflictAck) {
+      K.$("#apptConflict").innerHTML =
+        "<b>同時間帯に " +
+        conflicts.length +
+        "件の予定があります。</b><br>" +
+        conflicts
+          .slice(0, 3)
+          .map((y) =>
+            K.esc(
+              (y.startTime || "") +
+                " " +
+                (y.category || "") +
+                " " +
+                (y.customerName || y.title || ""),
+            ),
+          )
+          .join("<br>") +
+        "<br>問題なければもう一度「それでも保存」を押してください。";
+      K.$("#apptConflict").classList.remove("hidden");
+      K.$("#saveAppointment").classList.add("warning");
+      K.$("#saveAppointment").textContent = "重複あり・それでも保存";
+      conflictAck = true;
+      return;
+    }
+    await KRDB.putAppointment(x);
+    const i = localAppointments.findIndex(
+      (a) => a.appointmentId === x.appointmentId,
+    );
+    if (i >= 0) localAppointments[i] = x;
+    else localAppointments.push(x);
+    if (
+      x.caseId &&
+      !["休み", "出勤"].includes(x.category) &&
+      K.updateLocalCase
+    ) {
+      const next =
+        x.category === "買取"
+          ? "訪問・買取伝票作成"
+          : x.category === "工事"
+            ? "訪問・工事伝票作成"
+            : x.category + "対応";
+      await K.updateLocalCase(x.caseId, {
+        status: "✅ 訪問日時確定",
+        nextAction: next,
+        confirmedDate: x.date,
+        confirmedStart: x.startTime,
+        confirmedEnd: x.endTime,
+        assignedEmployeeIds: x.assignedEmployeeIds,
+        updatedAt: x.updatedAt,
+      });
+    }
+    await (window.KRAPI
+      ? KRAPI.run("appointment-upsert", x.appointmentId, x)
+      : KRDB.enqueue({
+          id: "sync-" + x.appointmentId + "-" + Date.now(),
+          operation: "appointment-upsert",
+          entityId: x.appointmentId,
+          payload: x,
+          status: "pending",
+          attempts: 0,
+          createdAt: x.updatedAt,
+        }));
+    K.overlay("appointmentModal").classList.remove("on");
+    window.dispatchEvent(
+      new CustomEvent("kr-next-appointment-saved", { detail: x }),
+    );
+    K.renderCalendar();
+    K.renderHome && K.renderHome();
+    if (lastSelectedDate === x.date) {
+      const d = new Date(x.date + "T00:00:00");
+      renderDay(x.date, d);
+    }
+  }
+  [
+    "apptDate",
+    "apptCategory",
+    "apptStart",
+    "apptEnd",
+    "apptCustomer",
+    "apptAddress",
+    "apptPhone",
+    "apptRef",
+    "apptNote",
+  ].forEach((id) => K.$("#" + id).addEventListener("input", resetConflict));
+  K.$("#addAppointment").onclick = () =>
+    openEditor(null, lastSelectedDate || K.keyDate(new Date()));
+  K.$("#saveAppointment").onclick = saveAppointment;
+  K.$("#prevMonth").onclick = () => {
+    monthCursor = new Date(
+      monthCursor.getFullYear(),
+      monthCursor.getMonth() - 1,
+      1,
+    );
+    K.renderCalendar();
+    K.$("#dayDetail").innerHTML = "";
+  };
+  K.$("#nextMonth").onclick = () => {
+    monthCursor = new Date(
+      monthCursor.getFullYear(),
+      monthCursor.getMonth() + 1,
+      1,
+    );
+    K.renderCalendar();
+    K.$("#dayDetail").innerHTML = "";
+  };
+  ensureLocal();
+})();
