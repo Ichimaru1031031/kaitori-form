@@ -1,1 +1,99 @@
 .editor select{width:100%;border:1px solid #ccd9d3;border-radius:10px;padding:9px;margin:4px 0;background:#fff}.pricePreview,.recyclePreview{font-size:11px;padding:7px 8px;background:#f6f8f7;border:1px solid #e6ece9;border-radius:8px;margin:6px 0;line-height:1.5}.editor.special .row{align-items:center}.editor.special .save:disabled{opacity:.4;cursor:not-allowed}
+/* NEXT slip picker v2 */
+.slipLineItem{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:8px!important;
+  align-items:center!important;
+}
+.itemMain{min-width:0}
+.itemMain b,.itemMain span{display:block}
+.itemMain b{font-size:11px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.itemMain span{font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.itemSide{display:flex;align-items:center;gap:6px}
+.itemSide>b{font-size:11px;white-space:nowrap}
+.itemDelete{
+  width:28px;height:28px;border:1px solid #e4c8c4;background:#fff5f3;color:#a64b43;
+  border-radius:9px;font-size:18px;line-height:1;padding:0;font-weight:700
+}
+.itemDelete:active{background:#fbe6e2}
+
+.productEditor{position:relative}
+.productField{
+  display:block;font-size:10px;font-weight:900;color:#56635f;margin-top:7px
+}
+.productField input{
+  width:100%;margin-top:4px;border:1px solid #ccd9d3;border-radius:10px;padding:10px;
+  background:#fff;font-size:13px
+}
+.suggestionPanel{
+  display:none;
+  position:relative;
+  z-index:5;
+  margin:4px 0 7px;
+  border:1px solid #d5dfda;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 8px 22px rgba(35,55,49,.10);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.suggestionPanel.open{display:block}
+.categorySuggestions{max-height:210px}
+.makerSuggestions{max-height:230px}
+.modelSuggestions.scrollSuggestions{max-height:250px!important}
+.suggestionPanel button{
+  display:flex!important;
+  width:100%;
+  min-height:40px;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  border:0!important;
+  border-bottom:1px solid #edf1ef!important;
+  border-radius:0!important;
+  background:#fff!important;
+  color:var(--ink)!important;
+  padding:9px 10px!important;
+  text-align:left!important;
+}
+.suggestionPanel button:last-child{border-bottom:0!important}
+.suggestionPanel button:active{background:#eef7f3!important}
+.suggestionPanel button b{
+  font-size:12px!important;
+  line-height:1.25!important;
+  color:#26332f!important;
+}
+.suggestionPanel button span{
+  font-size:9px!important;
+  color:#77827d!important;
+  white-space:nowrap;
+}
+.suggestionEmpty{
+  padding:12px 10px;
+  font-size:10px;
+  color:#78837e;
+}
+.categorySuggestions button b{font-size:13px!important}
+.makerSuggestions button:first-child b{color:#2f7864!important}
+.modelSuggestions.scrollSuggestions button{
+  align-items:flex-start;
+}
+.modelSuggestions.scrollSuggestions button b{
+  max-width:58%;
+  white-space:normal;
+  word-break:break-all;
+}
+.modelSuggestions.scrollSuggestions button span{
+  max-width:42%;
+  white-space:normal;
+  text-align:right;
+  line-height:1.3;
+}
+@media(max-width:600px){
+  .categorySuggestions{max-height:190px}
+  .makerSuggestions{max-height:210px}
+  .modelSuggestions.scrollSuggestions{max-height:225px!important}
+  .suggestionPanel button{min-height:42px;padding:10px!important}
+}
