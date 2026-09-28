@@ -480,7 +480,7 @@ function confirmStripeCheckout_(sessionId){
       const noteText=["EC決済",deliveryLabel,shippingAddress].filter(Boolean).join(" / ");
       const customerPhone=(session.customer_details&&session.customer_details.phone)||"";
       const customerEmail=(session.customer_details&&session.customer_details.email)||String(co.customerEmail||"");
-      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",notes:noteText,source:"STRIPE",updatedAt:now,deliveryOption:deliveryOption,shippingAddress:shippingAddress,customerPhone:customerPhone,customerEmail:customerEmail};
+      const saleObj={status:"売約済み",customerName:customer,salePrice:salePrice,reservedAt:now,soldAt:now,employeeId:"",employeeName:"EC決済",notes:noteText,source:"STRIPE",updatedAt:now,deliveryOption:deliveryOption,shippingAddress:shippingAddress,customerPhone:customerPhone,customerEmail:customerEmail,checkoutId:String(co.checkoutId||""),fulfillmentAppointmentId:""};
       if(sr)updateRow_("SALES",sr,saleObj);
       else{
         appendObject_("SALES",Object.assign({saleId:"SALE-"+inventoryId,inventoryId:inventoryId,inventoryNo:inv.inventoryNo||"",deliveredAt:"",idempotencyKey:"stripe:"+sessionId},saleObj));
@@ -575,10 +575,24 @@ function opAppointmentUpsert_(entityId,p,key){
     blueScheduleId:p.blueScheduleId||"",
     serviceOrderId:p.serviceOrderId||"",
     notes:p.notes||"",
+    sourceRef:p.sourceRef||"",
     createdAt:p.createdAt||now,
     updatedAt:now
   };
   if(row) updateRow_("APPOINTMENTS",row,obj); else appendObject_("APPOINTMENTS",obj);
+  const sourceRef=String(obj.sourceRef||"");
+  if(sourceRef){
+    if(sourceRef.indexOf("CHK-")===0){
+      const cr=findRow_("CHECKOUTS","checkoutId",sourceRef);
+      if(cr){
+        const checkout=rowObject_(sh_("CHECKOUTS"),cr),ids=parseJsonArray_(checkout.inventoryIdsJson);
+        ids.forEach(function(inventoryId){const sr=findRow_("SALES","inventoryId",inventoryId);if(sr)updateRow_("SALES",sr,{fulfillmentAppointmentId:entityId,updatedAt:now});});
+      }
+    }else if(sourceRef.indexOf("SALE-")===0){
+      const sr=findRow_("SALES","saleId",sourceRef);
+      if(sr)updateRow_("SALES",sr,{fulfillmentAppointmentId:entityId,updatedAt:now});
+    }
+  }
   audit_("appointment",entityId,row?"update":"create",obj,"NEXT");
   return {appointmentId:entityId,saved:true,updatedAt:now};
 }
