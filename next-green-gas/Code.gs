@@ -126,6 +126,7 @@ function dispatch_(op, entityId, p, key) {
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
+    case "appointment-note-update": return opAppointmentNoteUpdate_(entityId,p,key);
     case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
     case "case-upsert": return opCaseUpsert_(entityId,p,key);
     default: throw new Error("UNSUPPORTED_OPERATION:"+op);
@@ -211,6 +212,15 @@ function opCaseUpsert_(entityId,p,key){
   if(row) updateRow_("CASES",row,caseObj); else appendObject_("CASES",caseObj);
   audit_("case",caseId,row?"update":"create",caseObj,"NEXT");
   return {caseId:caseId,customerId:customerId,saved:true,updatedAt:now};
+}
+
+function opAppointmentNoteUpdate_(entityId,p,key){
+  const row=findRow_("APPOINTMENTS","appointmentId",entityId);
+  if(!row) throw new Error("APPOINTMENT_NOT_FOUND:"+entityId);
+  const at=String(p.updatedAt||new Date().toISOString()),notes=String(p.notes||"");
+  updateRow_("APPOINTMENTS",row,{notes:notes,updatedAt:at});
+  audit_("appointment",entityId,"note-update",{notes:notes,updatedAt:at},"NEXT");
+  return {appointmentId:entityId,notes:notes,updatedAt:at};
 }
 
 function opAppointmentUpsert_(entityId,p,key){
