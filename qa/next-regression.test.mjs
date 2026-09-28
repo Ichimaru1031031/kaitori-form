@@ -22,8 +22,8 @@ const assessment = await readFile(
   new URL("../next/assessment.js", import.meta.url),
   "utf8",
 );
-const assessmentPortal = await readFile(
-  new URL("../next/assessment-portal.html", import.meta.url),
+const assessmentAdapter = await readFile(
+  new URL("../next/assessment-adapter.js", import.meta.url),
   "utf8",
 );
 const inventory = await readFile(
@@ -110,23 +110,17 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
   assert.match(assessment, /K\.casesNow\(\)/);
 });
 
-test("NEXT assessment opens the Blue dashboard in a clean NEXT portal", () => {
-  assert.match(assessment, /\.\/assessment-portal\.html/);
-  assert.match(assessment, /iPad\|iPhone\|iPod/);
-  assert.match(assessment, /isAppleMobile \? K\.C\.assessment/);
-  assert.match(assessment, /u\.searchParams\.set\("embed", "1"\)/);
-  assert.match(assessmentPortal, /const BLUE_DASHBOARD =/);
-  assert.match(assessmentPortal, /location\.replace\(dashboard\.toString\(\)\)/);
-  assert.match(assessment, /u\.searchParams\.set\("case", activeBlueCase\)/);
-  assert.match(assessment, /window\.location\.assign\(u\.toString\(\)\)/);
-  assert.match(assessmentPortal, /--gas-banner-height: 0px/);
-  assert.match(assessmentPortal, /--legacy-menu-left: 82px/);
-  assert.match(assessmentPortal, /--legacy-menu-bottom: 76px/);
-  assert.match(
-    assessmentPortal,
-    /dashboard\.searchParams\.set\("embed", "1"\)/,
-  );
-  assert.doesNotMatch(assessment, /assessmentOpsModal/);
+test("NEXT assessment uses the token-protected native workbench", () => {
+  assert.match(html, /id="assessmentOpsModal"/);
+  assert.match(html, /id="assessmentOpsBody"/);
+  assert.match(html, /assessment-adapter\.js\?v=1/);
+  assert.match(assessmentAdapter, /kr-assessment-adapter-request/);
+  assert.match(assessmentAdapter, /kr-next-assessment-session/);
+  assert.match(assessment, /KRAssessmentAdapter\.getCase/);
+  assert.match(assessment, /send-estimate/);
+  assert.match(assessment, /send-combined/);
+  assert.match(assessment, /send-visit/);
+  assert.doesNotMatch(assessment, /window\.location\.assign/);
   assert.doesNotMatch(assessment, /assessmentOpsFrame/);
   assert.match(assessment, /K\.requestBlueCases\?\.\(\)/);
   assert.doesNotMatch(assessment, /saveAndSend(?:Estimate|Visit|Combined)/);
