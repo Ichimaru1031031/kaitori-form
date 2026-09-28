@@ -1,0 +1,1 @@
+.assessmentActions{grid-template-columns:repeat(4,1fr)!important}.assessmentActions .schedule{background:#edf3f8!important;color:#315d86!important;border-color:#cbd9e6!important}.assessmentActions .next{background:#496f65!important;color:#fff!important;border-color:#496f65!important}@media(max-width:600px){.assessmentActions{grid-template-columns:repeat(2,1fr)!important}}
