@@ -1,6 +1,7 @@
 (() => {
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbyna99PhsT4kx3gFNsUYY3QJwY2C6aMJrx0bP4eSq2wVMJxbfCa6M0sr5I0DV2w20OP/exec";
   const TOKEN_KEY = "kr-next-assessment-session";
+  const OCR_TOKEN_KEY = "kr-next-ocr-session";
   const pending = new Map();
   let initPromise = null;
 
@@ -52,7 +53,7 @@
     data.error ? item.reject(new Error(data.error)) : item.resolve(data.result);
   });
 
-  function request(operation, payload, timeout = 30000) {
+  function request(operation, payload, timeout = 30000, tokenOverride) {
     const requestId = "ass-" + Date.now() + "-" + Math.random().toString(36).slice(2);
     const channel = crypto.randomUUID
       ? crypto.randomUUID()
@@ -73,7 +74,10 @@
         requestId,
         channel,
         operation,
-        token: localStorage.getItem(TOKEN_KEY) || "",
+        token:
+          tokenOverride === undefined
+            ? localStorage.getItem(TOKEN_KEY) || ""
+            : tokenOverride,
         payload: JSON.stringify(payload || {}),
       };
       Object.entries(fields).forEach(([name, value]) => {
@@ -118,6 +122,40 @@
     localStorage.removeItem(TOKEN_KEY);
   }
 
+  async function ensureOcrSession() {
+    const stored = localStorage.getItem(OCR_TOKEN_KEY) || "";
+    if (stored) return stored;
+    const result = await request("ocr-bootstrap", {}, 30000, "");
+    if (!result?.token) throw new Error("OCR接続情報を保存できませんでした");
+    localStorage.setItem(OCR_TOKEN_KEY, result.token);
+    return result.token;
+  }
+
+  async function run(operation, payload) {
+    if (operation === "label-ocr" || operation === "label-ocr-status") {
+      let token = await ensureOcrSession();
+      try {
+        return await request(
+          operation,
+          payload,
+          operation === "label-ocr" ? 65000 : 30000,
+          token,
+        );
+      } catch (error) {
+        if (!/SESSION_EXPIRED/.test(String(error?.message || error))) throw error;
+        localStorage.removeItem(OCR_TOKEN_KEY);
+        token = await ensureOcrSession();
+        return request(
+          operation,
+          payload,
+          operation === "label-ocr" ? 65000 : 30000,
+          token,
+        );
+      }
+    }
+    return request(operation, payload, 30000);
+  }
+
   window.KRAssessmentAdapter = {
     init,
     pair,
@@ -125,7 +163,7 @@
     clear,
     hasSession,
     getCase: (id) => request("case", { id }),
-    run: (operation, payload) => request(operation, payload, operation === "label-ocr" ? 65000 : 30000),
+    run,
   };
   addEventListener("DOMContentLoaded", () => setTimeout(init, 0));
 })();

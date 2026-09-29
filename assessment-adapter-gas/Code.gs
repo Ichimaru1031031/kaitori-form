@@ -1,6 +1,7 @@
 const ADAPTER = Object.freeze({
   PAIR_HASH: "8f2be2c80f42c3d4a52ea98d2013127cae1fa596a5c7ecab49ad57b07a459cd9",
   SESSION_DAYS: 365,
+  OCR_SESSION_SECONDS: 21600,
   DEVICE_LINK_MINUTES: 10,
 });
 
@@ -26,6 +27,8 @@ function doPost(e) {
       ? adapterPair(payload.code)
       : operation === "claim-device-link"
         ? claimDeviceLink_(payload.token)
+        : operation === "ocr-bootstrap"
+          ? issueOcrSession_()
         : adapterRequest(String((e && e.parameter && e.parameter.token) || ""), operation, payload);
     body = { type: "kr-assessment-adapter-response", requestId: requestId, channel: channel, result: result };
   } catch (error) {
@@ -56,8 +59,12 @@ function adapterPair(code) {
 }
 
 function adapterRequest(token, operation, payload) {
-  requireSession_(token);
   payload = payload || {};
+  if (operation === "label-ocr-status" || operation === "label-ocr") {
+    requireOcrSession_(token);
+  } else {
+    requireSession_(token);
+  }
   switch (String(operation || "")) {
     case "dashboard": return ProdDash.getDashboardData(true);
     case "case": return ProdDash.getCase(String(payload.id || ""));
@@ -69,7 +76,7 @@ function adapterRequest(token, operation, payload) {
     case "status": return ProdDash.setStatus(String(payload.id || ""), String(payload.status || ""));
     case "create-device-link": return createDeviceLink_();
     case "label-ocr-status": return labelOcrStatus_();
-    case "label-ocr": return labelOcr_(payload);
+    case "label-ocr": return labelOcr_(payload, token);
     case "green-ping": return GreenNext.greenBridgeRequest("ping", payload);
     case "green-snapshot": return GreenNext.greenBridgeRequest("snapshot", payload);
     case "green-write": return GreenNext.greenBridgeRequest("write", payload);
@@ -86,7 +93,7 @@ function labelOcrStatus_() {
   };
 }
 
-function labelOcr_(payload) {
+function labelOcr_(payload, token) {
   const properties = PropertiesService.getScriptProperties();
   const apiKey = String(properties.getProperty("GOOGLE_CLOUD_VISION_API_KEY") || "").trim();
   if (!apiKey) throw new Error("HIGH_ACCURACY_OCR_NOT_CONFIGURED");
@@ -99,6 +106,10 @@ function labelOcr_(payload) {
   const count = Number(cache.get(minuteKey) || 0);
   if (count >= 60) throw new Error("OCR_RATE_LIMIT");
   cache.put(minuteKey, String(count + 1), 90);
+  const deviceMinuteKey = "label-ocr-device-rate:" + hash_(String(token || "")).slice(0, 16) + ":" + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMddHHmm");
+  const deviceCount = Number(cache.get(deviceMinuteKey) || 0);
+  if (deviceCount >= 12) throw new Error("OCR_DEVICE_RATE_LIMIT");
+  cache.put(deviceMinuteKey, String(deviceCount + 1), 90);
   const response = UrlFetchApp.fetch("https://vision.googleapis.com/v1/images:annotate?key=" + encodeURIComponent(apiKey), {
     method: "post",
     contentType: "application/json",
@@ -133,6 +144,34 @@ function requireSession_(token) {
     throw new Error("SESSION_EXPIRED");
   }
   properties.setProperty(key, String(Date.now() + ADAPTER.SESSION_DAYS * 86400000));
+}
+
+function requireOcrSession_(token) {
+  const value = String(token || "");
+  const properties = PropertiesService.getScriptProperties();
+  const assessmentKey = "session:" + hash_(value);
+  const ocrKey = "ocr-session:" + hash_(value);
+  const now = Date.now();
+  const assessmentExpiresAt = Number(properties.getProperty(assessmentKey) || 0);
+  if (assessmentExpiresAt >= now) {
+    properties.setProperty(assessmentKey, String(now + ADAPTER.SESSION_DAYS * 86400000));
+    return;
+  }
+  const cache = CacheService.getScriptCache();
+  if (cache.get(ocrKey) !== "1") throw new Error("SESSION_EXPIRED");
+  cache.put(ocrKey, "1", ADAPTER.OCR_SESSION_SECONDS);
+}
+
+function issueOcrSession_() {
+  const cache = CacheService.getScriptCache();
+  const minuteKey = "ocr-bootstrap:" + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMddHHmm");
+  const count = Number(cache.get(minuteKey) || 0);
+  if (count >= 30) throw new Error("OCR_BOOTSTRAP_RATE_LIMIT");
+  cache.put(minuteKey, String(count + 1), 90);
+  const token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+  const expiresAt = Date.now() + ADAPTER.OCR_SESSION_SECONDS * 1000;
+  cache.put("ocr-session:" + hash_(token), "1", ADAPTER.OCR_SESSION_SECONDS);
+  return { ok: true, token: token, expiresAt: new Date(expiresAt).toISOString(), scope: "label-ocr" };
 }
 
 function issueSession_() {
