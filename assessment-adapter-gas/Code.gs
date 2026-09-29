@@ -42,7 +42,7 @@ function doPost(e) {
 
 function adapterPair(code) {
   const cache = CacheService.getScriptCache();
-  const rateKey = "pair:" + hash_(String(code || "").slice(0, 4));
+  const rateKey = "pair:v2:" + hash_(String(code || "").slice(0, 4));
   const attempts = Number(cache.get(rateKey) || 0);
   if (attempts >= 8) throw new Error("接続試行が多すぎます。時間をおいてください。");
   cache.put(rateKey, String(attempts + 1), 600);
