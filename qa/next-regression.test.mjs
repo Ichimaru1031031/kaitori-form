@@ -46,6 +46,10 @@ const html = await readFile(
   new URL("../next/index.html", import.meta.url),
   "utf8",
 );
+const confirmCss = await readFile(
+  new URL("../next/confirm-extra.css", import.meta.url),
+  "utf8",
+);
 const greenGas = await readFile(
   new URL("../next-green-gas/Code.gs", import.meta.url),
   "utf8",
@@ -162,7 +166,7 @@ test("NEXT slip distinguishes issued PDF from unsent customer delivery", () => {
   assert.match(slip, /class="documentDeliveryStatus"/);
   assert.match(slip, />未送信</);
   assert.match(slip, /apiResult\?\.pdfFileUrl/);
-  assert.match(slip, /メール未登録・現行Blueを開く/);
+  assert.match(slip, /setDeliveryLabel\(blueSend,canEmail\?"メール送信"/);
   assert.match(html, /id="bluePdfSend" type="button" disabled/);
 });
 
@@ -176,7 +180,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=12/);
+  assert.match(html, /slip\.js\?v=13/);
   assert.match(html, /assessment-adapter\.js\?v=9/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
@@ -207,7 +211,7 @@ test("NEXT product entry uses protected cloud OCR with on-device fallback and ma
   assert.match(assessmentAdapter, /const OCR_TOKEN_KEY = "kr-next-ocr-session"/);
   assert.match(assessmentAdapter, /request\("ocr-bootstrap"/);
   assert.match(assessmentAdapter, /operation === "label-ocr" \? 65000/);
-  assert.doesNotMatch(slip, /hasSession\?\.\(\).*label-ocr/s);
+  assert.doesNotMatch(slip, /if\(!KRAssessmentAdapter\?\.hasSession.*label-ocr/);
   assert.match(adapterGas, /case "label-ocr"/);
   assert.match(adapterGas, /operation === "ocr-bootstrap"/);
   assert.match(adapterGas, /requireOcrSession_\(token\)/);
@@ -249,7 +253,7 @@ test("assessment product data seeds purchase entry and OCR conflicts require a s
   assert.match(assessment, /assessmentProduct: source\.product \|\| ""/);
   assert.match(assessment, /assessmentItems: Array\.isArray\(source\.items\) \? source\.items : \[\]/);
   assert.match(slip, /function assessmentSeedRows\(seed\)/);
-  assert.match(slip, /assessmentItems:assessmentSeedRows\(seed\)/);
+  assert.match(slip, /const intakeRows=assessmentSeedRows\(seed\)/);
   assert.match(slip, /class="sourceCompare"/);
   assert.match(slip, /査定フォームから反映済み/);
   assert.match(slip, /査定フォーム：/);
@@ -260,6 +264,16 @@ test("assessment product data seeds purchase entry and OCR conflicts require a s
   assert.match(slipCss, /\.sourceConflictChoices button\.active/);
 });
 
+test("intake form products automatically populate linked slip purchase lines", () => {
+  assert.match(slip, /async function enrichSlipSeed\(seed\)/);
+  assert.match(slip, /KRAssessmentAdapter\.getCase\(detailId\)/);
+  assert.match(slip, /function mergeIntakeProducts\(target,rows\)/);
+  assert.match(slip, /sourceForm:"案内フォーム"/);
+  assert.match(slip, /formImportedKeys/);
+  assert.match(slip, /案内フォームの商品/);
+  assert.match(html, /id="formImportStatus"/);
+});
+
 test("protected Green bridge is used without exposing an anonymous write URL", () => {
   assert.match(greenApi, /hasProtectedAdapter\(\)/);
   assert.match(greenApi, /green-write/);
@@ -267,7 +281,7 @@ test("protected Green bridge is used without exposing an anonymous write URL", (
   assert.match(adapterGas, /case "green-write"/);
   assert.match(adapterGas, /GreenNext\.greenBridgeRequest\("write", payload\)/);
   assert.match(adapterManifest, /"userSymbol": "GreenNext"/);
-  assert.match(adapterManifest, /"version": "4"/);
+  assert.match(adapterManifest, /"version": "5"/);
 });
 
 test("issued slip PDF email uses stored customer data and explicit resend", () => {
@@ -302,12 +316,26 @@ test("issued PDF can be shared by email, SMS, or LINE without changing the LINE 
   assert.match(html, /id="linePdfShare"/);
   assert.match(slip, /get-slip-pdf-share/);
   assert.match(slip, /navigator\.canShare/);
-  assert.match(slip, /https:\/\/line\.me\/R\/msg\/text/);
-  assert.match(slip, /location\.href="sms:"/);
+  assert.match(slip, /async function getIssuedPdfForShare/);
+  assert.match(slip, /for\(let attempt=0;attempt<2;attempt\+\+\)/);
+  assert.match(slip, /navigator\.share/);
+  assert.match(slip, /files:\[file\]/);
   assert.match(greenGas, /case "get-slip-pdf-share"/);
   assert.match(greenGas, /pdfBase64:Utilities\.base64Encode/);
   assert.match(greenGas, /cacheable = operation !== "get-slip-pdf-share"/);
   assert.doesNotMatch(greenGas, /api\.line\.me|hooks\.slack|Twilio/i);
+});
+
+test("customer confirmation is a readable stepped layout with colored share actions", () => {
+  assert.match(slip, /class="reviewIntro"/);
+  assert.match(slip, /class="reviewCustomer"/);
+  assert.match(slip, /class="reviewDetails"/);
+  assert.match(slip, /class="reviewGrandTotal"/);
+  assert.match(confirmCss, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(confirmCss, /#bluePdfSend\{border-color:/);
+  assert.match(confirmCss, /#smsPdfShare\{border-color:/);
+  assert.match(confirmCss, /#linePdfShare\{border-color:/);
+  assert.match(html, /class="deliveryIcon lineIcon"/);
 });
 
 test("slip list reloads live Green delivery status through the protected adapter", () => {
