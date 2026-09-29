@@ -145,3 +145,10 @@ test("assessment action result survives the post-send detail refresh", () => {
   );
   assert.match(assessment, /let actions = resultHtml \+ '<div class="nativeLocked">/);
 });
+
+test("assessment list refreshes from the protected production dashboard", () => {
+  assert.match(assessment, /KRAssessmentAdapter\.run\("dashboard", \{\}\)/);
+  assert.match(assessment, /K\.liveCases = rows/);
+  assert.match(assessment, /mergeNativeDetail\(detail\)/);
+  assert.match(assessment, /setTimeout\(refreshBlueList, 1200\)/);
+});

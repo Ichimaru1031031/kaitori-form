@@ -4,7 +4,8 @@
     query = "",
     loaded = false,
     activeBlueCase = "",
-    actionNotice = null;
+    actionNotice = null,
+    dashboardLoading = false;
   async function ensureCustomers() {
     if (loaded) return;
     if (Array.isArray(K.customers) && K.customers.length) {
@@ -72,6 +73,60 @@
     return K.casesNow()
       .map(normCase)
       .filter((x) => /^KR-/i.test(x.id));
+  }
+  function dashboardCases(result) {
+    if (Array.isArray(result)) return result;
+    const candidates = [
+      result?.cases,
+      result?.items,
+      result?.requests,
+      result?.rows,
+      result?.data?.cases,
+      result?.data?.items,
+      result?.dashboard?.cases,
+    ];
+    return candidates.find(Array.isArray) || [];
+  }
+  function caseIdOf(x) {
+    return String(x?.id || x?.blueReceptionId || x?.receptionId || x?.caseId || "")
+      .replace(/^BLUE-CASE-/, "")
+      .replace(/^BLUE-SLIP-CASE-/, "");
+  }
+  function mergeNativeDetail(detail) {
+    const id = caseIdOf(detail) || activeBlueCase;
+    const target = K.liveCases.length ? K.liveCases : K.snap.cases;
+    const index = target.findIndex((x) => caseIdOf(x) === id);
+    if (index < 0) return;
+    const visit = String(detail.visitTime || "").split(/〜/);
+    target[index] = {
+      ...target[index],
+      ...detail,
+      id,
+      blueReceptionId: id,
+      name: detail.name || target[index].name,
+      status: detail.status || target[index].status,
+      nextAction: detail.nextAction || target[index].nextAction,
+      product: detail.productText || detail.product || target[index].product,
+      estimateTotal: Number(detail.total || detail.estimateTotal || 0),
+      confirmedDate: detail.visitDate || target[index].confirmedDate,
+      confirmedStart: visit[0] || target[index].confirmedStart,
+      confirmedEnd: visit[1] || target[index].confirmedEnd,
+    };
+  }
+  async function syncNativeDashboard() {
+    if (dashboardLoading || !KRAssessmentAdapter.hasSession()) return false;
+    dashboardLoading = true;
+    try {
+      const result = await KRAssessmentAdapter.run("dashboard", {});
+      const rows = dashboardCases(result).filter((x) => /^KR-/i.test(caseIdOf(x)));
+      if (!rows.length) return false;
+      K.liveCases = rows;
+      return true;
+    } catch {
+      return false;
+    } finally {
+      dashboardLoading = false;
+    }
   }
   function bindFilters() {
     const counts = { all: 0, action: 0, wait: 0, confirmed: 0, cancel: 0 };
@@ -222,8 +277,10 @@
     try {
       const detail = await KRAssessmentAdapter.getCase(activeBlueCase);
       K.__assessmentCase = detail;
+      mergeNativeDetail(detail);
       body.innerHTML = nativeDetailHtml(detail);
       bindNativeActions(detail);
+      K.renderAssessment();
     } catch (e) {
       if (/SESSION_EXPIRED/.test(String(e.message || e))) {
         KRAssessmentAdapter.clear();
@@ -252,11 +309,19 @@
     if (!KRAssessmentAdapter.hasSession()) assessmentPairView(caseInfo);
     else await loadAssessmentCase(caseInfo);
   };
-  function refreshBlueList() {
+  async function refreshBlueList() {
     const state = K.$("#assessmentBridgeState");
     if (state) {
       state.textContent = "同期中";
       state.classList.remove("connected");
+    }
+    if (await syncNativeDashboard()) {
+      K.renderAssessment();
+      if (state) {
+        state.textContent = "ライブ接続";
+        state.classList.add("connected");
+      }
+      return;
     }
     K.requestBlueCases?.();
     setTimeout(() => {
@@ -366,4 +431,5 @@
   K.$("#assessmentOpsReload").onclick = () =>
     activeBlueCase && loadAssessmentCase({ id: activeBlueCase });
   K.$("#assessmentOpsClose").addEventListener("click", refreshBlueList);
+  setTimeout(refreshBlueList, 1200);
 })();
