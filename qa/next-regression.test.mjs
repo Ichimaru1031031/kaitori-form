@@ -132,7 +132,7 @@ test("slip customer cards open NEXT slips without requiring the small action but
 
 test("slip input always has a recoverable save-and-back path", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
-  assert.match(html, /slip-extra\.css\?v=5/);
+  assert.match(html, /slip-extra\.css\?v=6/);
   assert.match(html, /id="closeSlipFooter"/);
   assert.match(html, /保存して戻る/);
   assert.match(slip, /async function closeSlipSafely\(\)/);
@@ -180,7 +180,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=13/);
+  assert.match(html, /slip\.js\?v=15/);
   assert.match(html, /assessment-adapter\.js\?v=9/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
@@ -274,6 +274,19 @@ test("intake form products automatically populate linked slip purchase lines", (
   assert.match(html, /id="formImportStatus"/);
 });
 
+test("imported purchase lines remain editable for on-site product details and price", async () => {
+  const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
+  assert.match(slip, /class="itemEdit"/);
+  assert.match(slip, /function editExistingItem\(host,key,index\)/);
+  assert.match(slip, /商品情報と買取価格を編集/);
+  assert.match(slip, /容量・状態・使用感/);
+  assert.match(slip, /Object\.assign\(item,/);
+  assert.match(slip, /sourceFormEditedAt/);
+  assert.match(slip, /rememberModel\(item\.category,item\.maker,item\.model,item\.year\)/);
+  assert.match(slip, /案内フォーム反映・現場編集済み/);
+  assert.match(slipCss, /\.editExistingActions/);
+});
+
 test("protected Green bridge is used without exposing an anonymous write URL", () => {
   assert.match(greenApi, /hasProtectedAdapter\(\)/);
   assert.match(greenApi, /green-write/);
@@ -317,7 +330,9 @@ test("issued PDF can be shared by email, SMS, or LINE without changing the LINE 
   assert.match(slip, /get-slip-pdf-share/);
   assert.match(slip, /navigator\.canShare/);
   assert.match(slip, /async function getIssuedPdfForShare/);
-  assert.match(slip, /for\(let attempt=0;attempt<2;attempt\+\+\)/);
+  assert.match(slip, /for\(let attempt=0;attempt<5;attempt\+\+\)/);
+  assert.match(slip, /KRAPI\.syncPending\?\.\(\)/);
+  assert.match(slip, /PDFの発行完了を待っています/);
   assert.match(slip, /navigator\.share/);
   assert.match(slip, /files:\[file\]/);
   assert.match(greenGas, /case "get-slip-pdf-share"/);
