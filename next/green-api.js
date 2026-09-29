@@ -310,6 +310,7 @@
         save = document.getElementById("saveApiUrl"),
         testBtn = document.getElementById("testApiUrl"),
         sync = document.getElementById("syncQueue"),
+        issueDevice = document.getElementById("issueDeviceLink"),
         result = document.getElementById("apiResult");
       if (input) {
         input.value = apiUrl();
@@ -341,6 +342,23 @@
           result.textContent =
             "送信 " + r.sent + "件 / 残り " + r.pending + "件";
           await updateStatus();
+        };
+      if (issueDevice)
+        issueDevice.onclick = async () => {
+          result.textContent = "端末追加リンクを作成中…";
+          try {
+            const issued = await KRAssessmentAdapter.createDeviceLink();
+            let copied = false;
+            try {
+              await navigator.clipboard.writeText(issued.url);
+              copied = true;
+            } catch {}
+            result.textContent = copied
+              ? "10分有効の端末追加リンクをコピーしました"
+              : "10分有効のリンク：" + issued.url;
+          } catch (error) {
+            result.textContent = "作成できません：" + String(error.message || error);
+          }
         };
     }, 250),
   );

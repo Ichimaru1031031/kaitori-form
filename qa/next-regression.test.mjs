@@ -159,7 +159,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=6/);
+  assert.match(html, /assessment-adapter\.js\?v=7/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);
@@ -171,6 +171,20 @@ test("NEXT assessment uses the token-protected native workbench", () => {
   assert.doesNotMatch(assessment, /assessmentOpsFrame/);
   assert.match(assessment, /K\.requestBlueCases\?\.\(\)/);
   assert.doesNotMatch(assessment, /saveAndSend(?:Estimate|Visit|Combined)/);
+});
+
+test("NEXT assessment removes code entry and uses a one-time device link", () => {
+  assert.doesNotMatch(assessment, /id="assessmentPairCode"/);
+  assert.match(assessment, /接続コードの入力は廃止しました/);
+  assert.match(html, /id="issueDeviceLink"/);
+  assert.match(assessmentAdapter, /claim-device-link/);
+  assert.match(assessmentAdapter, /createDeviceLink/);
+  assert.match(assessmentAdapter, /url\.hash = "connect="/);
+  assert.match(adapterGas, /case "create-device-link"/);
+  assert.match(adapterGas, /function claimDeviceLink_/);
+  assert.match(adapterGas, /properties\.deleteProperty\(key\)/);
+  assert.match(adapterGas, /SESSION_DAYS: 365/);
+  assert.match(adapterGas, /properties\.setProperty\(key, String\(Date\.now\(\) \+ ADAPTER\.SESSION_DAYS/);
 });
 
 test("assessment action result survives the post-send detail refresh", () => {

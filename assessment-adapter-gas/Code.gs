@@ -1,6 +1,7 @@
 const ADAPTER = Object.freeze({
   PAIR_HASH: "8f2be2c80f42c3d4a52ea98d2013127cae1fa596a5c7ecab49ad57b07a459cd9",
-  SESSION_DAYS: 45,
+  SESSION_DAYS: 365,
+  DEVICE_LINK_MINUTES: 10,
 });
 
 function doGet(e) {
@@ -23,7 +24,9 @@ function doPost(e) {
     payload = JSON.parse(String((e && e.parameter && e.parameter.payload) || "{}"));
     const result = operation === "pair"
       ? adapterPair(payload.code)
-      : adapterRequest(String((e && e.parameter && e.parameter.token) || ""), operation, payload);
+      : operation === "claim-device-link"
+        ? claimDeviceLink_(payload.token)
+        : adapterRequest(String((e && e.parameter && e.parameter.token) || ""), operation, payload);
     body = { type: "kr-assessment-adapter-response", requestId: requestId, channel: channel, result: result };
   } catch (error) {
     body = {
@@ -49,10 +52,7 @@ function adapterPair(code) {
   if (!safeEqual_(hash_(normalizeCode_(code)), ADAPTER.PAIR_HASH)) {
     throw new Error("接続コードが正しくありません。");
   }
-  const token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
-  const expiresAt = Date.now() + ADAPTER.SESSION_DAYS * 86400000;
-  PropertiesService.getScriptProperties().setProperty("session:" + hash_(token), String(expiresAt));
-  return { ok: true, token: token, expiresAt: new Date(expiresAt).toISOString() };
+  return issueSession_();
 }
 
 function adapterRequest(token, operation, payload) {
@@ -67,6 +67,7 @@ function adapterRequest(token, operation, payload) {
     case "save-visit": return ProdDash.saveCase(String(payload.id || ""), payload.data || {});
     case "send-visit": return ProdDash.saveAndSendVisit(String(payload.id || ""), payload.data || {}, String(payload.message || ""));
     case "status": return ProdDash.setStatus(String(payload.id || ""), String(payload.status || ""));
+    case "create-device-link": return createDeviceLink_();
     case "green-ping": return GreenNext.greenBridgeRequest("ping", payload);
     case "green-snapshot": return GreenNext.greenBridgeRequest("snapshot", payload);
     case "green-write": return GreenNext.greenBridgeRequest("write", payload);
@@ -76,11 +77,38 @@ function adapterRequest(token, operation, payload) {
 
 function requireSession_(token) {
   const key = "session:" + hash_(String(token || ""));
-  const expiresAt = Number(PropertiesService.getScriptProperties().getProperty(key) || 0);
+  const properties = PropertiesService.getScriptProperties();
+  const expiresAt = Number(properties.getProperty(key) || 0);
   if (!expiresAt || expiresAt < Date.now()) {
-    PropertiesService.getScriptProperties().deleteProperty(key);
+    properties.deleteProperty(key);
     throw new Error("SESSION_EXPIRED");
   }
+  properties.setProperty(key, String(Date.now() + ADAPTER.SESSION_DAYS * 86400000));
+}
+
+function issueSession_() {
+  const token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+  const expiresAt = Date.now() + ADAPTER.SESSION_DAYS * 86400000;
+  PropertiesService.getScriptProperties().setProperty("session:" + hash_(token), String(expiresAt));
+  return { ok: true, token: token, expiresAt: new Date(expiresAt).toISOString() };
+}
+
+function createDeviceLink_() {
+  const token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+  const expiresAt = Date.now() + ADAPTER.DEVICE_LINK_MINUTES * 60000;
+  PropertiesService.getScriptProperties().setProperty("device-link:" + hash_(token), String(expiresAt));
+  return { ok: true, deviceToken: token, expiresAt: new Date(expiresAt).toISOString() };
+}
+
+function claimDeviceLink_(token) {
+  const normalized = String(token || "").replace(/[^A-Za-z0-9]/g, "");
+  if (!normalized) throw new Error("DEVICE_LINK_REQUIRED");
+  const properties = PropertiesService.getScriptProperties();
+  const key = "device-link:" + hash_(normalized);
+  const expiresAt = Number(properties.getProperty(key) || 0);
+  properties.deleteProperty(key);
+  if (!expiresAt || expiresAt < Date.now()) throw new Error("DEVICE_LINK_EXPIRED");
+  return issueSession_();
 }
 
 function normalizeCode_(value) {

@@ -169,23 +169,12 @@
   }
   function assessmentPairView(caseInfo) {
     const body = K.$("#assessmentOpsBody");
+    const linkError = sessionStorage.getItem("kr-next-device-link-error") || "";
+    sessionStorage.removeItem("kr-next-device-link-error");
     body.innerHTML =
-      '<div class="assessmentPair"><div class="assessmentPairIcon">🔐</div><h2>NEXT査定を接続</h2><p>初回のみ接続コードを入力します。コードはこの端末に安全に保存されます。</p><input id="assessmentPairCode" inputmode="text" autocomplete="off" placeholder="接続コード"><button id="assessmentPairButton" class="assessmentPrimary">接続して査定を開く</button><small id="assessmentPairError"></small></div>';
-    K.$("#assessmentPairButton").onclick = async () => {
-      const button = K.$("#assessmentPairButton");
-      const error = K.$("#assessmentPairError");
-      button.disabled = true;
-      button.textContent = "接続中…";
-      error.textContent = "";
-      try {
-        await KRAssessmentAdapter.pair(K.$("#assessmentPairCode").value);
-        await loadAssessmentCase(caseInfo);
-      } catch (e) {
-        error.textContent = String(e.message || e);
-        button.disabled = false;
-        button.textContent = "接続して査定を開く";
-      }
-    };
+      '<div class="assessmentPair"><div class="assessmentPairIcon">📱</div><h2>この端末を追加</h2><p>接続コードの入力は廃止しました。接続済みの端末で「その他 → 新しい端末を追加」を押し、10分有効のリンクをこの端末で開いてください。</p>' +
+      (linkError ? '<small id="assessmentPairError">端末追加リンクを確認できません。新しいリンクを作成してください。</small>' : '<small>通常の利用時は自動接続されます。</small>') +
+      '</div>';
   }
   function money(value) {
     return "¥" + Number(value || 0).toLocaleString("ja-JP");
@@ -294,6 +283,7 @@
     }
   }
   K.openAssessmentOps = async (caseInfo) => {
+    await KRAssessmentAdapter.init();
     const nextBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
       .replace(/^BLUE-CASE-/, "")
       .replace(/^BLUE-SLIP-CASE-/, "");
