@@ -68,6 +68,12 @@ test("appointment cards show a start and end time range", () => {
   assert.match(schedule, /e\.startTime\s*\+\s*"〜"\s*\+\s*e\.endTime/);
 });
 
+test("appointment cards suppress a duplicated address from the note", () => {
+  assert.match(core, /K\.appointmentDisplayNote = \(note, address\)/);
+  assert.match(core, /normalize\(part\) !== addressKey/);
+  assert.match(core, /\[x\.address, displayNote\]/);
+});
+
 test("the day sheet retains the downward swipe close gesture", () => {
   assert.match(appointments, /if \(dy > 72\) close\(\)/);
   assert.match(appointments, /Math\.abs\(dx\) > Math\.abs\(raw\) \* 1\.15/);
@@ -209,8 +215,9 @@ test("model suggestions prioritize local history and stay in a bounded scroller"
 
 test("assessment product data seeds purchase entry and OCR conflicts require a source choice", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
-  assert.match(assessment, /assessmentProduct: x\.product \|\| ""/);
-  assert.match(assessment, /assessmentItems: Array\.isArray\(x\.items\) \? x\.items : \[\]/);
+  assert.match(assessment, /KRAssessmentAdapter\.getCase\(x\.id\)/);
+  assert.match(assessment, /assessmentProduct: source\.product \|\| ""/);
+  assert.match(assessment, /assessmentItems: Array\.isArray\(source\.items\) \? source\.items : \[\]/);
   assert.match(slip, /function assessmentSeedRows\(seed\)/);
   assert.match(slip, /assessmentItems:assessmentSeedRows\(seed\)/);
   assert.match(slip, /class="sourceCompare"/);

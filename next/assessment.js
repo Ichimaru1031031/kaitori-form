@@ -404,17 +404,38 @@
           date: x.date || "",
           notes: x.product ? "査定内容：" + x.product : "",
         });
-      c.querySelector(".next").onclick = () =>
+      c.querySelector(".next").onclick = async (event) => {
+        const button = event.currentTarget;
+        let source = x;
+        button.disabled = true;
+        button.textContent = "査定情報を確認中…";
+        try {
+          if (KRAssessmentAdapter?.hasSession?.()) {
+            const detail = await KRAssessmentAdapter.getCase(x.id);
+            if (detail) {
+              mergeNativeDetail(detail);
+              source = normCase({
+                ...x,
+                ...detail,
+                product: detail.productText || detail.product || x.product,
+                items: Array.isArray(detail.items) ? detail.items : x.items,
+              });
+            }
+          }
+        } catch {}
+        button.disabled = false;
+        button.textContent = "NEXT伝票";
         K.openSlip &&
-        K.openSlip({
-          caseId: x.caseId || x.id,
-          name: x.name,
-          phone: x.phone,
-          address: x.address,
-          email: x.email,
-          assessmentProduct: x.product || "",
-          assessmentItems: Array.isArray(x.items) ? x.items : [],
-        });
+          K.openSlip({
+            caseId: source.caseId || source.id,
+            name: source.name,
+            phone: source.phone,
+            address: source.address,
+            email: source.email,
+            assessmentProduct: source.product || "",
+            assessmentItems: Array.isArray(source.items) ? source.items : [],
+          });
+      };
       list.appendChild(c);
     });
   };

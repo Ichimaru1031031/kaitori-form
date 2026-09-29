@@ -134,6 +134,19 @@
       localStorage.setItem("kr-next-event-state", JSON.stringify(v));
     } catch {}
   };
+  K.appointmentDisplayNote = (note, address) => {
+    const normalize = (value) =>
+        String(value || "")
+          .normalize("NFKC")
+          .replace(/[\s,，]/g, "")
+          .toUpperCase(),
+      addressKey = normalize(address);
+    return String(note || "")
+      .split(/\s*(?:／|\/)\s*/)
+      .map((part) => part.trim())
+      .filter((part) => part && (!addressKey || normalize(part) !== addressKey))
+      .join(" ／ ");
+  };
   K.apptCard = (x) => {
     const el = document.createElement("article");
     el.className = "card fieldCard";
@@ -147,7 +160,11 @@
           encodeURIComponent(x.address)
         : "",
       state = K.localEventState()[x.appointmentId] || {},
-      callAt = state.callAt || x.callAt || "";
+      callAt = state.callAt || x.callAt || "",
+      displayNote = K.appointmentDisplayNote(
+        state.note !== undefined ? state.note : x.notes,
+        x.address,
+      );
     const phoneSvg =
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h3l1.4 4-2 1.7a15.7 15.7 0 0 0 5.9 5.9l1.7-2 4 1.4v3c0 1.1-.9 2-2 2C11.3 19 5 12.7 5 5c0-1.1.9-2 2-2z"/></svg>';
     const mapSvg =
@@ -163,7 +180,7 @@
       K.esc(x.customerName || x.title || "") +
       '</div><div class="meta">' +
       K.esc(
-        [x.address, state.note !== undefined ? state.note : x.notes]
+        [x.address, displayNote]
           .filter(Boolean)
           .join(" ／ "),
       ) +
@@ -409,7 +426,7 @@
     if ("serviceWorker" in navigator)
       window.addEventListener("load", () =>
         navigator.serviceWorker
-          .register("./service-worker.js?v=16", { updateViaCache: "none" })
+          .register("./service-worker.js?v=18", { updateViaCache: "none" })
           .then((r) => r.update())
           .catch(() => {}),
       );
