@@ -128,18 +128,22 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry offers private on-device camera OCR with manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=4/);
+  assert.match(html, /slip\.js\?v=5/);
   assert.match(slip, /capture="environment"/);
-  assert.match(slip, /カメラで型番ラベルを読み取る/);
+  assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
   assert.match(slip, /worker\.recognize\(canvas\)/);
+  assert.match(slip, /createWorker\("eng\+jpn"/);
   assert.match(slip, /tessedit_char_whitelist/);
   assert.match(slip, /editDistance\(code,token\)/);
   assert.match(slip, /recognizeOcrPass\(worker,canvas,11\)/);
-  assert.match(slip, /recognizeOcrPass\(worker,canvas,6\)/);
-  assert.match(slip, /読み取り方式を変えて再解析中/);
-  assert.match(slip, /型番を2〜3文字手入力/);
-  assert.match(slip, /ラベルと合っているか確認/);
+  assert.match(slip, /recognizeOcrPass\(worker,canvas,6,true\)/);
+  assert.match(slip, /function labelCategory\(/);
+  assert.match(slip, /function labelMaker\(/);
+  assert.match(slip, /function labelYear\(/);
+  assert.match(slip, /4項目を自動反映/);
+  assert.match(slip, /誤登録防止のため自動確定していません/);
+  assert.match(slip, /const camera=key==="purchase"/);
   assert.doesNotMatch(slip, /FormData|upload.*modelPhoto/i);
 });
 
@@ -148,6 +152,9 @@ test("model suggestions prioritize local history and stay in a bounded scroller"
   assert.match(slip, /kr-next-model-history-v1/);
   assert.match(slip, /最近入力/);
   assert.match(slip, /rememberModel\(item\.category,item\.maker,item\.model,item\.year\)/);
+  assert.match(slip, /staticModelMaster\.concat\(K\.snap\.modelMaster\|\|\[\]\)/);
+  assert.match(slip, /modelCode\.includes\(queryCode\)/);
+  assert.match(slip, /if\(!rows\.length&&q\)rows=all\.filter/);
   assert.match(slipCss, /modelSuggestions\.scrollSuggestions\{max-height:/);
   assert.match(slipCss, /ocrCandidates\{display:none;max-height:/);
 });
