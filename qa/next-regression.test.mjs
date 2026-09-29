@@ -6,6 +6,14 @@ const slip = await readFile(
   new URL("../next/slip.js", import.meta.url),
   "utf8",
 );
+const slips = await readFile(
+  new URL("../next/slips.js", import.meta.url),
+  "utf8",
+);
+const workflowRouter = await readFile(
+  new URL("../next/workflow-router.js", import.meta.url),
+  "utf8",
+);
 const core = await readFile(
   new URL("../next/core.js", import.meta.url),
   "utf8",
@@ -134,6 +142,15 @@ test("issued slip PDF email uses stored customer data and explicit resend", () =
   assert.match(slip, /KRAPI\.runImmediate\("send-slip-pdf-email"/);
   assert.match(slip, /送信済み（メール）/);
   assert.match(slip, /dataset\.resend="1"/);
+});
+
+test("slip list reloads live Green delivery status through the protected adapter", () => {
+  assert.match(workflowRouter, /KRAPI\.hasProtectedAdapter\?\.\(\)/);
+  assert.match(slips, /function delivery\(d\)/);
+  assert.match(slips, /メール送信済み/);
+  assert.match(slips, /顧客へ未送信/);
+  assert.match(slips, /送信失敗/);
+  assert.match(slips, /Number\(d\.version \|\| 0\) > Number\(old\.version \|\| 0\)/);
 });
 
 test("native assessment, inventory, and sales controls bind without startup errors", () => {
