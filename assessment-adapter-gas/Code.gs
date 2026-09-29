@@ -15,6 +15,7 @@ function doGet(e) {
 
 function doPost(e) {
   const requestId = String((e && e.parameter && e.parameter.requestId) || "");
+  const channel = String((e && e.parameter && e.parameter.channel) || "");
   const operation = String((e && e.parameter && e.parameter.operation) || "");
   let payload = {};
   let body;
@@ -23,11 +24,12 @@ function doPost(e) {
     const result = operation === "pair"
       ? adapterPair(payload.code)
       : adapterRequest(String((e && e.parameter && e.parameter.token) || ""), operation, payload);
-    body = { type: "kr-assessment-adapter-response", requestId: requestId, result: result };
+    body = { type: "kr-assessment-adapter-response", requestId: requestId, channel: channel, result: result };
   } catch (error) {
     body = {
       type: "kr-assessment-adapter-response",
       requestId: requestId,
+      channel: channel,
       error: String(error && error.message || error),
     };
   }

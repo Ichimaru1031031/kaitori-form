@@ -8,6 +8,7 @@
   }
 
   function allowedOrigin(origin) {
+    if (origin === "null") return true;
     try {
       const host = new URL(origin).hostname;
       return host === "script.google.com" || host.endsWith(".googleusercontent.com");
@@ -17,11 +18,11 @@
   }
 
   addEventListener("message", (event) => {
-    if (!allowedOrigin(event.origin)) return;
     const data = event.data || {};
     if (data.type !== "kr-assessment-adapter-response" || !data.requestId) return;
     const item = pending.get(data.requestId);
     if (!item) return;
+    if (!allowedOrigin(event.origin) || data.channel !== item.channel) return;
     clearTimeout(item.timer);
     pending.delete(data.requestId);
     item.form.remove();
@@ -31,6 +32,9 @@
 
   function request(operation, payload, timeout = 30000) {
     const requestId = "ass-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+    const channel = crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2) + Date.now();
     return new Promise((resolve, reject) => {
       const target = "kr-assessment-" + requestId;
       const frame = document.createElement("iframe");
@@ -45,6 +49,7 @@
       form.style.display = "none";
       const fields = {
         requestId,
+        channel,
         operation,
         token: localStorage.getItem(TOKEN_KEY) || "",
         payload: JSON.stringify(payload || {}),
@@ -63,7 +68,7 @@
         frame.remove();
         reject(new Error("査定サーバーから応答がありません"));
       }, timeout);
-      pending.set(requestId, { resolve, reject, timer, form, frame });
+      pending.set(requestId, { resolve, reject, timer, form, frame, channel });
       form.submit();
     });
   }
