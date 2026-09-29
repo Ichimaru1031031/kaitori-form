@@ -1,11 +1,11 @@
-const CACHE = "kr-next-green-v74";
+const CACHE = "kr-next-green-v75";
 const SHELL = [
   "./",
   "./index.html",
   "./app.css",
   "./native.css",
   "./workflow.css?v=2",
-  "./slip-extra.css",
+  "./slip-extra.css?v=2",
   "./confirm-extra.css",
   "./api.css",
   "./inventory-process.css",
@@ -42,7 +42,7 @@ const SHELL = [
   "./sales.js",
   "./home-fulfillment.js",
   "./global-search.js",
-  "./slip.js?v=7",
+  "./slip.js?v=8",
   "./workflow-router.js?v=2",
   "./manifest.webmanifest",
   "./data/snapshot.json",

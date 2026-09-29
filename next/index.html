@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="./app.css" />
     <link rel="stylesheet" href="./native.css" />
     <link rel="stylesheet" href="./workflow.css?v=2" />
-    <link rel="stylesheet" href="./slip-extra.css" />
+    <link rel="stylesheet" href="./slip-extra.css?v=2" />
     <link rel="stylesheet" href="./confirm-extra.css" />
     <link rel="stylesheet" href="./api.css" />
     <link rel="stylesheet" href="./inventory-process.css" />
@@ -508,7 +508,7 @@
       <section class="sheet">
         <header>
           <div><b>NEXT伝票</b><small id="saveState">端末へ自動保存</small></div>
-          <button data-close="slip">×</button>
+          <button id="closeSlip" data-close="slip" aria-label="伝票を保存して閉じる">×</button>
         </header>
         <div class="body">
           <div class="common">
@@ -539,7 +539,8 @@
           <div class="total"><span>差引</span><b id="total">¥0</b></div>
         </div>
         <footer>
-          <button id="customerPreview">お客様確認</button
+          <button id="closeSlipFooter" class="slipBack">← 保存して戻る</button
+          ><button id="customerPreview">お客様確認</button
           ><button id="saveDraft">下書き保存</button>
         </footer>
       </section>
@@ -932,7 +933,7 @@
     <script src="./sales.js"></script>
     <script src="./home-fulfillment.js"></script>
     <script src="./global-search.js"></script>
-    <script src="./slip.js?v=7"></script>
+    <script src="./slip.js?v=8"></script>
     <script src="./workflow-router.js?v=2"></script>
   </body>
 </html>

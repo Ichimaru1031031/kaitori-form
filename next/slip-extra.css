@@ -102,6 +102,10 @@
 .ocrCandidates button span{margin-top:2px;color:#6c7974;font-size:9px;font-weight:700}
 .confirmOcr{display:block;width:100%;margin:0 0 8px;border:1px solid #9fc7b8;background:#e9f6f1;color:#245f4d;border-radius:10px;padding:9px;font-size:10px;font-weight:950}
 .confirmOcr.hidden{display:none}
+#slip .sheet footer{grid-template-columns:.9fr 1fr 1fr}
+#slip .sheet footer .slipBack{background:#eef2f0;color:#42534d;border:1px solid #d7e0dc}
+#slip .sheet .body{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+#slip .sheet footer{z-index:3}
 .categorySuggestions button b{font-size:13px!important}
 .makerSuggestions button:first-child b{color:#2f7864!important}
 .modelSuggestions.scrollSuggestions button{

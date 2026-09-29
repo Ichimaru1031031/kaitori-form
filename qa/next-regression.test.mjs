@@ -98,6 +98,20 @@ test("customer confirmation blocks incomplete purchase slips", () => {
   assert.match(slip, /買取明細"\+\(index\+1\)/);
   assert.match(slip, /if\(!draft\|\|stopForDraftIssues\(\)\)return/);
   assert.match(slip, /if\(stopForDraftIssues\(\)\)return/);
+  assert.doesNotMatch(slip, /\["model","型番"\]/);
+});
+
+test("slip input always has a recoverable save-and-back path", async () => {
+  const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
+  assert.match(html, /slip-extra\.css\?v=2/);
+  assert.match(html, /id="closeSlipFooter"/);
+  assert.match(html, /保存して戻る/);
+  assert.match(slip, /async function closeSlipSafely\(\)/);
+  assert.match(slip, /\["closeSlip","closeSlipFooter"\]/);
+  assert.match(slip, /e\.key!=="Escape"/);
+  assert.match(slip, /OCR_TIMEOUT/);
+  assert.match(slip, /45000/);
+  assert.match(slipCss, /#slip \.sheet \.body\{padding-bottom:calc\(88px/);
 });
 
 test("all generated inventory links are bound and the confirmed slip id is handed to Blue", () => {
@@ -137,7 +151,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry offers private on-device camera OCR with manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=7/);
+  assert.match(html, /slip\.js\?v=8/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -153,7 +167,7 @@ test("NEXT product entry offers private on-device camera OCR with manual confirm
   assert.match(slip, /4項目を自動反映/);
   assert.match(slip, /誤登録防止のため自動確定していません/);
   assert.match(slip, /const camera=key==="purchase"/);
-  assert.match(slip, /ラベルと一致・4項目を確定/);
+  assert.match(slip, /ラベルと照合・読取内容を確定/);
   assert.match(slip, /function fourMissing\(\)/);
   assert.match(slip, /if\(ocrPending\)/);
   assert.match(slip, /買取明細の必須項目です/);
