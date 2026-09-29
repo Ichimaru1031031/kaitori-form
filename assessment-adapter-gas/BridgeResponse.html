@@ -1,3 +1,13 @@
 <!doctype html><html><head><meta charset="utf-8"></head><body><script>
-window.parent.postMessage(<?!= responseJson ?>, "https://ichimaru1031031.github.io");
+(() => {
+  const response = <?!= responseJson ?>;
+  let target = window;
+  for (let i = 0; i < 8; i += 1) {
+    if (target === target.parent) break;
+    target = target.parent;
+    try {
+      target.postMessage(response, "https://ichimaru1031031.github.io");
+    } catch (_) {}
+  }
+})();
 </script></body></html>
