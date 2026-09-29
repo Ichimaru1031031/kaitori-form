@@ -91,6 +91,15 @@ test("slip confirmation resolves the Green result before advancing the appointme
   assert.doesNotMatch(slip.slice(0, apiResultAt), /apiResult\?\./);
 });
 
+test("customer confirmation blocks incomplete purchase slips", () => {
+  assert.match(slip, /function draftValidationIssues\(\)/);
+  assert.match(slip, /お客様のお名前/);
+  assert.match(slip, /明細を1件以上/);
+  assert.match(slip, /買取明細"\+\(index\+1\)/);
+  assert.match(slip, /if\(!draft\|\|stopForDraftIssues\(\)\)return/);
+  assert.match(slip, /if\(stopForDraftIssues\(\)\)return/);
+});
+
 test("all generated inventory links are bound and the confirmed slip id is handed to Blue", () => {
   assert.match(
     slip,
@@ -128,7 +137,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry offers private on-device camera OCR with manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=6/);
+  assert.match(html, /slip\.js\?v=7/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);

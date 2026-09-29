@@ -55,6 +55,8 @@ function calc(){const it=item(),tr=masters.transport.find(x=>x.type===type.value
 function calc(){let total=0;for(const key of draft.selected)for(const x of draft.items[key])total+=(key==="purchase"?-1:1)*(+x.amount||0);K.$("#total").textContent="¥"+total.toLocaleString()}K.refreshResume=async()=>{const a=(await KRDB.listDrafts()).sort((x,y)=>y.updatedAt-x.updatedAt);K.$("#resume").disabled=!a.length;K.$("#draftSummary").textContent=a.length?(a[0].customer?.name||"未入力")+"｜NEXT伝票入力中":"保存中のNEXT伝票はありません";K.$("#resume").onclick=()=>{if(!a[0])return;draft=a[0];fill();K.overlay("slip").classList.add("on")}};
 
 function draftTotal(){let total=0;for(const key of draft.selected)for(const x of draft.items[key])total+=(key==="purchase"?-1:1)*(+x.amount||0);return total}
+function draftValidationIssues(){if(!draft)return["伝票がありません"];const issues=[];if(!String(draft.customer?.name||"").trim())issues.push("お客様のお名前");const itemCount=Object.values(draft.items||{}).reduce((sum,rows)=>sum+(Array.isArray(rows)?rows.length:0),0);if(!itemCount)issues.push("明細を1件以上");(draft.items?.purchase||[]).forEach((item,index)=>{const missing=[["category","品目"],["maker","メーカー"],["year","年式"],["model","型番"]].filter(([key])=>!String(item[key]||"").trim()).map(([,label])=>label);if(missing.length)issues.push("買取明細"+(index+1)+"の"+missing.join("・"))});return issues}
+function stopForDraftIssues(){const issues=draftValidationIssues();if(!issues.length)return false;alert("お客様確認へ進む前に入力してください\n・"+issues.join("\n・"));return true}
 
 function renderPreview(){let h='<div class="previewBlock"><h3>'+K.esc(draft.customer.name||"お客様")+' 様</h3><div>'+K.esc(draft.customer.postalCode?"〒"+draft.customer.postalCode:"")+'</div><div>'+K.esc(draft.customer.address||"")+'</div><div>'+K.esc(draft.customer.phone||"")+'</div></div>';for(const key of draft.selected){if(!draft.items[key].length)continue;h+='<div class="previewBlock"><h3>'+services[key]+'</h3>'+draft.items[key].map(x=>'<div class="previewLine"><span>'+K.esc([x.category,x.maker,x.model,x.year,x.spec].filter(Boolean).join(" / "))+'</span><b>¥'+Number(x.amount||0).toLocaleString()+'</b></div>').join("")+'</div>'}h+='<div class="previewBlock"><div class="previewLine"><span>差引合計</span><b>¥'+draftTotal().toLocaleString()+'</b></div></div>';K.$("#previewBody").innerHTML=h}
 let sig={canvas:null,ctx:null,drawn:false,drawing:false,last:null};
@@ -65,6 +67,7 @@ function clearSignature(){if(!sig.ctx||!sig.canvas)return;sig.ctx.clearRect(0,0,
 async function sha256(text){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 async function finalizeSnapshot(){
   if(!draft)return;
+  if(stopForDraftIssues())return;
   if(draft.selected.includes("purchase")&&!sig.drawn){
     alert("買取を含むため、お客様サインを入力してください。");
     return;
@@ -140,7 +143,7 @@ async function finalizeSnapshot(){
   K.$("#finalizeConfirmation").textContent="✓ 確定済み";
   await K.refreshResume();
 }
-K.$("#customerPreview").onclick=()=>{if(!draft)return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#finalizeConfirmation").disabled=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";const send=K.$("#bluePdfSend");send.disabled=true;send.textContent="顧客送信は伝票確定後";send.dataset.slip="";send.dataset.mode="";send.dataset.email="";send.dataset.version="";send.dataset.resend="0";K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
+K.$("#customerPreview").onclick=()=>{if(!draft||stopForDraftIssues())return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#finalizeConfirmation").disabled=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";const send=K.$("#bluePdfSend");send.disabled=true;send.textContent="顧客送信は伝票確定後";send.dataset.slip="";send.dataset.mode="";send.dataset.email="";send.dataset.version="";send.dataset.resend="0";K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
 K.$("#clearSignature").onclick=clearSignature;
 K.$("#finalizeConfirmation").onclick=finalizeSnapshot;
 K.$("#printPreview").onclick=()=>window.print();
