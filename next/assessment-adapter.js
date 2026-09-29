@@ -25,6 +25,12 @@
     if (data.type !== "kr-assessment-adapter-response" || !data.requestId) return;
     const item = pending.get(data.requestId);
     if (!item) return;
+    console.info(
+      "KR assessment adapter validation",
+      allowedOrigin(event.origin),
+      typeof data.channel,
+      data.channel === item.channel,
+    );
     if (!allowedOrigin(event.origin) || data.channel !== item.channel) return;
     clearTimeout(item.timer);
     pending.delete(data.requestId);
