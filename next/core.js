@@ -382,7 +382,11 @@
   };
   K.bindCore = () => {
     K.$$("[data-tab]").forEach(
-      (b) => (b.onclick = () => K.openTab(b.dataset.tab)),
+      (b) =>
+        (b.onclick = () => {
+          b.closest(".overlay")?.classList.remove("on");
+          K.openTab(b.dataset.tab);
+        }),
     );
     K.$$("[data-blue]").forEach(
       (b) => (b.onclick = () => K.openBlue(b.dataset.blue)),
@@ -393,11 +397,14 @@
       (b) =>
         (b.onclick = () => K.overlay(b.dataset.close).classList.remove("on")),
     );
-    K.$("#more").onclick = () => K.overlay("drawer").classList.add("on");
-    K.$("#manualSlip").onclick = () => {
-      K.overlay("drawer").classList.remove("on");
-      K.openSlip && K.openSlip(null);
-    };
+    const more = K.$("#more");
+    if (more) more.onclick = () => K.overlay("drawer").classList.add("on");
+    const manualSlip = K.$("#manualSlip");
+    if (manualSlip)
+      manualSlip.onclick = () => {
+        K.overlay("drawer").classList.remove("on");
+        K.openSlip && K.openSlip(null);
+      };
     K.$$(".metrics button").forEach(
       (b) =>
         (b.onclick = () => {
@@ -426,7 +433,7 @@
     if ("serviceWorker" in navigator)
       window.addEventListener("load", () =>
         navigator.serviceWorker
-          .register("./service-worker.js?v=22", { updateViaCache: "none" })
+          .register("./service-worker.js?v=23", { updateViaCache: "none" })
           .then((r) => r.update())
           .catch(() => {}),
       );

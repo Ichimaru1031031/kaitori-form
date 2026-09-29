@@ -623,6 +623,19 @@
       "</div>"
     );
   }
+  function inventoryPhotoSrc(photo) {
+    const raw = String(photo.dataUrl || photo.remoteRef || "").trim();
+    if (!raw) return "";
+    if (/^data:image\//.test(raw)) return raw;
+    const match =
+      raw.match(/(?:\/d\/|[?&]id=)([-\w]{20,})/) ||
+      raw.match(/^([-\w]{20,})$/);
+    return match
+      ? "https://drive.google.com/thumbnail?id=" +
+          encodeURIComponent(match[1]) +
+          "&sz=w1400"
+      : raw;
+  }
   async function renderDetail(item) {
     if (!item) return;
     detailItem = item;
@@ -657,23 +670,31 @@
       ? photos
           .slice()
           .reverse()
-          .map((p) =>
-            p.dataUrl
-              ? '<div class="detailPhoto"><img src="' +
-                p.dataUrl +
-                '" alt="' +
-                K.esc(p.fileName || "作業写真") +
-                '"></div>'
-              : p.remoteRef
-                ? '<a class="detailPhoto remotePhoto" target="_blank" rel="noopener" href="' +
-                  K.esc(p.remoteRef) +
-                  '"><span>📷</span><small>' +
-                  K.esc(p.fileName || "写真") +
+          .map((p, index) => {
+            const src = inventoryPhotoSrc(p),
+              href = K.esc(p.remoteRef || src),
+              name = K.esc(p.fileName || "在庫写真");
+            return src
+              ? '<a class="detailPhoto" target="_blank" rel="noopener" href="' +
+                  href +
+                  '"><img src="' +
+                  K.esc(src) +
+                  '" alt="' +
+                  name +
+                  '"><small>' +
+                  (index + 1) +
+                  " / " +
+                  photos.length +
+                  " " +
+                  name +
                   "</small></a>"
-                : '<div class="detailPhoto"><span>📷</span></div>',
-          )
+              : '<div class="detailPhoto remotePhoto"><span>📷</span><small>' +
+                  name +
+                  "</small></div>";
+          })
           .join("")
       : '<div class="detailEmpty">写真はまだありません</div>';
+    K.$("#detailPhotos").classList.toggle("swipeGallery", photos.length > 0);
     detailPhotoCount = photos.length;
     detailTestOk = tests.some((t) => String(t.result) === "OK");
     K.$("#detailTestCount").textContent = tests.length + "件";

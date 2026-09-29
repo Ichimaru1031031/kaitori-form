@@ -50,6 +50,14 @@ const confirmCss = await readFile(
   new URL("../next/confirm-extra.css", import.meta.url),
   "utf8",
 );
+const headerActions = await readFile(
+  new URL("../next/header-actions.js", import.meta.url),
+  "utf8",
+);
+const headerCss = await readFile(
+  new URL("../next/header-actions.css", import.meta.url),
+  "utf8",
+);
 const greenGas = await readFile(
   new URL("../next-green-gas/Code.gs", import.meta.url),
   "utf8",
@@ -132,7 +140,7 @@ test("slip customer cards open NEXT slips without requiring the small action but
 
 test("slip input always has a recoverable save-and-back path", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
-  assert.match(html, /slip-extra\.css\?v=6/);
+  assert.match(html, /slip-extra\.css\?v=7/);
   assert.match(html, /id="closeSlipFooter"/);
   assert.match(html, /保存して戻る/);
   assert.match(slip, /async function closeSlipSafely\(\)/);
@@ -180,8 +188,8 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=15/);
-  assert.match(html, /assessment-adapter\.js\?v=9/);
+  assert.match(html, /slip\.js\?v=16/);
+  assert.match(html, /assessment-adapter\.js\?v=10/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -287,6 +295,15 @@ test("imported purchase lines remain editable for on-site product details and pr
   assert.match(slipCss, /\.editExistingActions/);
 });
 
+test("intake products are collapsed and toggle their product details on tap", async () => {
+  const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
+  assert.match(slip, /<details class="importedProduct">/);
+  assert.match(slip, /案内フォームから反映された商品情報/);
+  assert.match(slip, /タップで閉じる/);
+  assert.match(slip, /タップで表示/);
+  assert.match(slipCss, /\.importedProduct>summary/);
+});
+
 test("protected Green bridge is used without exposing an anonymous write URL", () => {
   assert.match(greenApi, /hasProtectedAdapter\(\)/);
   assert.match(greenApi, /green-write/);
@@ -294,7 +311,7 @@ test("protected Green bridge is used without exposing an anonymous write URL", (
   assert.match(adapterGas, /case "green-write"/);
   assert.match(adapterGas, /GreenNext\.greenBridgeRequest\("write", payload\)/);
   assert.match(adapterManifest, /"userSymbol": "GreenNext"/);
-  assert.match(adapterManifest, /"version": "5"/);
+  assert.match(adapterManifest, /"version": "6"/);
 });
 
 test("issued slip PDF email uses stored customer data and explicit resend", () => {
@@ -313,14 +330,18 @@ test("issued slip PDF email uses stored customer data and explicit resend", () =
   assert.match(slip, /dataset\.resend="1"/);
 });
 
-test("one versioned customer PDF uses separate readable document pages", () => {
-  assert.match(greenGas, /documentFor\("販売・工事 明細",\["sale","work","delivery","estimate"\]/);
-  assert.match(greenGas, /documentFor\("リサイクル 明細",\["recycle"\]/);
-  assert.match(greenGas, /documentFor\("買取 明細",\["purchase"\]/);
+test("one versioned customer PDF uses separate readable statement pages", () => {
+  assert.match(greenGas, /documentFor\("販売・工事",\["sale","work","delivery","estimate"\]/);
+  assert.match(greenGas, /documentFor\("リサイクル",\["recycle"\]/);
+  assert.match(greenGas, /documentFor\("買取",\["purchase"\]/);
   assert.match(greenGas, /class='documentPage/);
   assert.match(greenGas, /page-break-after:always/);
   assert.match(greenGas, /customer b\{display:block;font-size:22px/);
   assert.match(greenGas, /grandTotal b\{font-size:27px/);
+  assert.match(greenGas, /お客様送付用・お客様控え/);
+  assert.match(greenGas, /お客様用 明細書/);
+  assert.match(greenGas, /customerTotal=Math\.abs\(signedTotal\)/);
+  assert.match(greenGas, /お客様受取額/);
   assert.match(greenGas, /PDF_FOLDER_ID/);
 });
 
@@ -351,6 +372,43 @@ test("customer confirmation is a readable stepped layout with colored share acti
   assert.match(confirmCss, /#smsPdfShare\{border-color:/);
   assert.match(confirmCss, /#linePdfShare\{border-color:/);
   assert.match(html, /class="deliveryIcon lineIcon"/);
+  assert.match(slip, /customerReceives=signedTotal<0/);
+  assert.match(slip, /Math\.abs\(signedTotal\)\.toLocaleString\(\)/);
+  assert.match(slip, /お客様受取額/);
+});
+
+test("PDF finalization allows the protected Green write to finish", () => {
+  assert.match(assessmentAdapter, /operation === "green-write" \? 120000 : 30000/);
+});
+
+test("saved appointments show their content and a visible completion notice", () => {
+  assert.match(schedule, /wasEditing = Boolean\(editingAppointment\)/);
+  assert.match(schedule, /予定を追加しました/);
+  assert.match(schedule, /x\.startTime \+ "〜" \+ x\.endTime/);
+  assert.match(schedule, /K\.openAppointmentDetail && K\.openAppointmentDetail\(x\)/);
+  assert.match(headerCss, /\.appointmentSavedNotice/);
+});
+
+test("inventory photos render as a horizontal swipe gallery", () => {
+  assert.match(inventory, /function inventoryPhotoSrc\(photo\)/);
+  assert.match(inventory, /drive\.google\.com\/thumbnail\?id=/);
+  assert.match(inventory, /classList\.toggle\("swipeGallery", photos\.length > 0\)/);
+  assert.match(headerCss, /scroll-snap-type:x mandatory/);
+  assert.match(headerCss, /\.swipeGallery \.detailPhoto/);
+});
+
+test("header exposes recycle sales slip QR and recoverable settings actions", () => {
+  assert.match(html, /data-tab="recycle" aria-label="リサイクル"/);
+  assert.match(html, /data-tab="store" aria-label="販売"/);
+  assert.match(html, /id="headerNewSlip"/);
+  assert.match(html, /id="headerQrScan"/);
+  assert.match(html, /id="settingsQuick"/);
+  assert.match(html, /class="drawerBack" data-close="drawer"/);
+  assert.doesNotMatch(html, /id="more"/);
+  assert.match(headerActions, /BarcodeDetector/);
+  assert.match(headerActions, /jsqr@1\.4\.0/);
+  assert.match(headerActions, /K\.openInventoryDetail\?\.\(item\)/);
+  assert.match(headerCss, /\.topActions \.topIcon svg/);
 });
 
 test("slip list reloads live Green delivery status through the protected adapter", () => {
@@ -385,7 +443,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=9/);
+  assert.match(html, /assessment-adapter\.js\?v=10/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);

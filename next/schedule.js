@@ -387,6 +387,7 @@
     };
   }
   async function saveAppointment() {
+    const wasEditing = Boolean(editingAppointment);
     const x = candidate();
     if (!x.date || !x.startTime || !x.endTime || !x.customerName) {
       K.$("#apptConflict").textContent =
@@ -469,10 +470,31 @@
     );
     K.renderCalendar();
     K.renderHome && K.renderHome();
-    if (lastSelectedDate === x.date) {
-      const d = new Date(x.date + "T00:00:00");
-      renderDay(x.date, d);
-    }
+    lastSelectedDate = x.date;
+    const d = new Date(x.date + "T00:00:00");
+    renderDay(x.date, d);
+    const old = K.$("#appointmentSavedNotice");
+    if (old) old.remove();
+    const notice = document.createElement("button");
+    notice.type = "button";
+    notice.id = "appointmentSavedNotice";
+    notice.className = "appointmentSavedNotice";
+    notice.innerHTML =
+      "<b>✓ " +
+      (wasEditing ? "予定を更新しました" : "予定を追加しました") +
+      "</b><span>" +
+      K.esc([x.date, x.startTime + "〜" + x.endTime, x.category, x.customerName].filter(Boolean).join(" ")) +
+      "</span><small>タップで予定の内容を表示</small>";
+    notice.onclick = () => {
+      notice.remove();
+      K.openAppointmentDetail && K.openAppointmentDetail(x);
+    };
+    document.body.appendChild(notice);
+    setTimeout(() => notice.classList.add("show"), 10);
+    setTimeout(() => {
+      notice.classList.remove("show");
+      setTimeout(() => notice.remove(), 250);
+    }, 6500);
   }
   [
     "apptDate",

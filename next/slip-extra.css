@@ -22,6 +22,9 @@
   border-radius:9px;font-size:18px;line-height:1;padding:0;font-weight:700
 }
 .itemDelete:active{background:#fbe6e2}
+.importedProduct{margin:7px 0;border:1px solid #bed8ce;border-radius:12px;background:#f5fbf8;overflow:hidden}
+.importedProduct>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:54px;padding:9px 11px;cursor:pointer;list-style:none}
+.importedProduct>summary::-webkit-details-marker{display:none}.importedProduct>summary div{min-width:0}.importedProduct>summary small,.importedProduct>summary b{display:block}.importedProduct>summary small{font-size:9px;font-weight:900;color:#2e705c}.importedProduct>summary b{margin-top:3px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.importedProduct>summary>span{flex:0 0 auto;font-size:9px;font-weight:900;color:#487368}.importedProduct[open]>summary{border-bottom:1px solid #d7e8e1;background:#eaf6f1}.importedProduct>.slipLineItem{margin:0!important;border:0!important;border-radius:0!important;background:#fff!important}
 .editExisting{margin-top:10px;border:2px solid #92bcad!important;background:#f7fbf9!important}
 .editExistingHead{display:flex;flex-direction:column;gap:2px;margin-bottom:7px}
 .editExistingHead b{font-size:14px;color:#214c3e}.editExistingHead small{font-size:9px;color:var(--muted)}

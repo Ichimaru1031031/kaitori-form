@@ -153,7 +153,11 @@
         );
       }
     }
-    return request(operation, payload, 30000);
+    return request(
+      operation,
+      payload,
+      operation === "green-write" ? 120000 : 30000,
+    );
   }
 
   window.KRAssessmentAdapter = {
