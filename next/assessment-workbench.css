@@ -333,3 +333,4 @@
   .nativeVisit label:first-child { grid-column: 1 / -1; }
   .nativeActionBar { grid-template-columns: 1fr; }
 }
+.nativeActionResult{min-height:20px;margin:8px 0 0;font-size:13px;font-weight:700}.nativeActionResult.pending{color:#5f6f69}.nativeActionResult.success{color:#087f47}.nativeActionResult.error{color:#b42318}
