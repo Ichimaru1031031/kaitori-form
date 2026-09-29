@@ -30,8 +30,13 @@ async function finalizeSnapshot(){
   const serviceOrderId=apiResult?.serviceOrderId||draft.sourceServiceOrderId||"";
   const blueSend=K.$("#bluePdfSend");
   blueSend.dataset.slip=serviceOrderId;
+  blueSend.dataset.version=String(version);
+  blueSend.dataset.email=String(draft.customer.email||"").trim();
+  blueSend.dataset.resend="0";
+  const canEmail=Boolean(apiResult&&serviceOrderId&&blueSend.dataset.email);
+  blueSend.dataset.mode=canEmail?"email":"blue";
   blueSend.disabled=!serviceOrderId;
-  blueSend.textContent=serviceOrderId?"顧客へ送信（現行Blue）":"顧客送信は伝票確定後";
+  blueSend.textContent=canEmail?"PDFをメール送信":(serviceOrderId?"顧客へ送信（現行Blue）":"顧客送信は伝票確定後");
 
   const hasPurchase=draft.selected.includes("purchase");
   if(draft.caseId&&K.updateLocalCase){
@@ -52,7 +57,7 @@ async function finalizeSnapshot(){
   const generated=Array.isArray(apiResult?.inventory)?apiResult.inventory:[];
   const pdfUrl=String(apiResult?.pdfFileUrl||"");
   let statusHtml="<b>✓ お客様確認済み・第"+version+"版</b><span>"+new Date(confirmedAt).toLocaleString("ja-JP")+(apiResult?" / Green保存済み":" / Green共有同期待ち")+"</span>";
-  statusHtml+='<div class="documentDeliveryStatus"><div><span>PDF</span><b>'+(apiResult?("第"+version+"版 発行済み"):"同期後に発行")+'</b></div><div><span>顧客送信</span><b class="unsent">未送信</b></div></div>';
+  statusHtml+='<div class="documentDeliveryStatus"><div><span>PDF</span><b>'+(apiResult?("第"+version+"版 発行済み"):"同期後に発行")+'</b></div><div><span>顧客送信</span><b class="unsent">未送信</b></div></div><div id="documentSendResult" class="documentSendResult" role="status"></div>';
   if(pdfUrl)statusHtml+='<a class="confirmedPdfLink" target="_blank" rel="noopener" href="'+K.esc(pdfUrl)+'">発行PDFを確認</a>';
   if(generated.length)statusHtml+='<div class="generatedInventoryLinks"><small>在庫を自動生成しました</small>'+generated.map((x,i)=>'<button type="button" data-inv="'+K.esc(x.inventoryId||"")+'" data-no="'+K.esc(x.inventoryNo||"")+'">'+K.esc(x.inventoryNo||("在庫"+(i+1)))+' を開く</button>').join("")+'</div>';
   K.$("#confirmedPanel").innerHTML=statusHtml;
@@ -80,9 +85,36 @@ async function finalizeSnapshot(){
   K.$("#finalizeConfirmation").textContent="✓ 確定済み";
   await K.refreshResume();
 }
-K.$("#customerPreview").onclick=()=>{if(!draft)return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#finalizeConfirmation").disabled=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";const send=K.$("#bluePdfSend");send.disabled=true;send.textContent="顧客送信は伝票確定後";send.dataset.slip="";K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
+K.$("#customerPreview").onclick=()=>{if(!draft)return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#finalizeConfirmation").disabled=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";const send=K.$("#bluePdfSend");send.disabled=true;send.textContent="顧客送信は伝票確定後";send.dataset.slip="";send.dataset.mode="";send.dataset.email="";send.dataset.version="";send.dataset.resend="0";K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
 K.$("#clearSignature").onclick=clearSignature;
 K.$("#finalizeConfirmation").onclick=finalizeSnapshot;
 K.$("#printPreview").onclick=()=>window.print();
-K.$("#bluePdfSend").onclick=()=>{const slip=K.$("#bluePdfSend").dataset.slip||draft?.sourceServiceOrderId||"";K.overlay("preview").classList.remove("on");K.overlay("slip").classList.remove("on");slip?K.openBlue("slips",{slip}):K.openBlue("slips")};
+K.$("#bluePdfSend").onclick=async()=>{
+  const button=K.$("#bluePdfSend"),slip=button.dataset.slip||draft?.sourceServiceOrderId||"";
+  if(button.dataset.mode!=="email"){
+    K.overlay("preview").classList.remove("on");
+    K.overlay("slip").classList.remove("on");
+    slip?K.openBlue("slips",{slip}):K.openBlue("slips");
+    return;
+  }
+  const email=button.dataset.email||"",version=button.dataset.version||"1",resend=button.dataset.resend==="1";
+  if(!confirm("第"+version+"版PDFを "+email+" へ"+(resend?"再送":"送信")+"しますか？"))return;
+  const resultEl=K.$("#documentSendResult");
+  button.disabled=true;
+  button.textContent=resend?"再送信中…":"送信中…";
+  if(resultEl){resultEl.className="documentSendResult working";resultEl.textContent="宛先とPDFを確認しています…"}
+  try{
+    const raw=await KRAPI.runImmediate("send-slip-pdf-email",slip,{resend}),result=raw?.result||raw||{};
+    const delivery=K.$("#confirmedPanel .documentDeliveryStatus .unsent");
+    if(delivery){delivery.classList.remove("unsent");delivery.classList.add("sent");delivery.textContent="送信済み（メール）"}
+    if(resultEl){resultEl.className="documentSendResult success";resultEl.textContent=result.message||("\u7b2c"+version+"\u7248PDF\u3092\u30e1\u30fc\u30eb\u3067\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002")}
+    button.dataset.resend="1";
+    button.textContent="PDFをメール再送";
+  }catch(error){
+    if(resultEl){resultEl.className="documentSendResult error";resultEl.textContent="送信できません："+String(error?.message||error)}
+    button.textContent=resend?"PDFをメール再送":"PDFをメール送信";
+  }finally{
+    button.disabled=false;
+  }
+};
 })();

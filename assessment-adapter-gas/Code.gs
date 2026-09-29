@@ -67,6 +67,9 @@ function adapterRequest(token, operation, payload) {
     case "save-visit": return ProdDash.saveCase(String(payload.id || ""), payload.data || {});
     case "send-visit": return ProdDash.saveAndSendVisit(String(payload.id || ""), payload.data || {}, String(payload.message || ""));
     case "status": return ProdDash.setStatus(String(payload.id || ""), String(payload.status || ""));
+    case "green-ping": return GreenNext.greenBridgeRequest("ping", payload);
+    case "green-snapshot": return GreenNext.greenBridgeRequest("snapshot", payload);
+    case "green-write": return GreenNext.greenBridgeRequest("write", payload);
     default: throw new Error("UNSUPPORTED_OPERATION:" + operation);
   }
 }

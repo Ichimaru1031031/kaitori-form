@@ -42,6 +42,18 @@ const greenGas = await readFile(
   new URL("../next-green-gas/Code.gs", import.meta.url),
   "utf8",
 );
+const greenApi = await readFile(
+  new URL("../next/green-api.js", import.meta.url),
+  "utf8",
+);
+const adapterGas = await readFile(
+  new URL("../assessment-adapter-gas/Code.gs", import.meta.url),
+  "utf8",
+);
+const adapterManifest = await readFile(
+  new URL("../assessment-adapter-gas/appsscript.json", import.meta.url),
+  "utf8",
+);
 
 test("appointment cards show a start and end time range", () => {
   assert.match(core, /x\.startTime\s*\+\s*"〜"\s*\+\s*x\.endTime/);
@@ -96,6 +108,32 @@ test("NEXT slip distinguishes issued PDF from unsent customer delivery", () => {
   assert.match(slip, /apiResult\?\.pdfFileUrl/);
   assert.match(slip, /顧客へ送信（現行Blue）/);
   assert.match(html, /id="bluePdfSend" type="button" disabled/);
+});
+
+test("protected Green bridge is used without exposing an anonymous write URL", () => {
+  assert.match(greenApi, /hasProtectedAdapter\(\)/);
+  assert.match(greenApi, /green-write/);
+  assert.match(greenApi, /runImmediate/);
+  assert.match(adapterGas, /case "green-write"/);
+  assert.match(adapterGas, /GreenNext\.greenBridgeRequest\("write", payload\)/);
+  assert.match(adapterManifest, /"userSymbol": "GreenNext"/);
+  assert.match(adapterManifest, /"version": "3"/);
+});
+
+test("issued slip PDF email uses stored customer data and explicit resend", () => {
+  assert.match(greenGas, /case "send-slip-pdf-email"/);
+  assert.match(greenGas, /CUSTOMER_CONFIRMATION_REQUIRED/);
+  assert.match(greenGas, /CUSTOMER_EMAIL_NOT_REGISTERED/);
+  assert.match(greenGas, /PDF_ALREADY_SENT_USE_RESEND/);
+  assert.match(greenGas, /MailApp\.sendEmail/);
+  assert.match(greenGas, /sentMethod:"email",status:"sent"/);
+  assert.doesNotMatch(
+    greenGas,
+    /UrlFetchApp\.fetch\([^\n]*(?:line\.me|api\.line)/i,
+  );
+  assert.match(slip, /KRAPI\.runImmediate\("send-slip-pdf-email"/);
+  assert.match(slip, /送信済み（メール）/);
+  assert.match(slip, /dataset\.resend="1"/);
 });
 
 test("native assessment, inventory, and sales controls bind without startup errors", () => {

@@ -133,6 +133,7 @@ function dispatch_(op, entityId, p, key) {
     case "call-log": return opCallLog_(entityId,p,key);
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
+    case "send-slip-pdf-email": return opSendSlipPdfEmail_(entityId,p,key);
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
     case "appointment-note-update": return opAppointmentNoteUpdate_(entityId,p,key);
     case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
@@ -899,6 +900,53 @@ function opFinalizeSlip_(entityId,p,key){
     signatureFileId:signatureFileId,
     inventory:inventoryLinks
   };
+}
+
+function opSendSlipPdfEmail_(entityId,p,key){
+  const serviceOrderId=String(entityId||p.serviceOrderId||"").trim();
+  if(!serviceOrderId) throw new Error("SERVICE_ORDER_ID_REQUIRED");
+  const soRow=findRow_("SERVICE_ORDERS","serviceOrderId",serviceOrderId);
+  if(!soRow) throw new Error("SERVICE_ORDER_NOT_FOUND:"+serviceOrderId);
+  const serviceOrder=rowObject_(sh_("SERVICE_ORDERS"),soRow);
+  if(String(serviceOrder.customerConfirmed).toLowerCase()!=="true") throw new Error("CUSTOMER_CONFIRMATION_REQUIRED");
+  const customerId=String(serviceOrder.customerId||"");
+  const customerRow=findRow_("CUSTOMERS","customerId",customerId);
+  if(!customerRow) throw new Error("CUSTOMER_NOT_FOUND:"+customerId);
+  const customer=rowObject_(sh_("CUSTOMERS"),customerRow);
+  const email=String(customer.email||"").trim();
+  if(!email) throw new Error("CUSTOMER_EMAIL_NOT_REGISTERED");
+  const requestedDocumentId=String(p.documentId||"");
+  const documents=rowsBy_("DOCUMENTS","serviceOrderId",serviceOrderId)
+    .filter(function(x){return String(x.obj.type||"")==="customer-copy";})
+    .sort(function(a,b){return Number(b.obj.version||0)-Number(a.obj.version||0);});
+  const selected=requestedDocumentId
+    ? documents.find(function(x){return String(x.obj.documentId||"")===requestedDocumentId;})
+    : documents[0];
+  if(!selected) throw new Error("ISSUED_PDF_NOT_FOUND:"+serviceOrderId);
+  if(String(selected.obj.status||"")==="sent"&&!p.resend) throw new Error("PDF_ALREADY_SENT_USE_RESEND");
+  const fileId=String(selected.obj.fileId||"");
+  if(!fileId) throw new Error("PDF_FILE_ID_MISSING");
+  const sentAt=new Date().toISOString();
+  const version=Number(selected.obj.version||1);
+  const file=DriveApp.getFileById(fileId);
+  const subject="【買取レスキュー】お客様控え "+serviceOrderId+" 第"+version+"版";
+  const body=(customer.name||"お客様")+" 様\n\nご確認・ご署名いただいた伝票の控えをお送りします。\n受付番号："+serviceOrderId+"\n版：第"+version+"版\n\n添付PDFをご確認ください。\n\n買取レスキュー";
+  try{
+    MailApp.sendEmail({
+      to:email,
+      subject:subject,
+      body:body,
+      name:"買取レスキュー",
+      attachments:[file.getBlob().setName(String(selected.obj.fileName||file.getName()))]
+    });
+    updateRow_("DOCUMENTS",selected.row,{sentAt:sentAt,sentMethod:"email",status:"sent"});
+    audit_("document",String(selected.obj.documentId||fileId),p.resend?"resend-slip-pdf":"send-slip-pdf",{serviceOrderId:serviceOrderId,version:version,sentMethod:"email",sentAt:sentAt},"NEXT");
+    return {ok:true,serviceOrderId:serviceOrderId,documentId:selected.obj.documentId||"",version:version,sentAt:sentAt,sentMethod:"email",message:"第"+version+"版PDFをメールで送信しました。"};
+  }catch(error){
+    updateRow_("DOCUMENTS",selected.row,{status:"failed"});
+    audit_("document",String(selected.obj.documentId||fileId),"send-slip-pdf-failed",{serviceOrderId:serviceOrderId,version:version,error:String(error&&error.message||error)},"NEXT");
+    throw error;
+  }
 }
 
 function nextId_(prefix){

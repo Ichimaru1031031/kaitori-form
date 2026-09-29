@@ -7,6 +7,12 @@
         "libraryId": "1slk1lnk2vZrPo5s3dV-PEkrr82G7eTaTgD3KnmuxbeSc8r_Z-UrFoRMp",
         "version": "40",
         "developmentMode": false
+      },
+      {
+        "userSymbol": "GreenNext",
+        "libraryId": "11VE6c-cCtVVe09wRkpl17G3js2L6yHbSBbHob9k8SCnNQMGOmpaDJIQq",
+        "version": "3",
+        "developmentMode": false
       }
     ]
   },
