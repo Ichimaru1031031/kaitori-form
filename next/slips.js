@@ -177,7 +177,7 @@
         K.openInventoryForSlip
           ? K.openInventoryForSlip(x.serviceOrderId)
           : K.openTab("inventory");
-      card.querySelector(".next").onclick = () =>
+      const openNextSlip = () =>
         K.openSlip &&
         K.openSlip({
           caseId: x.caseId,
@@ -187,6 +187,19 @@
           phone: c.phone,
           email: c.email,
         });
+      card.querySelector(".next").onclick = openNextSlip;
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", name + " 様の伝票を開く");
+      card.addEventListener("click", (event) => {
+        if (event.target.closest("button,a")) return;
+        openNextSlip();
+      });
+      card.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        openNextSlip();
+      });
       list.appendChild(card);
     });
   };

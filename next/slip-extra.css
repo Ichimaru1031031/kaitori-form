@@ -152,3 +152,9 @@
 .documentSendResult.success{background:#e9f8f1;color:#177a55}
 .documentSendResult.error{background:#fff0ef;color:#a63b33}
 .confirmedPdfLink{display:block;margin-top:8px;padding:9px 10px;border-radius:9px;background:#fff;border:1px solid #bfd4cb;color:#315f50;text-align:center;text-decoration:none;font-weight:900}
+.scanInventoryQr{background:#e8f5f0!important;color:#245e50!important;border-color:#a8cbbf!important}
+#inventoryQrStatus{display:block;min-height:16px;margin-top:5px;font-size:10px;font-weight:800;color:var(--muted)}
+#inventoryQrStatus.working{color:#805d12}
+#inventoryQrStatus.success{color:#176241}
+#inventoryQrStatus.error{color:#a63b33}
+.slipCardNative[role="button"]{cursor:pointer}.slipCardNative[role="button"]:focus-visible{outline:3px solid rgba(70,117,104,.28);outline-offset:2px}

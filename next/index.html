@@ -10,9 +10,9 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./app.css" />
     <link rel="stylesheet" href="./native.css" />
-    <link rel="stylesheet" href="./workflow.css?v=2" />
-    <link rel="stylesheet" href="./slip-extra.css?v=4" />
-    <link rel="stylesheet" href="./confirm-extra.css" />
+    <link rel="stylesheet" href="./workflow.css?v=3" />
+    <link rel="stylesheet" href="./slip-extra.css?v=5" />
+    <link rel="stylesheet" href="./confirm-extra.css?v=2" />
     <link rel="stylesheet" href="./api.css" />
     <link rel="stylesheet" href="./inventory-process.css" />
     <link rel="stylesheet" href="./inventory-workbench.css" />
@@ -534,6 +534,14 @@
           <div class="services">
             <b>今回の業務</b>
             <div id="serviceButtons"></div>
+            <input
+              id="inventoryQrPhoto"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+            />
+            <small id="inventoryQrStatus" role="status"></small>
           </div>
           <div id="serviceArea"></div>
           <div class="total"><span>差引</span><b id="total">¥0</b></div>
@@ -585,10 +593,21 @@
             <b>お客様確認</b
             ><small id="previewStatus">内容をご確認ください</small>
           </div>
-          <button data-close="preview">×</button>
+          <button id="previewClose" data-close="preview" aria-label="伝票入力へ戻る">×</button>
         </header>
         <div class="body">
           <div id="previewBody"></div>
+          <section class="customerConsentChecks">
+            <h3>お客様確認</h3>
+            <label
+              ><input id="confirmCustomerDetails" type="checkbox" />
+              お名前・住所などのお客様情報に誤りがないことを確認しました</label
+            >
+            <label
+              ><input id="confirmPurchaseTerms" type="checkbox" />
+              買取明細と買取金額を確認し、内容に同意しました</label
+            >
+          </section>
           <section class="signatureBox">
             <h3>お客様サイン</h3>
             <p>内容・金額を確認後、枠内にサインしてください。</p>
@@ -599,14 +618,19 @@
           </section>
           <div id="confirmedPanel" class="confirmedPanel hidden"></div>
           <div class="confirmActions">
+            <button id="previewBack" type="button">← 伝票入力へ戻る</button>
             <button id="finalizeConfirmation" class="finalize" type="button">
               ✓ 確認・署名を確定</button
-            ><button id="printPreview" type="button">PDF表示・印刷</button>
+            >
           </div>
           <div class="confirmActions">
+            <button id="printPreview" type="button">PDF表示・印刷</button>
+          </div>
+          <div class="confirmActions deliveryActions">
             <button id="bluePdfSend" type="button" disabled>
-              顧客送信は伝票確定後
-            </button>
+              メール送信は伝票確定後</button
+            ><button id="smsPdfShare" type="button" disabled>SMSで共有</button
+            ><button id="linePdfShare" type="button" disabled>LINEで共有</button>
           </div>
           <div class="printOnly">
             この控えは発行時点のスナップショットです。
@@ -920,7 +944,7 @@
     </div>
     <script src="./draft-db.js"></script>
     <script src="./green-api.js?v=3"></script>
-    <script src="./core.js?v=14"></script>
+    <script src="./core.js?v=15"></script>
     <script src="./schedule.js"></script>
     <script src="./appointments-ui.js"></script>
     <script src="./inventory.js"></script>
@@ -928,12 +952,12 @@
     <script src="./assessment-adapter.js?v=9"></script>
     <script src="./assessment.js?v=14"></script>
     <script src="./phone-assessment.js"></script>
-    <script src="./slips.js?v=2"></script>
+    <script src="./slips.js?v=3"></script>
     <script src="./recycle.js"></script>
     <script src="./sales.js"></script>
     <script src="./home-fulfillment.js"></script>
     <script src="./global-search.js"></script>
-    <script src="./slip.js?v=11"></script>
+    <script src="./slip.js?v=12"></script>
     <script src="./workflow-router.js?v=2"></script>
   </body>
 </html>

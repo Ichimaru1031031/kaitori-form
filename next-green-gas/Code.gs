@@ -54,10 +54,11 @@ function greenBridgeRequest(request, payload) {
     const entityId = String(body.entityId || "");
     const p = body.payload || {};
     if (!key || !operation) throw new Error("INVALID_REQUEST");
-    const previous = idempotencyResult_(key);
+    const cacheable = operation !== "get-slip-pdf-share";
+    const previous = cacheable ? idempotencyResult_(key) : null;
     if (previous) return {ok:true,idempotent:true,result:previous};
     const result = dispatch_(operation, entityId, p, key);
-    writeIdempotency_(key, operation, entityId, result);
+    if (cacheable) writeIdempotency_(key, operation, entityId, result);
     return {ok:true,idempotent:false,result:result};
   }
   throw new Error("UNSUPPORTED_BRIDGE_REQUEST:"+request);
@@ -134,6 +135,7 @@ function dispatch_(op, entityId, p, key) {
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
     case "send-slip-pdf-email": return opSendSlipPdfEmail_(entityId,p,key);
+    case "get-slip-pdf-share": return opGetSlipPdfShare_(entityId,p,key);
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
     case "appointment-note-update": return opAppointmentNoteUpdate_(entityId,p,key);
     case "inventory-sale-update": return opInventorySaleUpdate_(entityId,p,key);
@@ -830,6 +832,8 @@ function opVisitStart_(entityId,p,key){
 function opFinalizeSlip_(entityId,p,key){
   const confirmedAt=String(p.confirmedAt||new Date().toISOString());
   const version=Number(p.version||1);
+  const confirmations=(p.payload&&p.payload.confirmations)||{};
+  if(confirmations.customerDetails!==true||confirmations.purchaseTerms!==true) throw new Error("CUSTOMER_CONFIRMATIONS_REQUIRED");
   const links=ensureFinalizedEntities_(p,confirmedAt);
   const linked=Object.assign({},p,{caseId:links.caseId,sourceServiceOrderId:links.serviceOrderId});
   let signatureFileId="",signatureFileUrl="";
@@ -947,6 +951,31 @@ function opSendSlipPdfEmail_(entityId,p,key){
     audit_("document",String(selected.obj.documentId||fileId),"send-slip-pdf-failed",{serviceOrderId:serviceOrderId,version:version,error:String(error&&error.message||error)},"NEXT");
     throw error;
   }
+}
+
+function opGetSlipPdfShare_(entityId,p,key){
+  const serviceOrderId=String(entityId||p.serviceOrderId||"").trim();
+  if(!serviceOrderId) throw new Error("SERVICE_ORDER_ID_REQUIRED");
+  const soRow=findRow_("SERVICE_ORDERS","serviceOrderId",serviceOrderId);
+  if(!soRow) throw new Error("SERVICE_ORDER_NOT_FOUND:"+serviceOrderId);
+  const serviceOrder=rowObject_(sh_("SERVICE_ORDERS"),soRow);
+  if(String(serviceOrder.customerConfirmed).toLowerCase()!=="true") throw new Error("CUSTOMER_CONFIRMATION_REQUIRED");
+  const documents=rowsBy_("DOCUMENTS","serviceOrderId",serviceOrderId)
+    .filter(function(x){return String(x.obj.type||"")==="customer-copy";})
+    .sort(function(a,b){return Number(b.obj.version||0)-Number(a.obj.version||0);});
+  if(!documents.length) throw new Error("ISSUED_PDF_NOT_FOUND:"+serviceOrderId);
+  const document=documents[0].obj,fileId=String(document.fileId||"");
+  if(!fileId) throw new Error("PDF_FILE_ID_MISSING");
+  const file=DriveApp.getFileById(fileId),blob=file.getBlob();
+  return {
+    serviceOrderId:serviceOrderId,
+    documentId:document.documentId||"",
+    version:Number(document.version||1),
+    fileName:String(document.fileName||file.getName()),
+    fileUrl:String(document.fileUrl||file.getUrl()),
+    mimeType:String(blob.getContentType()||MimeType.PDF),
+    pdfBase64:Utilities.base64Encode(blob.getBytes())
+  };
 }
 
 function nextId_(prefix){
@@ -1123,18 +1152,32 @@ function newInventoryNo_(category){
 }
 
 function createCustomerPdf_(snap,signatureUrl){
-  const d=snap.payload||{},customer=d.customer||{},selected=d.selected||[],items=d.items||{};
-  const labels={purchase:"買取",work:"工事",delivery:"配送",recycle:"リサイクル",estimate:"見積",sale:"販売"};
-  let sections="";
-  selected.forEach(function(k){
-    const rows=items[k]||[]; if(!rows.length) return;
-    let tr=rows.map(function(x){
-      return "<tr><td>"+html_( [x.category,x.maker,x.model,x.year,x.spec].filter(Boolean).join(" / ") )+"</td><td>"+html_(x.quantity||1)+"</td><td class='num'>"+yen_(x.amount||0)+"</td></tr>";
+  const d=snap.payload||{},customer=d.customer||{},items=d.items||{},documents=[];
+  function rowsFor(keys){
+    const rows=[];
+    keys.forEach(function(key){(items[key]||[]).forEach(function(item){rows.push({serviceType:key,item:item});});});
+    return rows;
+  }
+  function documentFor(title,keys,tone){
+    const rows=rowsFor(keys); if(!rows.length) return;
+    const body=rows.map(function(row){
+      const x=row.item||{},year=String(x.year||"").trim()||"不明",details=[x.maker,x.model,"年式 "+year,x.spec].filter(Boolean).join(" / ");
+      return "<tr><td><b>"+html_(x.category||"明細")+"</b><small>"+html_(details)+"</small></td><td class='qty'>"+html_(x.quantity||1)+"</td><td class='num'>"+yen_(x.amount||0)+"</td></tr>";
     }).join("");
-    sections+="<h2>"+html_(labels[k]||k)+"</h2><table><thead><tr><th>内容</th><th>数量</th><th>金額</th></tr></thead><tbody>"+tr+"</tbody></table>";
-  });
-  const sign=signatureUrl?"<h2>お客様サイン</h2><img class='sign' src='"+html_(signatureUrl)+"'>":"";
-  const html="<!doctype html><html><head><meta charset='utf-8'><style>body{font-family:Arial,'Noto Sans JP',sans-serif;color:#222;font-size:11px;padding:18px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}.meta{color:#666;margin-bottom:12px}.customer{border:1px solid #ddd;border-radius:8px;padding:10px;line-height:1.7}table{width:100%;border-collapse:collapse;margin-bottom:8px}th,td{border-bottom:1px solid #e5e5e5;padding:6px;text-align:left}th{background:#f5f5f5}.num{text-align:right}.total{font-size:16px;font-weight:bold;text-align:right;margin-top:14px}.sign{max-width:280px;max-height:100px;border:1px solid #ddd}.foot{margin-top:20px;color:#777;font-size:9px}</style></head><body><h1>買取レスキュー お客様控え</h1><div class='meta'>案件 "+html_(snap.caseId||"")+" / 第"+versionText_(snap.version)+"版 / "+html_(snap.confirmedAt||"")+"</div><div class='customer'><b>"+html_(customer.name||"")+" 様</b><br>"+html_(customer.address||"")+"<br>"+html_(customer.phone||"")+" "+html_(customer.email||"")+"</div>"+sections+"<div class='total'>差引合計 "+yen_(snap.total||0)+"</div>"+sign+"<div class='foot'>このPDFは確認・署名時点のスナップショットです。再発行時も過去版は上書きしません。</div></body></html>";
+    const total=rows.reduce(function(sum,row){return sum+Number(row.item.amount||0);},0);
+    documents.push({title:title,tone:tone,body:body,total:total});
+  }
+  documentFor("販売・工事 明細",["sale","work","delivery","estimate"],"commercial");
+  documentFor("リサイクル 明細",["recycle"],"recycle");
+  documentFor("買取 明細",["purchase"],"purchase");
+  if(!documents.length) documents.push({title:"お客様控え",tone:"commercial",body:"<tr><td><b>明細なし</b></td><td class='qty'>-</td><td class='num'>¥0</td></tr>",total:0});
+  const customerHtml="<div class='customer'><div><span>お客様</span><b>"+html_(customer.name||"未登録")+" 様</b></div><div><span>ご住所</span><strong>"+html_([customer.postalCode?("〒"+customer.postalCode):"",customer.address||"未登録"].filter(Boolean).join(" "))+"</strong></div><div class='contact'>"+html_([customer.phone,customer.email].filter(Boolean).join(" / "))+"</div></div>";
+  const sign=signatureUrl?"<div class='signature'><h3>お客様サイン</h3><img src='"+html_(signatureUrl)+"'></div>":"";
+  const pages=documents.map(function(doc,index){
+    const isLast=index===documents.length-1;
+    return "<section class='documentPage "+doc.tone+(isLast?" last":"")+"'><header><div><b>買取レスキュー</b><span>お客様控え</span></div><em>第"+versionText_(snap.version)+"版</em></header><div class='documentTitle'><small>明細書</small><h1>"+html_(doc.title)+"</h1></div><div class='meta'>伝票番号 "+html_(snap.sourceServiceOrderId||snap.caseId||"")+"　発行 "+html_(snap.confirmedAt||"")+"</div>"+customerHtml+"<table><thead><tr><th>商品・作業内容</th><th class='qty'>数量</th><th class='num'>金額</th></tr></thead><tbody>"+doc.body+"</tbody></table><div class='documentTotal'><span>この明細の合計</span><b>"+yen_(doc.total)+"</b></div>"+(isLast?"<div class='grandTotal'><span>伝票差引合計</span><b>"+yen_(snap.total||0)+"</b></div><div class='consent'>お客様情報、明細および金額を確認し、内容に同意しました。</div>"+sign:"")+"<footer>確認・署名時点のスナップショットです。過去版は上書きされません。<span>"+(index+1)+" / "+documents.length+"</span></footer></section>";
+  }).join("");
+  const html="<!doctype html><html><head><meta charset='utf-8'><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Noto Sans JP',sans-serif;color:#18251f;background:#fff}.documentPage{position:relative;min-height:277mm;padding:15mm 14mm 17mm;page-break-after:always}.documentPage.last{page-break-after:auto}.documentPage header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #3d7667;padding-bottom:8px}.documentPage header div b{display:block;font-size:18px}.documentPage header div span{font-size:9px;color:#60716a}.documentPage header em{font-style:normal;font-weight:bold;background:#e7f3ef;color:#2f6758;border-radius:20px;padding:6px 11px}.documentTitle{margin:16px 0 5px}.documentTitle small{font-size:10px;color:#6c7a75}.documentTitle h1{font-size:27px;line-height:1.25;margin:2px 0}.meta{font-size:10px;color:#62716b;margin-bottom:12px}.customer{border:2px solid #cbded7;border-radius:12px;padding:12px 14px;margin-bottom:16px;background:#f7fbf9}.customer span{display:block;font-size:9px;color:#66766f}.customer b{display:block;font-size:22px;line-height:1.4;margin-bottom:7px}.customer strong{display:block;font-size:15px;line-height:1.55}.customer .contact{font-size:12px;font-weight:bold;margin-top:7px}table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #cedbd6;border-radius:10px;overflow:hidden}th{background:#edf5f2;color:#344a42;font-size:11px;padding:9px;text-align:left}td{border-top:1px solid #dce5e1;padding:11px 9px;vertical-align:top;font-size:13px}td b{display:block;font-size:15px;line-height:1.4}td small{display:block;font-size:11px;line-height:1.5;color:#566861;margin-top:3px}.qty{width:52px;text-align:center}.num{width:108px;text-align:right;font-weight:bold;font-size:15px}.documentTotal,.grandTotal{display:flex;justify-content:flex-end;align-items:baseline;gap:18px;margin-top:13px}.documentTotal span{font-size:12px}.documentTotal b{font-size:21px}.grandTotal{border-top:2px solid #385f54;padding-top:12px}.grandTotal span{font-size:14px;font-weight:bold}.grandTotal b{font-size:27px;color:#214f43}.consent{margin-top:16px;border:1px solid #d5dfdb;background:#f8faf9;border-radius:9px;padding:10px;font-size:11px;font-weight:bold}.signature{margin-top:14px}.signature h3{font-size:12px;margin:0 0 6px}.signature img{display:block;max-width:300px;max-height:90px;border:1px solid #cad5d1;border-radius:7px}.documentPage footer{position:absolute;left:14mm;right:14mm;bottom:9mm;border-top:1px solid #d6dfdb;padding-top:6px;font-size:8px;color:#78847f}.documentPage footer span{float:right}.purchase header{border-color:#a9574e}.purchase header em{background:#fbecea;color:#8b4038}.recycle header{border-color:#557a91}.recycle header em{background:#eaf2f7;color:#365f76}</style></head><body>"+pages+"</body></html>";
   const blob=HtmlService.createHtmlOutput(html).getBlob().getAs(MimeType.PDF);
   const base=(snap.caseId||snap.draftId||"NEXT").replace(/[^0-9A-Za-z_-]/g,"_");
   const fileName=base+"_v"+Number(snap.version||1)+"_"+Utilities.formatDate(new Date(),"Asia/Tokyo","yyyyMMdd-HHmmss")+".pdf";

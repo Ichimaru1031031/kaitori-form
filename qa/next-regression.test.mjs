@@ -105,11 +105,30 @@ test("customer confirmation blocks incomplete purchase slips", () => {
   assert.match(slip, /if\(!draft\|\|stopForDraftIssues\(\)\)return/);
   assert.match(slip, /if\(stopForDraftIssues\(\)\)return/);
   assert.doesNotMatch(slip, /\["model","型番"\]/);
+  assert.doesNotMatch(slip, /\["year","年式"\]/);
+});
+
+test("customer confirmation has an explicit return path and two required consents", () => {
+  assert.match(html, /id="previewBack"/);
+  assert.match(html, /id="confirmCustomerDetails"/);
+  assert.match(html, /id="confirmPurchaseTerms"/);
+  assert.match(html, /お客様情報に誤りがないことを確認しました/);
+  assert.match(html, /買取明細と買取金額を確認し、内容に同意しました/);
+  assert.match(slip, /function closePreviewSafely\(\)/);
+  assert.match(slip, /CUSTOMER_CONFIRMATIONS_REQUIRED|confirmCustomerDetails/);
+  assert.match(slip, /payload\.confirmations=\{customerDetails:true,purchaseTerms:true\}/);
+  assert.match(greenGas, /CUSTOMER_CONFIRMATIONS_REQUIRED/);
+});
+
+test("slip customer cards open NEXT slips without requiring the small action button", () => {
+  assert.match(slips, /card\.setAttribute\("role", "button"\)/);
+  assert.match(slips, /if \(event\.target\.closest\("button,a"\)\) return/);
+  assert.match(slips, /openNextSlip\(\)/);
 });
 
 test("slip input always has a recoverable save-and-back path", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
-  assert.match(html, /slip-extra\.css\?v=4/);
+  assert.match(html, /slip-extra\.css\?v=5/);
   assert.match(html, /id="closeSlipFooter"/);
   assert.match(html, /保存して戻る/);
   assert.match(slip, /async function closeSlipSafely\(\)/);
@@ -143,7 +162,7 @@ test("NEXT slip distinguishes issued PDF from unsent customer delivery", () => {
   assert.match(slip, /class="documentDeliveryStatus"/);
   assert.match(slip, />未送信</);
   assert.match(slip, /apiResult\?\.pdfFileUrl/);
-  assert.match(slip, /顧客へ送信（現行Blue）/);
+  assert.match(slip, /メール未登録・現行Blueを開く/);
   assert.match(html, /id="bluePdfSend" type="button" disabled/);
 });
 
@@ -157,7 +176,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=11/);
+  assert.match(html, /slip\.js\?v=12/);
   assert.match(html, /assessment-adapter\.js\?v=9/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
@@ -213,6 +232,17 @@ test("model suggestions prioritize local history and stay in a bounded scroller"
   assert.match(slipCss, /ocrCandidates\{display:none;max-height:/);
 });
 
+test("sale entry can import a live inventory item from its QR code", () => {
+  assert.match(html, /id="inventoryQrPhoto"/);
+  assert.match(slip, /在庫QRを読み取って販売明細へ追加/);
+  assert.match(slip, /BarcodeDetector/);
+  assert.match(slip, /jsqr@1\.4\.0/);
+  assert.match(slip, /url\.searchParams\.get\("inventory"\)/);
+  assert.match(slip, /await KRAPI\.getSnapshot\(\)/);
+  assert.match(slip, /draft\.items\.sale\.push/);
+  assert.match(slip, /sourceInventoryId:item\.inventoryId/);
+});
+
 test("assessment product data seeds purchase entry and OCR conflicts require a source choice", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
   assert.match(assessment, /KRAssessmentAdapter\.getCase\(x\.id\)/);
@@ -254,6 +284,30 @@ test("issued slip PDF email uses stored customer data and explicit resend", () =
   assert.match(slip, /KRAPI\.runImmediate\("send-slip-pdf-email"/);
   assert.match(slip, /送信済み（メール）/);
   assert.match(slip, /dataset\.resend="1"/);
+});
+
+test("one versioned customer PDF uses separate readable document pages", () => {
+  assert.match(greenGas, /documentFor\("販売・工事 明細",\["sale","work","delivery","estimate"\]/);
+  assert.match(greenGas, /documentFor\("リサイクル 明細",\["recycle"\]/);
+  assert.match(greenGas, /documentFor\("買取 明細",\["purchase"\]/);
+  assert.match(greenGas, /class='documentPage/);
+  assert.match(greenGas, /page-break-after:always/);
+  assert.match(greenGas, /customer b\{display:block;font-size:22px/);
+  assert.match(greenGas, /grandTotal b\{font-size:27px/);
+  assert.match(greenGas, /PDF_FOLDER_ID/);
+});
+
+test("issued PDF can be shared by email, SMS, or LINE without changing the LINE webhook", () => {
+  assert.match(html, /id="smsPdfShare"/);
+  assert.match(html, /id="linePdfShare"/);
+  assert.match(slip, /get-slip-pdf-share/);
+  assert.match(slip, /navigator\.canShare/);
+  assert.match(slip, /https:\/\/line\.me\/R\/msg\/text/);
+  assert.match(slip, /location\.href="sms:"/);
+  assert.match(greenGas, /case "get-slip-pdf-share"/);
+  assert.match(greenGas, /pdfBase64:Utilities\.base64Encode/);
+  assert.match(greenGas, /cacheable = operation !== "get-slip-pdf-share"/);
+  assert.doesNotMatch(greenGas, /api\.line\.me|hooks\.slack|Twilio/i);
 });
 
 test("slip list reloads live Green delivery status through the protected adapter", () => {
