@@ -113,7 +113,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=3/);
+  assert.match(html, /assessment-adapter\.js\?v=4/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);

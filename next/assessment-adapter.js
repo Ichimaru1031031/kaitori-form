@@ -19,6 +19,9 @@
 
   addEventListener("message", (event) => {
     const data = event.data || {};
+    if (data.type === "kr-assessment-adapter-response") {
+      console.info("KR assessment adapter response", event.origin, data.requestId || "missing-id");
+    }
     if (data.type !== "kr-assessment-adapter-response" || !data.requestId) return;
     const item = pending.get(data.requestId);
     if (!item) return;
