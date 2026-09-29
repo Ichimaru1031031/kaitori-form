@@ -128,7 +128,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry offers private on-device camera OCR with manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=5/);
+  assert.match(html, /slip\.js\?v=6/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -144,6 +144,10 @@ test("NEXT product entry offers private on-device camera OCR with manual confirm
   assert.match(slip, /4項目を自動反映/);
   assert.match(slip, /誤登録防止のため自動確定していません/);
   assert.match(slip, /const camera=key==="purchase"/);
+  assert.match(slip, /ラベルと一致・4項目を確定/);
+  assert.match(slip, /function fourMissing\(\)/);
+  assert.match(slip, /if\(ocrPending\)/);
+  assert.match(slip, /買取明細の必須項目です/);
   assert.doesNotMatch(slip, /FormData|upload.*modelPhoto/i);
 });
 
