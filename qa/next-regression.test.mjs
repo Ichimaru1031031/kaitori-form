@@ -148,7 +148,8 @@ test("assessment action result survives the post-send detail refresh", () => {
 
 test("assessment list refreshes from the protected production dashboard", () => {
   assert.match(assessment, /KRAssessmentAdapter\.run\("dashboard", \{\}\)/);
-  assert.match(assessment, /K\.liveCases = rows/);
+  assert.match(assessment, /K\.liveCases = rows\.map/);
+  assert.match(assessment, /existing\.find\(\(x\) => caseIdOf\(x\) === caseIdOf\(row\)\)/);
   assert.match(assessment, /mergeNativeDetail\(detail\)/);
   assert.match(assessment, /setTimeout\(refreshBlueList, 1200\)/);
 });

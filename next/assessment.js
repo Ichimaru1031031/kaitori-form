@@ -120,7 +120,11 @@
       const result = await KRAssessmentAdapter.run("dashboard", {});
       const rows = dashboardCases(result).filter((x) => /^KR-/i.test(caseIdOf(x)));
       if (!rows.length) return false;
-      K.liveCases = rows;
+      const existing = K.liveCases.length ? K.liveCases : K.snap.cases;
+      K.liveCases = rows.map((row) => ({
+        ...(existing.find((x) => caseIdOf(x) === caseIdOf(row)) || {}),
+        ...row,
+      }));
       return true;
     } catch {
       return false;
