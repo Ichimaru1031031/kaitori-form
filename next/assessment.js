@@ -46,6 +46,7 @@
       status: x.status || "",
       next: x.nextAction || x.next || "",
       product: x.product || x.summary || "",
+      items: Array.isArray(x.items) ? x.items : [],
       date: x.date || x.confirmedDate || "",
       time:
         x.time || [x.confirmedStart, x.confirmedEnd].filter(Boolean).join("〜"),
@@ -411,6 +412,8 @@
           phone: x.phone,
           address: x.address,
           email: x.email,
+          assessmentProduct: x.product || "",
+          assessmentItems: Array.isArray(x.items) ? x.items : [],
         });
       list.appendChild(c);
     });

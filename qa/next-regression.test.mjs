@@ -103,7 +103,7 @@ test("customer confirmation blocks incomplete purchase slips", () => {
 
 test("slip input always has a recoverable save-and-back path", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
-  assert.match(html, /slip-extra\.css\?v=3/);
+  assert.match(html, /slip-extra\.css\?v=4/);
   assert.match(html, /id="closeSlipFooter"/);
   assert.match(html, /保存して戻る/);
   assert.match(slip, /async function closeSlipSafely\(\)/);
@@ -151,7 +151,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=10/);
+  assert.match(html, /slip\.js\?v=11/);
   assert.match(html, /assessment-adapter\.js\?v=9/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
@@ -205,6 +205,22 @@ test("model suggestions prioritize local history and stay in a bounded scroller"
   assert.match(slip, /if\(!rows\.length&&q\)rows=all\.filter/);
   assert.match(slipCss, /modelSuggestions\.scrollSuggestions\{max-height:/);
   assert.match(slipCss, /ocrCandidates\{display:none;max-height:/);
+});
+
+test("assessment product data seeds purchase entry and OCR conflicts require a source choice", async () => {
+  const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
+  assert.match(assessment, /assessmentProduct: x\.product \|\| ""/);
+  assert.match(assessment, /assessmentItems: Array\.isArray\(x\.items\) \? x\.items : \[\]/);
+  assert.match(slip, /function assessmentSeedRows\(seed\)/);
+  assert.match(slip, /assessmentItems:assessmentSeedRows\(seed\)/);
+  assert.match(slip, /class="sourceCompare"/);
+  assert.match(slip, /査定フォームから反映済み/);
+  assert.match(slip, /査定フォーム：/);
+  assert.match(slip, /ラベル：/);
+  assert.match(slip, /if\(!current\)\{field\.input\.value=incoming;supplemented\+\+/);
+  assert.match(slip, /if\(same\(current,incoming\)\)continue/);
+  assert.match(slip, /merged\.conflicts\?"査定フォームとラベルに相違があります/);
+  assert.match(slipCss, /\.sourceConflictChoices button\.active/);
 });
 
 test("protected Green bridge is used without exposing an anonymous write URL", () => {
