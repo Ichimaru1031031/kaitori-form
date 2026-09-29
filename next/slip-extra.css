@@ -94,6 +94,9 @@
 .modelAssistRow .ocrStatus{display:block;font-size:9px;color:var(--muted);line-height:1.45}
 .modelAssistRow .ocrStatus.error{color:#a63b33}
 .modelAssistRow .ocrStatus.warning{color:#8a641d}
+.ocrEngineBadge{display:inline-flex;align-items:center;white-space:nowrap;border-radius:999px;padding:3px 7px;font-size:9px;background:#edf2ef;color:#4e625a}
+.ocrEngineBadge.online{background:#e4f4ec;color:#176241}
+.ocrEngineBadge.setup,.ocrEngineBadge.offline{background:#fff3d9;color:#805d12}
 .ocrCandidates{display:none;max-height:116px;overflow-y:auto;overscroll-behavior:contain;margin:0 0 7px;padding:7px;background:#f6f9f7;border:1px solid #dce7e2;border-radius:10px}
 .ocrCandidates.open{display:block}
 .ocrCandidates small{display:block;margin-bottom:5px;color:#60706a;font-size:9px}

@@ -68,11 +68,60 @@ function adapterRequest(token, operation, payload) {
     case "send-visit": return ProdDash.saveAndSendVisit(String(payload.id || ""), payload.data || {}, String(payload.message || ""));
     case "status": return ProdDash.setStatus(String(payload.id || ""), String(payload.status || ""));
     case "create-device-link": return createDeviceLink_();
+    case "label-ocr-status": return labelOcrStatus_();
+    case "label-ocr": return labelOcr_(payload);
     case "green-ping": return GreenNext.greenBridgeRequest("ping", payload);
     case "green-snapshot": return GreenNext.greenBridgeRequest("snapshot", payload);
     case "green-write": return GreenNext.greenBridgeRequest("write", payload);
     default: throw new Error("UNSUPPORTED_OPERATION:" + operation);
   }
+}
+
+function labelOcrStatus_() {
+  return {
+    ok: true,
+    configured: Boolean(PropertiesService.getScriptProperties().getProperty("GOOGLE_CLOUD_VISION_API_KEY")),
+    engine: "google-cloud-vision",
+    storesImage: false,
+  };
+}
+
+function labelOcr_(payload) {
+  const properties = PropertiesService.getScriptProperties();
+  const apiKey = String(properties.getProperty("GOOGLE_CLOUD_VISION_API_KEY") || "").trim();
+  if (!apiKey) throw new Error("HIGH_ACCURACY_OCR_NOT_CONFIGURED");
+  const mimeType = String(payload && payload.mimeType || "image/jpeg").toLowerCase();
+  if (["image/jpeg", "image/png", "image/webp"].indexOf(mimeType) < 0) throw new Error("OCR_IMAGE_TYPE_NOT_SUPPORTED");
+  const imageBase64 = String(payload && payload.imageBase64 || "").replace(/^data:[^;]+;base64,/, "");
+  if (!imageBase64 || imageBase64.length > 4000000) throw new Error("OCR_IMAGE_TOO_LARGE");
+  const cache = CacheService.getScriptCache();
+  const minuteKey = "label-ocr-rate:" + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMddHHmm");
+  const count = Number(cache.get(minuteKey) || 0);
+  if (count >= 60) throw new Error("OCR_RATE_LIMIT");
+  cache.put(minuteKey, String(count + 1), 90);
+  const response = UrlFetchApp.fetch("https://vision.googleapis.com/v1/images:annotate?key=" + encodeURIComponent(apiKey), {
+    method: "post",
+    contentType: "application/json",
+    muteHttpExceptions: true,
+    payload: JSON.stringify({
+      requests: [{
+        image: {content: imageBase64},
+        features: [{type: "TEXT_DETECTION", maxResults: 1, model: "builtin/latest"}],
+        imageContext: {languageHints: ["ja", "en"]},
+      }],
+    }),
+  });
+  const status = response.getResponseCode();
+  const body = JSON.parse(response.getContentText() || "{}");
+  if (status < 200 || status >= 300) {
+    const message = body && body.error && body.error.message || ("HTTP " + status);
+    throw new Error("CLOUD_VISION_ERROR:" + message);
+  }
+  const first = body.responses && body.responses[0] || {};
+  if (first.error) throw new Error("CLOUD_VISION_ERROR:" + String(first.error.message || "unknown"));
+  const text = String(first.fullTextAnnotation && first.fullTextAnnotation.text || first.textAnnotations && first.textAnnotations[0] && first.textAnnotations[0].description || "").trim();
+  if (!text) throw new Error("OCR_TEXT_NOT_FOUND");
+  return {ok: true, engine: "google-cloud-vision", text: text, storesImage: false};
 }
 
 function requireSession_(token) {

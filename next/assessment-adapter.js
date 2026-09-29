@@ -125,7 +125,7 @@
     clear,
     hasSession,
     getCase: (id) => request("case", { id }),
-    run: (operation, payload) => request(operation, payload, 30000),
+    run: (operation, payload) => request(operation, payload, operation === "label-ocr" ? 65000 : 30000),
   };
   addEventListener("DOMContentLoaded", () => setTimeout(init, 0));
 })();

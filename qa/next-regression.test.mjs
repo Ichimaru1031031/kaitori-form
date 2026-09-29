@@ -103,7 +103,7 @@ test("customer confirmation blocks incomplete purchase slips", () => {
 
 test("slip input always has a recoverable save-and-back path", async () => {
   const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
-  assert.match(html, /slip-extra\.css\?v=2/);
+  assert.match(html, /slip-extra\.css\?v=3/);
   assert.match(html, /id="closeSlipFooter"/);
   assert.match(html, /保存して戻る/);
   assert.match(slip, /async function closeSlipSafely\(\)/);
@@ -150,8 +150,9 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
   assert.match(greenGas, /postalCode:customer\.postalCode\|\|""/);
 });
 
-test("NEXT product entry offers private on-device camera OCR with manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=8/);
+test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
+  assert.match(html, /slip\.js\?v=9/);
+  assert.match(html, /assessment-adapter\.js\?v=8/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -171,6 +172,20 @@ test("NEXT product entry offers private on-device camera OCR with manual confirm
   assert.match(slip, /function fourMissing\(\)/);
   assert.match(slip, /if\(ocrPending\)/);
   assert.match(slip, /買取明細の必須項目です/);
+  assert.match(slip, /KRAssessmentAdapter\.run\("label-ocr"/);
+  assert.match(slip, /高精度AIでラベルを読み取り中/);
+  assert.match(slip, /画像は保存しません/);
+  assert.match(slip, /label-ocr-status/);
+  assert.match(slip, /高精度AI 接続済み/);
+  assert.match(slip, /labelAwareCandidates/);
+  assert.match(slip, /recognizeModelOnDevice/);
+  assert.match(assessmentAdapter, /operation === "label-ocr" \? 65000/);
+  assert.match(adapterGas, /case "label-ocr"/);
+  assert.match(adapterGas, /GOOGLE_CLOUD_VISION_API_KEY/);
+  assert.match(adapterGas, /vision\.googleapis\.com\/v1\/images:annotate/);
+  assert.match(adapterGas, /TEXT_DETECTION/);
+  assert.match(adapterGas, /languageHints: \["ja", "en"\]/);
+  assert.doesNotMatch(assessmentAdapter, /GOOGLE_CLOUD_VISION_API_KEY|vision\.googleapis\.com/);
   assert.doesNotMatch(slip, /FormData|upload.*modelPhoto/i);
 });
 
@@ -244,7 +259,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=7/);
+  assert.match(html, /assessment-adapter\.js\?v=8/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);

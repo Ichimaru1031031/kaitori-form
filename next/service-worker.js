@@ -1,11 +1,11 @@
-const CACHE = "kr-next-green-v75";
+const CACHE = "kr-next-green-v76";
 const SHELL = [
   "./",
   "./index.html",
   "./app.css",
   "./native.css",
   "./workflow.css?v=2",
-  "./slip-extra.css?v=2",
+  "./slip-extra.css?v=3",
   "./confirm-extra.css",
   "./api.css",
   "./inventory-process.css",
@@ -34,7 +34,7 @@ const SHELL = [
   "./appointments-ui.js",
   "./inventory.js",
   "./home-field.js",
-  "./assessment-adapter.js?v=7",
+  "./assessment-adapter.js?v=8",
   "./assessment.js?v=12",
   "./phone-assessment.js",
   "./slips.js?v=2",
@@ -42,7 +42,7 @@ const SHELL = [
   "./sales.js",
   "./home-fulfillment.js",
   "./global-search.js",
-  "./slip.js?v=8",
+  "./slip.js?v=9",
   "./workflow-router.js?v=2",
   "./manifest.webmanifest",
   "./data/snapshot.json",
