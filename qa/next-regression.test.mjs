@@ -118,6 +118,35 @@ test("NEXT slip distinguishes issued PDF from unsent customer delivery", () => {
   assert.match(html, /id="bluePdfSend" type="button" disabled/);
 });
 
+test("NEXT slip carries postal address lookup through confirmation and Green customer storage", () => {
+  assert.match(html, /id="postalCode"/);
+  assert.match(html, /id="lookupPostalCode"/);
+  assert.match(slip, /zipcloud\.ibsnet\.co\.jp\/api\/search/);
+  assert.match(slip, /postalCode:K\.\$\("#postalCode"\)\.value/);
+  assert.match(slip, /〒"\+draft\.customer\.postalCode/);
+  assert.match(greenGas, /postalCode:customer\.postalCode\|\|""/);
+});
+
+test("NEXT product entry offers private on-device camera OCR with manual confirmation", () => {
+  assert.match(slip, /capture="environment"/);
+  assert.match(slip, /カメラで型番ラベルを読み取る/);
+  assert.match(slip, /tesseract\.js@5\.1\.1/);
+  assert.match(slip, /worker\.recognize\(canvas\)/);
+  assert.match(slip, /tessedit_char_whitelist/);
+  assert.match(slip, /editDistance\(code,token\)/);
+  assert.match(slip, /ラベルと合っているか確認/);
+  assert.doesNotMatch(slip, /FormData|upload.*modelPhoto/i);
+});
+
+test("model suggestions prioritize local history and stay in a bounded scroller", async () => {
+  const slipCss = await readFile(new URL("../next/slip-extra.css", import.meta.url), "utf8");
+  assert.match(slip, /kr-next-model-history-v1/);
+  assert.match(slip, /最近入力/);
+  assert.match(slip, /rememberModel\(item\.category,item\.maker,item\.model,item\.year\)/);
+  assert.match(slipCss, /modelSuggestions\.scrollSuggestions\{max-height:/);
+  assert.match(slipCss, /ocrCandidates\{display:none;max-height:/);
+});
+
 test("protected Green bridge is used without exposing an anonymous write URL", () => {
   assert.match(greenApi, /hasProtectedAdapter\(\)/);
   assert.match(greenApi, /green-write/);
@@ -125,7 +154,7 @@ test("protected Green bridge is used without exposing an anonymous write URL", (
   assert.match(adapterGas, /case "green-write"/);
   assert.match(adapterGas, /GreenNext\.greenBridgeRequest\("write", payload\)/);
   assert.match(adapterManifest, /"userSymbol": "GreenNext"/);
-  assert.match(adapterManifest, /"version": "3"/);
+  assert.match(adapterManifest, /"version": "4"/);
 });
 
 test("issued slip PDF email uses stored customer data and explicit resend", () => {

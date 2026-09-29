@@ -967,9 +967,22 @@ function ensureFinalizedEntities_(p,confirmedAt){
     customerId=nextId_("NEXT-CUST");
     appendObject_("CUSTOMERS",{
       customerId:customerId,name:customer.name||"",phone:String(customer.phone||"").replace(/\D/g,""),email:customer.email||"",
-      postalCode:"",address:customer.address||"",preferredContact:"",lineUserId:"",source:"next",
+      postalCode:customer.postalCode||"",address:customer.address||"",preferredContact:"",lineUserId:"",source:"next",
       blueReceptionId:"",createdAt:confirmedAt,updatedAt:confirmedAt
     });
+  }else{
+    const customerRow=findRow_("CUSTOMERS","customerId",customerId);
+    if(customerRow){
+      const existing=rowObject_(sh_("CUSTOMERS"),customerRow);
+      updateRow_("CUSTOMERS",customerRow,{
+        name:customer.name||existing.name||"",
+        phone:String(customer.phone||existing.phone||"").replace(/\D/g,""),
+        email:customer.email||existing.email||"",
+        postalCode:customer.postalCode||existing.postalCode||"",
+        address:customer.address||existing.address||"",
+        updatedAt:confirmedAt
+      });
+    }
   }
   const hasPurchase=selected.indexOf("purchase")!==-1;
   if(!caseId){

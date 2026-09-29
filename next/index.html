@@ -514,7 +514,21 @@
           <div class="common">
             <label>お名前<input id="name" /></label
             ><label>電話<input id="phone" /></label
-            ><label>住所<input id="address" /></label
+            ><div class="commonField zipField">
+              <label for="postalCode">郵便番号</label>
+              <div class="zipLookupRow">
+                <input
+                  id="postalCode"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                  maxlength="8"
+                  placeholder="123-4567"
+                />
+                <button id="lookupPostalCode" type="button">住所検索</button>
+              </div>
+              <small id="postalLookupStatus" role="status"></small>
+            </div>
+            <label>住所<input id="address" autocomplete="street-address" /></label
             ><label>メール<input id="email" /></label>
           </div>
           <div class="services">
@@ -918,7 +932,7 @@
     <script src="./sales.js"></script>
     <script src="./home-fulfillment.js"></script>
     <script src="./global-search.js"></script>
-    <script src="./slip.js?v=2"></script>
+    <script src="./slip.js?v=3"></script>
     <script src="./workflow-router.js?v=2"></script>
   </body>
 </html>

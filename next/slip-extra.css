@@ -19,6 +19,16 @@
 .itemDelete:active{background:#fbe6e2}
 
 .productEditor{position:relative}
+.commonField>label{font-size:11px;font-weight:900;color:#52605c}
+.zipLookupRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:4px}
+.zipLookupRow input{margin:0!important}
+.zipLookupRow button{
+  border:1px solid #b9cec5;background:#eef7f3;color:#315f50;border-radius:10px;
+  padding:0 11px;font-size:11px;font-weight:900;white-space:nowrap
+}
+#postalLookupStatus{display:block;min-height:15px;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.4}
+#postalLookupStatus.success{color:#177a55}
+#postalLookupStatus.error{color:#a63b33}
 .productField{
   display:block;font-size:10px;font-weight:900;color:#56635f;margin-top:7px
 }
@@ -75,6 +85,17 @@
   font-size:10px;
   color:#78837e;
 }
+.modelInputRow{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:6px;align-items:center}
+.modelInputRow .model{margin-top:4px}
+.modelInputRow .scanModel{height:39px;margin-top:4px;border:1px solid #b9cec5;background:#eef7f3;color:#315f50;border-radius:10px;font-size:18px;font-weight:900}
+.modelInputRow .scanModel:disabled{opacity:.5}
+.modelAssistRow{min-height:17px;margin:3px 1px 5px}
+.modelAssistRow .ocrStatus{display:block;font-size:9px;color:var(--muted);line-height:1.45}
+.modelAssistRow .ocrStatus.error{color:#a63b33}
+.ocrCandidates{display:none;max-height:116px;overflow-y:auto;overscroll-behavior:contain;margin:0 0 7px;padding:7px;background:#f6f9f7;border:1px solid #dce7e2;border-radius:10px}
+.ocrCandidates.open{display:block}
+.ocrCandidates small{display:block;margin-bottom:5px;color:#60706a;font-size:9px}
+.ocrCandidates button{border:1px solid #cbdcd4;background:#fff;color:#26332f;border-radius:8px;padding:6px 8px;margin:2px;font-size:10px;font-weight:900}
 .categorySuggestions button b{font-size:13px!important}
 .makerSuggestions button:first-child b{color:#2f7864!important}
 .modelSuggestions.scrollSuggestions button{
