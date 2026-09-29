@@ -1,5 +1,5 @@
 (() => {
-  const URL = "https://script.google.com/macros/s/AKfycbyna99PhsT4kx3gFNsUYY3QJwY2C6aMJrx0bP4eSq2wVMJxbfCa6M0sr5I0DV2w20OP/exec";
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbyna99PhsT4kx3gFNsUYY3QJwY2C6aMJrx0bP4eSq2wVMJxbfCa6M0sr5I0DV2w20OP/exec";
   const TOKEN_KEY = "kr-next-assessment-session";
   const pending = new Map();
 
@@ -19,18 +19,9 @@
 
   addEventListener("message", (event) => {
     const data = event.data || {};
-    if (data.type === "kr-assessment-adapter-response") {
-      console.info("KR assessment adapter response", event.origin, data.requestId || "missing-id");
-    }
     if (data.type !== "kr-assessment-adapter-response" || !data.requestId) return;
     const item = pending.get(data.requestId);
     if (!item) return;
-    console.info(
-      "KR assessment adapter validation",
-      allowedOrigin(event.origin),
-      typeof data.channel,
-      data.channel === item.channel,
-    );
     if (!allowedOrigin(event.origin) || data.channel !== item.channel) return;
     clearTimeout(item.timer);
     pending.delete(data.requestId);
@@ -53,7 +44,7 @@
       frame.style.cssText = "position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0";
       const form = document.createElement("form");
       form.method = "post";
-      form.action = URL;
+      form.action = ENDPOINT;
       form.target = target;
       form.style.display = "none";
       const fields = {

@@ -34,7 +34,7 @@ const SHELL = [
   "./appointments-ui.js",
   "./inventory.js",
   "./home-field.js",
-  "./assessment-adapter.js?v=5",
+  "./assessment-adapter.js?v=6",
   "./assessment.js?v=7",
   "./phone-assessment.js",
   "./slips.js",
