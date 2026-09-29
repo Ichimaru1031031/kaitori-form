@@ -28,7 +28,10 @@ async function finalizeSnapshot(){
 
   const apiResult=syncState&&!syncState.queued?(syncState.result?.result||syncState.result||{}):null;
   const serviceOrderId=apiResult?.serviceOrderId||draft.sourceServiceOrderId||"";
-  K.$("#bluePdfSend").dataset.slip=serviceOrderId;
+  const blueSend=K.$("#bluePdfSend");
+  blueSend.dataset.slip=serviceOrderId;
+  blueSend.disabled=!serviceOrderId;
+  blueSend.textContent=serviceOrderId?"顧客へ送信（現行Blue）":"顧客送信は伝票確定後";
 
   const hasPurchase=draft.selected.includes("purchase");
   if(draft.caseId&&K.updateLocalCase){
@@ -47,7 +50,10 @@ async function finalizeSnapshot(){
   K.renderHome&&K.renderHome();
   K.$("#confirmedPanel").classList.remove("hidden");
   const generated=Array.isArray(apiResult?.inventory)?apiResult.inventory:[];
+  const pdfUrl=String(apiResult?.pdfFileUrl||"");
   let statusHtml="<b>✓ お客様確認済み・第"+version+"版</b><span>"+new Date(confirmedAt).toLocaleString("ja-JP")+(apiResult?" / Green保存済み":" / Green共有同期待ち")+"</span>";
+  statusHtml+='<div class="documentDeliveryStatus"><div><span>PDF</span><b>'+(apiResult?("第"+version+"版 発行済み"):"同期後に発行")+'</b></div><div><span>顧客送信</span><b class="unsent">未送信</b></div></div>';
+  if(pdfUrl)statusHtml+='<a class="confirmedPdfLink" target="_blank" rel="noopener" href="'+K.esc(pdfUrl)+'">発行PDFを確認</a>';
   if(generated.length)statusHtml+='<div class="generatedInventoryLinks"><small>在庫を自動生成しました</small>'+generated.map((x,i)=>'<button type="button" data-inv="'+K.esc(x.inventoryId||"")+'" data-no="'+K.esc(x.inventoryNo||"")+'">'+K.esc(x.inventoryNo||("在庫"+(i+1)))+' を開く</button>').join("")+'</div>';
   K.$("#confirmedPanel").innerHTML=statusHtml;
   K.$$("#confirmedPanel .generatedInventoryLinks button").forEach(b=>b.onclick=async()=>{
@@ -74,7 +80,7 @@ async function finalizeSnapshot(){
   K.$("#finalizeConfirmation").textContent="✓ 確定済み";
   await K.refreshResume();
 }
-K.$("#customerPreview").onclick=()=>{if(!draft)return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#finalizeConfirmation").disabled=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
+K.$("#customerPreview").onclick=()=>{if(!draft)return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#finalizeConfirmation").disabled=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";const send=K.$("#bluePdfSend");send.disabled=true;send.textContent="顧客送信は伝票確定後";send.dataset.slip="";K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
 K.$("#clearSignature").onclick=clearSignature;
 K.$("#finalizeConfirmation").onclick=finalizeSnapshot;
 K.$("#printPreview").onclick=()=>window.print();

@@ -3,7 +3,8 @@
   let filter = "all",
     query = "",
     loaded = false,
-    activeBlueCase = "";
+    activeBlueCase = "",
+    actionNotice = null;
   async function ensureCustomers() {
     if (loaded) return;
     if (Array.isArray(K.customers) && K.customers.length) {
@@ -155,12 +156,12 @@
     }
     try {
       const result = await KRAssessmentAdapter.run(operation, payload);
+      actionNotice = {
+        caseId: activeBlueCase,
+        kind: "success",
+        text: result?.message || success || "保存しました",
+      };
       await loadAssessmentCase({ id: activeBlueCase });
-      const nextResult = K.$("#nativeActionResult");
-      if (nextResult) {
-        nextResult.className = "nativeActionResult success";
-        nextResult.textContent = result?.message || success || "保存しました";
-      }
       refreshBlueList();
     } catch (e) {
       if (/SESSION_EXPIRED/.test(String(e.message || e))) {
@@ -177,6 +178,16 @@
       buttons.forEach((x) => (x.disabled = false));
     }
   }
+  function actionResultHtml(c) {
+    const notice = actionNotice?.caseId === (c.id || activeBlueCase) ? actionNotice : null;
+    return (
+      '<p id="nativeActionResult" class="nativeActionResult' +
+      (notice ? " " + K.esc(notice.kind) : "") +
+      '" aria-live="polite">' +
+      K.esc(notice?.text || "") +
+      "</p>"
+    );
+  }
   function nativeDetailHtml(c) {
     const status = String(c.status || "");
     const assessable = /新規|査定中|予約変更/.test(status);
@@ -185,9 +196,10 @@
     const rawItems = Array.isArray(c.items) && c.items.length ? c.items : String(c.productText || c.product || "商品").split(/\n/).filter(Boolean).map((name) => ({ name, amount: "" }));
     const itemRows = rawItems.map((item, index) => '<div class="nativeItem"><div><small>商品 ' + (index + 1) + '</small><b>' + K.esc(item.name || item.product || "商品") + '</b></div>' + (assessable ? '<label><span>査定額</span><input class="nativeAmount" inputmode="numeric" value="' + K.esc(item.amount || "") + '" placeholder="0"></label>' : '<strong>' + money(item.amount || 0) + '</strong>') + '</div>').join("");
     const visitFields = '<div class="nativeVisit"><label>訪問日<input id="nativeVisitDate" type="date" value="' + K.esc(c.visitDate || "") + '"></label><label>開始<input id="nativeVisitStart" type="time" value="' + K.esc(String(c.visitTime || "").split(/〜/)[0] || "10:00") + '"></label><label>終了<input id="nativeVisitEnd" type="time" value="' + K.esc(String(c.visitTime || "").split(/〜/)[1] || "12:00") + '"></label></div>';
-    let actions = '<div class="nativeLocked">この案件は現在「' + K.esc(c.nextAction || status || "確認") + '」です。</div>';
-    if (assessable) actions = (combined ? visitFields : "") + '<textarea id="nativeMessage" placeholder="お客様への追加メッセージ（任意）"></textarea><p id="nativeActionResult" class="nativeActionResult" aria-live="polite"></p><div class="nativeActionBar"><button id="nativeSaveAssessment">下書き保存</button><button id="nativeSendAssessment" class="assessmentPrimary">' + (combined ? "査定額と訪問日時を確認・送信" : "査定結果を確認・送信") + "</button></div>";
-    else if (visitEdit) actions = visitFields + '<textarea id="nativeMessage" placeholder="お客様への追加メッセージ（任意）"></textarea><p id="nativeActionResult" class="nativeActionResult" aria-live="polite"></p><div class="nativeActionBar"><button id="nativeSaveVisit">下書き保存</button><button id="nativeSendVisit" class="assessmentPrimary">訪問日時を確認・送信</button></div>';
+    const resultHtml = actionResultHtml(c);
+    let actions = resultHtml + '<div class="nativeLocked">この案件は現在「' + K.esc(c.nextAction || status || "確認") + '」です。</div>';
+    if (assessable) actions = (combined ? visitFields : "") + '<textarea id="nativeMessage" placeholder="お客様への追加メッセージ（任意）"></textarea>' + resultHtml + '<div class="nativeActionBar"><button id="nativeSaveAssessment">下書き保存</button><button id="nativeSendAssessment" class="assessmentPrimary">' + (combined ? "査定額と訪問日時を確認・送信" : "査定結果を確認・送信") + "</button></div>";
+    else if (visitEdit) actions = visitFields + '<textarea id="nativeMessage" placeholder="お客様への追加メッセージ（任意）"></textarea>' + resultHtml + '<div class="nativeActionBar"><button id="nativeSaveVisit">下書き保存</button><button id="nativeSendVisit" class="assessmentPrimary">訪問日時を確認・送信</button></div>';
     return '<div class="nativeAssessment"><section class="nativeHero"><div><small>' + K.esc(c.id || activeBlueCase) + '</small><h2>' + K.esc(c.name || "氏名未登録") + ' 様</h2><p>' + K.esc(status) + '</p></div><div class="nativeTotal"><small>査定合計</small><b>' + money(c.total || 0) + '</b></div></section><section class="nativeSection"><h3>📦 商品と査定額</h3>' + itemRows + '</section><section class="nativeSection"><h3>📋 今やること</h3>' + actions + '</section><details class="nativeMore"><summary>お客様情報</summary><p>電話：' + K.esc(c.phone || "—") + '</p><p>メール：' + K.esc(c.email || "—") + '</p><p>住所：' + K.esc(c.address || "—") + '</p></details></div>';
   }
   function bindNativeActions(c) {
@@ -221,9 +233,11 @@
     }
   }
   K.openAssessmentOps = async (caseInfo) => {
-    activeBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
+    const nextBlueCase = String(caseInfo?.id || caseInfo?.caseId || "")
       .replace(/^BLUE-CASE-/, "")
       .replace(/^BLUE-SLIP-CASE-/, "");
+    actionNotice = null;
+    activeBlueCase = nextBlueCase;
     if (!activeBlueCase) {
       K.$("#assessmentOpsTitle").textContent = "NEXT査定接続";
       K.$("#assessmentOpsSub").textContent = "Blue本番・LINE経路を安全に利用";

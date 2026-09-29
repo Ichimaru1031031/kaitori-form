@@ -97,3 +97,11 @@
   .modelSuggestions.scrollSuggestions{max-height:225px!important}
   .suggestionPanel button{min-height:42px;padding:10px!important}
 }
+
+.confirmActions button:disabled{opacity:.48;cursor:not-allowed}
+.documentDeliveryStatus{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}
+.documentDeliveryStatus>div{background:#fff;border:1px solid #dce8e2;border-radius:9px;padding:8px}
+.documentDeliveryStatus span{font-size:9px!important;margin:0!important}
+.documentDeliveryStatus b{font-size:11px;margin-top:3px}
+.documentDeliveryStatus .unsent{color:#9a631f}
+.confirmedPdfLink{display:block;margin-top:8px;padding:9px 10px;border-radius:9px;background:#fff;border:1px solid #bfd4cb;color:#315f50;text-align:center;text-decoration:none;font-weight:900}

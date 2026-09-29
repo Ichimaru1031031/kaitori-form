@@ -90,6 +90,14 @@ test("Green finalization keeps immutable PDF history and does not call LINE", ()
   );
 });
 
+test("NEXT slip distinguishes issued PDF from unsent customer delivery", () => {
+  assert.match(slip, /class="documentDeliveryStatus"/);
+  assert.match(slip, />未送信</);
+  assert.match(slip, /apiResult\?\.pdfFileUrl/);
+  assert.match(slip, /顧客へ送信（現行Blue）/);
+  assert.match(html, /id="bluePdfSend" type="button" disabled/);
+});
+
 test("native assessment, inventory, and sales controls bind without startup errors", () => {
   assert.match(assessment, /class="schedule">訪問予定/);
   assert.match(html, /id="detailEcPreview"/);
@@ -125,4 +133,15 @@ test("NEXT assessment uses the token-protected native workbench", () => {
   assert.doesNotMatch(assessment, /assessmentOpsFrame/);
   assert.match(assessment, /K\.requestBlueCases\?\.\(\)/);
   assert.doesNotMatch(assessment, /saveAndSend(?:Estimate|Visit|Combined)/);
+});
+
+test("assessment action result survives the post-send detail refresh", () => {
+  const noticeAt = assessment.indexOf("actionNotice = {");
+  const reloadAt = assessment.indexOf("await loadAssessmentCase", noticeAt);
+  assert.ok(noticeAt >= 0, "the action result must be stored");
+  assert.ok(
+    reloadAt > noticeAt,
+    "the action result must be stored before refreshing the case detail",
+  );
+  assert.match(assessment, /let actions = resultHtml \+ '<div class="nativeLocked">/);
 });
