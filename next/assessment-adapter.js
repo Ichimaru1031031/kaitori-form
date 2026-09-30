@@ -118,6 +118,20 @@
     return { ...result, url: url.toString() };
   }
 
+  async function claimLink(value) {
+    let token = String(value || "").trim();
+    try {
+      const url = new URL(token, location.href);
+      token = new URLSearchParams(String(url.hash || "").replace(/^#/, "")).get("connect") || "";
+    } catch {}
+    token = token.replace(/[^A-Za-z0-9]/g, "");
+    if (!token) throw new Error("接続リンクをコピーしてください");
+    const result = await request("claim-device-link", { token });
+    saveSession(result);
+    dispatchEvent(new CustomEvent("kr-assessment-connected"));
+    return result;
+  }
+
   function clear() {
     localStorage.removeItem(TOKEN_KEY);
   }
@@ -164,6 +178,7 @@
     init,
     pair,
     createDeviceLink,
+    claimLink,
     clear,
     hasSession,
     getCase: (id) => request("case", { id }),

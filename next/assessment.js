@@ -196,7 +196,20 @@
     body.innerHTML =
       '<div class="assessmentPair"><div class="assessmentPairIcon">📱</div><h2>この端末は閲覧中です</h2><p>査定の更新・送信には、接続済み端末で「設定 → 別の端末を接続」から24時間有効のリンクを作成し、この端末で一度だけ開いてください。</p>' +
       (linkError ? '<small id="assessmentPairError">端末接続リンクを確認できません。新しいリンクを作成してください。</small>' : '<small>一度接続すれば、この端末は継続して自動接続されます。</small>') +
+      '<button id="assessmentConnectClipboard" type="button">コピーした接続リンクを使う</button><small id="assessmentConnectResult" aria-live="polite"></small>' +
       '</div>';
+    K.$("#assessmentConnectClipboard")?.addEventListener("click", async () => {
+      const result = K.$("#assessmentConnectResult");
+      result.textContent = "接続中…";
+      try {
+        const value = await navigator.clipboard.readText();
+        await KRAssessmentAdapter.claimLink(value);
+        result.textContent = "この端末を接続しました。次回から自動接続されます。";
+        await loadAssessmentCase(caseInfo);
+      } catch (error) {
+        result.textContent = "接続できません：" + String(error.message || error);
+      }
+    });
   }
   function money(value) {
     return "¥" + Number(value || 0).toLocaleString("ja-JP");
