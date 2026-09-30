@@ -1269,6 +1269,7 @@
         K.digits(K.$("#detailSalePrice").value || detailItem.salePrice || 0),
       ),
       saleNote: K.$("#detailSaleNote").value || "",
+      description: K.$("#detailEcDescription").value || "",
     });
   };
   K.$("#detailAllHistory").onclick = () =>

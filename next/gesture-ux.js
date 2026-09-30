@@ -100,4 +100,8 @@
       grabber.addEventListener("pointercancel", reset);
     }
   };
+  K.$$('[data-swipe-dismiss]').forEach((sheet) => {
+    const overlayId = sheet.dataset.swipeDismiss;
+    K.enableSwipeSheet(sheet, () => K.overlay(overlayId)?.classList.remove("on"));
+  });
 })();

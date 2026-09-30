@@ -36,8 +36,8 @@
     <link rel="stylesheet" href="./header-actions.css?v=2" />
     <link rel="stylesheet" href="./inventory-photo.css?v=1" />
     <link rel="stylesheet" href="./inventory-compact.css?v=1" />
-    <link rel="stylesheet" href="./gesture-ux.css?v=1" />
-    <link rel="stylesheet" href="./price-card.css?v=1" />
+    <link rel="stylesheet" href="./gesture-ux.css?v=2" />
+    <link rel="stylesheet" href="./price-card.css?v=2" />
     <title>買取レスキュー NEXT</title>
   </head>
   <body>
@@ -472,7 +472,8 @@
       </section>
     </div>
     <div id="globalSearchModal" class="overlay">
-      <section class="compactSheet searchSheet">
+      <section class="compactSheet searchSheet" data-swipe-dismiss="globalSearchModal">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <div><b>全体検索</b><small>顧客・案件・伝票・在庫</small></div>
           <button data-close="globalSearchModal">×</button>
@@ -490,7 +491,8 @@
       </section>
     </div>
     <div id="drawer" class="overlay">
-      <section>
+      <section data-swipe-dismiss="drawer">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header><b>設定・接続</b><button class="drawerBack" data-close="drawer">← 戻る</button></header>
         <div class="apiPanel">
           <b>Green共有API</b><span id="apiState">状態確認中…</span
@@ -647,7 +649,8 @@
       </section>
     </div>
     <div id="phoneAssessmentModal" class="overlay">
-      <section class="compactSheet phoneAssessmentSheet">
+      <section class="compactSheet phoneAssessmentSheet" data-swipe-dismiss="phoneAssessmentModal">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <div><b>電話査定</b><small>電話受付をNEXT案件として保存</small></div>
           <button data-close="phoneAssessmentModal">×</button>
@@ -902,6 +905,10 @@
             <div class="priceCardEditorGrid">
               <label>キャッチフレーズ<input id="priceCardCatch" maxlength="34" /></label>
               <label>補足文<input id="priceCardNote" maxlength="48" placeholder="例：新生活におすすめ" /></label>
+              <label>品目<input id="priceCardCategory" maxlength="24" /></label>
+              <label>メーカー<input id="priceCardMaker" maxlength="32" /></label>
+              <label class="wide">型番<input id="priceCardModel" maxlength="64" /></label>
+              <label>年式<input id="priceCardYear" maxlength="16" /></label>
               <label>販売価格<input id="priceCardPrice" inputmode="numeric" /></label>
               <label>保証・サービス<input id="priceCardWarranty" maxlength="34" /></label>
               <label class="wide">付属品・状態<input id="priceCardCondition" maxlength="80" /></label>
@@ -915,7 +922,8 @@
       </section>
     </div>
     <div id="testModal" class="overlay">
-      <section class="compactSheet">
+      <section class="compactSheet" data-swipe-dismiss="testModal">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <b>テスト結果</b><button data-close="testModal">×</button>
         </header>
@@ -945,7 +953,8 @@
       </section>
     </div>
     <div id="processModal" class="overlay">
-      <section class="compactSheet processSheet">
+      <section class="compactSheet processSheet" data-swipe-dismiss="processModal">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <div>
             <b id="processTitle">工程変更</b><small id="processSub"></small>
@@ -965,7 +974,8 @@
       </section>
     </div>
     <div id="meModal" class="overlay">
-      <section class="compactSheet">
+      <section class="compactSheet" data-swipe-dismiss="meModal">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <b>この端末の「自分」</b><button data-close="meModal">×</button>
         </header>
@@ -978,7 +988,8 @@
       </section>
     </div>
     <div id="listModal" class="overlay">
-      <section class="compactSheet">
+      <section class="compactSheet" data-swipe-dismiss="listModal">
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <b id="listTitle">一覧</b><button data-close="listModal">×</button>
         </header>
@@ -990,12 +1001,12 @@
     <script src="./core.js?v=17"></script>
     <script src="./schedule.js?v=2"></script>
     <script src="./appointments-ui.js"></script>
-    <script src="./inventory.js?v=5"></script>
-    <script src="./gesture-ux.js?v=1"></script>
-    <script src="./price-card.js?v=1"></script>
+    <script src="./inventory.js?v=6"></script>
+    <script src="./gesture-ux.js?v=2"></script>
+    <script src="./price-card.js?v=2"></script>
     <script src="./home-field.js"></script>
     <script src="./assessment-adapter.js?v=10"></script>
-    <script src="./assessment.js?v=15"></script>
+    <script src="./assessment.js?v=16"></script>
     <script src="./phone-assessment.js"></script>
     <script src="./slips.js?v=3"></script>
     <script src="./recycle.js"></script>

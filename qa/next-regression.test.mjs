@@ -437,6 +437,15 @@ test("assessment stays inside NEXT without the GAS or legacy menu chrome", () =>
   assert.match(html, /id="assessmentView"/);
 });
 
+test("assessment restores form product text and only normalizes duplicated address display", () => {
+  assert.match(assessment, /x\.productText/);
+  assert.match(assessment, /x\.productsText/);
+  assert.match(assessment, /function displayAddress\(value\)/);
+  assert.match(assessment, /\\d\+\(\?:-\\d\+\)\{1,3\}/);
+  assert.match(assessment, /text\.slice\(-length \* 2, -length\) === tail/);
+  assert.match(assessment, /address: displayAddress\(x\.address \|\| c\.address \|\| ""\)/);
+});
+
 test("inventory detail supports downward close and horizontal photo browsing", () => {
   assert.match(html, /id="inventoryDetailModal"[\s\S]*data-swipe-sheet/);
   assert.match(gestureUx, /distance > 86/);
@@ -453,15 +462,29 @@ test("inventory creates three editable 100 by 70 mm price cards", () => {
   assert.match(html, /data-template="sale"/);
   assert.match(html, /data-template="editorial"/);
   assert.match(inventory, /K\.openPriceCard/);
-  assert.match(priceCard, /item\?\.maker/);
-  assert.match(priceCard, /item\?\.model/);
-  assert.match(priceCard, /displayYear\(item\?\.year\)/);
+  assert.match(priceCard, /source\.maker/);
+  assert.match(priceCard, /suggestedModel\(source\.model/);
+  assert.match(priceCard, /displayYear\(value\("priceCardYear"\)\)/);
+  assert.match(priceCard, /const suggestedModel/);
+  assert.match(priceCard, /descriptionLine\(description, "保証"\)/);
+  assert.match(priceCard, /priceCardModel/);
+  assert.match(priceCard, /priceCardMaker/);
   assert.match(priceCard, /window\.print\(\)/);
   assert.match(priceCardCss, /size:100mm 70mm/);
   assert.match(priceCardCss, /print-color-adjust:exact/);
   assert.match(priceCardCss, /\.priceCard\{/);
   assert.match(priceCardCss, /\.priceCard\.sale/);
   assert.match(priceCardCss, /\.priceCard\.editorial/);
+});
+
+test("secondary NEXT sheets share the safe downward-swipe dismissal", () => {
+  assert.match(html, /data-swipe-dismiss="globalSearchModal"/);
+  assert.match(html, /data-swipe-dismiss="drawer"/);
+  assert.match(html, /data-swipe-dismiss="phoneAssessmentModal"/);
+  assert.match(html, /data-swipe-dismiss="testModal"/);
+  assert.match(html, /data-swipe-dismiss="processModal"/);
+  assert.match(gestureUx, /\[data-swipe-dismiss\]/);
+  assert.match(gestureUx, /target\.closest\(interactive\)/);
 });
 
 test("header exposes recycle sales slip QR and recoverable settings actions", () => {

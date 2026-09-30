@@ -17,12 +17,37 @@
     if (!raw || /不明/.test(raw)) return "年式不明";
     return raw.includes("年") ? raw : raw + "年製";
   };
+  const descriptionLine = (description, label) => {
+    const line = String(description || "")
+      .split(/\n+/)
+      .find((row) => row.trim().startsWith(label));
+    return line ? line.replace(new RegExp("^" + label + "\\s*[→:：]?\\s*"), "").trim() : "";
+  };
+  const suggestedModel = (raw) => {
+    const text = String(raw || "").trim();
+    if (text.length <= 32) return text;
+    const tokens = [...text.matchAll(/[A-Z0-9][A-Z0-9().\/-]{3,}/gi)]
+      .map((match) => ({ token: match[0], index: match.index || 0 }))
+      .filter(({ token, index }) => {
+        const before = text.slice(Math.max(0, index - 3), index);
+        return (
+          /[A-Z]/i.test(token) &&
+          /\d/.test(token) &&
+          !/^20\d{2}$/.test(token) &&
+          !/^\d+(?:\.\d+)?(?:KG|L|V|K)$/.test(token) &&
+          !/管理$/.test(before) &&
+          !/^KR[A-Z]?\d+$/i.test(token)
+        );
+      });
+    const preferred = tokens.find(({ token }) => token.includes("-"));
+    return preferred?.token || tokens[0]?.token || text;
+  };
 
   function cardMarkup() {
-    const maker = item?.maker || "メーカー不明",
-      model = item?.model || "型番不明",
-      category = item?.category || "リユース家電",
-      year = displayYear(item?.year),
+    const maker = value("priceCardMaker") || "メーカー不明",
+      model = value("priceCardModel") || "型番不明",
+      category = value("priceCardCategory") || "リユース家電",
+      year = displayYear(value("priceCardYear")),
       spec = item?.spec || "詳しい状態はスタッフまで",
       condition = value("priceCardCondition") || spec,
       catchText = value("priceCardCatch"),
@@ -63,11 +88,22 @@
   K.openPriceCard = (source) => {
     item = { ...source };
     template = "premium";
-    K.$("#priceCardCatch").value = "安心して選べるリユース家電";
-    K.$("#priceCardNote").value = "";
+    const description = source.description || "",
+      state = descriptionLine(description, "商品状態"),
+      accessories = descriptionLine(description, "付属品"),
+      warranty = descriptionLine(description, "保証");
+    K.$("#priceCardCatch").value = /清掃|クリーニング/.test(description)
+      ? "清掃・動作確認済み"
+      : "安心して選べるリユース家電";
+    K.$("#priceCardNote").value = source.spec || "";
+    K.$("#priceCardCategory").value = source.category || "";
+    K.$("#priceCardMaker").value = source.maker || "";
+    K.$("#priceCardModel").value = suggestedModel(source.model || "");
+    K.$("#priceCardYear").value = source.year || "";
     K.$("#priceCardPrice").value = String(source.salePrice || "");
-    K.$("#priceCardWarranty").value = "安心の動作保証6か月";
-    K.$("#priceCardCondition").value = source.saleNote || source.spec || "";
+    K.$("#priceCardWarranty").value = warranty || "動作保証あり";
+    K.$("#priceCardCondition").value =
+      source.saleNote || [state, accessories].filter(Boolean).join(" ／ ") || source.spec || "";
     render();
     K.overlay("priceCardModal").classList.add("on");
   };
@@ -81,6 +117,10 @@
   [
     "priceCardCatch",
     "priceCardNote",
+    "priceCardCategory",
+    "priceCardMaker",
+    "priceCardModel",
+    "priceCardYear",
     "priceCardPrice",
     "priceCardWarranty",
     "priceCardCondition",

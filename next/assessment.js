@@ -41,11 +41,17 @@
         x.caseId || (String(id).startsWith("KR-") ? "BLUE-CASE-" + id : ""),
       name: x.name || String(x.title || "").replace(/様$/, "") || c.name || "",
       phone: x.phone || c.phone || "",
-      address: x.address || c.address || "",
+      address: displayAddress(x.address || c.address || ""),
       email: x.email || c.email || "",
       status: x.status || "",
       next: x.nextAction || x.next || "",
-      product: x.product || x.summary || "",
+      product:
+        x.productText ||
+        x.productsText ||
+        x.itemSummary ||
+        x.product ||
+        x.summary ||
+        "",
       items: Array.isArray(x.items) ? x.items : [],
       date: x.date || x.confirmedDate || "",
       time:
@@ -53,6 +59,21 @@
       total: Number(x.total || x.estimateTotal || 0),
       mode: x.mode || x.requestType || "",
     };
+  }
+  function displayAddress(value) {
+    let text = String(value || "")
+      .replace(/\s*,\s*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    text = text.replace(/(\d+(?:-\d+){1,3})\1$/, "$1");
+    for (let length = Math.floor(text.length / 2); length >= 5; length--) {
+      const tail = text.slice(-length);
+      if (text.slice(-length * 2, -length) === tail) {
+        text = text.slice(0, -length) + tail;
+        break;
+      }
+    }
+    return text;
   }
   function group(x) {
     if (/キャンセル/.test(x.status)) return "cancel";
