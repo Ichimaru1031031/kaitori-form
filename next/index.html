@@ -36,6 +36,8 @@
     <link rel="stylesheet" href="./header-actions.css?v=2" />
     <link rel="stylesheet" href="./inventory-photo.css?v=1" />
     <link rel="stylesheet" href="./inventory-compact.css?v=1" />
+    <link rel="stylesheet" href="./gesture-ux.css?v=1" />
+    <link rel="stylesheet" href="./price-card.css?v=1" />
     <title>買取レスキュー NEXT</title>
   </head>
   <body>
@@ -152,7 +154,7 @@
             <button id="refreshAssessment" type="button">↻ 同期</button
             ><button id="addPhoneAssessment" type="button">＋ 電話査定</button
             ><button id="openAssessmentDashboard" type="button">
-              全案件を操作
+              全案件を同期
             </button>
           </div>
         </section>
@@ -559,7 +561,8 @@
       </section>
     </div>
     <div id="assessmentOpsModal" class="overlay assessmentOpsOverlay">
-      <section class="assessmentOpsSheet">
+      <section class="assessmentOpsSheet" data-swipe-sheet>
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <div>
             <b id="assessmentOpsTitle">査定業務</b
@@ -758,7 +761,8 @@
       </section>
     </div>
     <div id="inventoryDetailModal" class="overlay">
-      <section class="detailSheet">
+      <section class="detailSheet" data-swipe-sheet>
+        <div class="sheetGrabber" aria-hidden="true"></div>
         <header>
           <div>
             <b id="detailInventoryNo">在庫詳細</b
@@ -781,7 +785,8 @@
             <button id="detailAddPhoto" type="button">📷 写真追加</button
             ><button id="detailAddTest" type="button">✓ テスト結果</button
             ><button id="detailSourceSlip" type="button">📄 元伝票</button
-            ><button id="detailPdf" type="button">PDF</button>
+            ><button id="detailPdf" type="button">PDF</button
+            ><button id="detailPriceCard" type="button">🏷 プライスカード</button>
           </section>
           <input
             id="detailPhotoInput"
@@ -876,6 +881,39 @@
         </div>
       </section>
     </div>
+    <div id="priceCardModal" class="overlay priceCardOverlay">
+      <section class="priceCardSheet" data-swipe-sheet>
+        <div class="sheetGrabber" aria-hidden="true"></div>
+        <header>
+          <div><b>プライスカード作成</b><small>在庫情報を自動反映・100×70mm</small></div>
+          <button id="closePriceCard" type="button" aria-label="閉じる">×</button>
+        </header>
+        <div class="priceCardBody">
+          <nav id="priceCardTemplates" class="priceCardTemplates" aria-label="デザインを選択">
+            <button type="button" data-template="premium" class="active"><b>プレミアム</b><small>上質・安心感</small></button>
+            <button type="button" data-template="sale"><b>セールPOP</b><small>価格が一目で伝わる</small></button>
+            <button type="button" data-template="editorial"><b>シンプル</b><small>仕様を読みやすく</small></button>
+          </nav>
+          <div class="priceCardActions">
+            <button id="printPriceCard" class="primary" type="button">このデザインを印刷・PDF保存</button>
+          </div>
+          <details class="priceCardEditor">
+            <summary>表示する文言を調整</summary>
+            <div class="priceCardEditorGrid">
+              <label>キャッチフレーズ<input id="priceCardCatch" maxlength="34" /></label>
+              <label>補足文<input id="priceCardNote" maxlength="48" placeholder="例：新生活におすすめ" /></label>
+              <label>販売価格<input id="priceCardPrice" inputmode="numeric" /></label>
+              <label>保証・サービス<input id="priceCardWarranty" maxlength="34" /></label>
+              <label class="wide">付属品・状態<input id="priceCardCondition" maxlength="80" /></label>
+            </div>
+          </details>
+          <p class="priceCardHint">メーカー・型番・年式・価格は必ず表示します。長い型番は自動で縮小します。</p>
+          <div class="priceCardPreviewFrame">
+            <article id="priceCardPreview" class="priceCard premium" aria-label="プライスカードのプレビュー"></article>
+          </div>
+        </div>
+      </section>
+    </div>
     <div id="testModal" class="overlay">
       <section class="compactSheet">
         <header>
@@ -952,10 +990,12 @@
     <script src="./core.js?v=17"></script>
     <script src="./schedule.js?v=2"></script>
     <script src="./appointments-ui.js"></script>
-    <script src="./inventory.js?v=4"></script>
+    <script src="./inventory.js?v=5"></script>
+    <script src="./gesture-ux.js?v=1"></script>
+    <script src="./price-card.js?v=1"></script>
     <script src="./home-field.js"></script>
     <script src="./assessment-adapter.js?v=10"></script>
-    <script src="./assessment.js?v=14"></script>
+    <script src="./assessment.js?v=15"></script>
     <script src="./phone-assessment.js"></script>
     <script src="./slips.js?v=3"></script>
     <script src="./recycle.js"></script>
@@ -963,7 +1003,7 @@
     <script src="./home-fulfillment.js"></script>
     <script src="./global-search.js"></script>
     <script src="./slip.js?v=16"></script>
-    <script src="./workflow-router.js?v=4"></script>
+    <script src="./workflow-router.js?v=5"></script>
     <script src="./header-actions.js?v=1"></script>
   </body>
 </html>

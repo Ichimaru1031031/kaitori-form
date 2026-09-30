@@ -62,6 +62,18 @@ const inventoryCompactCss = await readFile(
   new URL("../next/inventory-compact.css", import.meta.url),
   "utf8",
 );
+const gestureUx = await readFile(
+  new URL("../next/gesture-ux.js", import.meta.url),
+  "utf8",
+);
+const priceCard = await readFile(
+  new URL("../next/price-card.js", import.meta.url),
+  "utf8",
+);
+const priceCardCss = await readFile(
+  new URL("../next/price-card.css", import.meta.url),
+  "utf8",
+);
 const greenGas = await readFile(
   new URL("../next-green-gas/Code.gs", import.meta.url),
   "utf8",
@@ -416,10 +428,40 @@ test("inventory uses compact tappable rows and separates completed sales", () =>
   assert.match(inventoryCompactCss, /\.processStageList[\s\S]*overflow-x: auto/);
 });
 
-test("assessment tab opens the existing production dashboard directly", () => {
-  assert.match(workflowRouter, /if \(tab === "assessment"\)[\s\S]*location\.href = K\.blue\.assessment/);
-  assert.match(core, /assessment:\s*K\.C\.assessment/);
-  assert.match(core, /AKfycby5yXQfe2Ki8V3TXqNTj1by9GtRZEo4a-yfdvsQ0e2k-EaUwnoeBpnprpRX1LjkMSUI/);
+test("assessment stays inside NEXT without the GAS or legacy menu chrome", () => {
+  assert.match(workflowRouter, /if \(tab === "assessment"\)[\s\S]*K\.screen\("assessmentView"\)/);
+  assert.match(workflowRouter, /K\.requestBlueCases\?\.\(\)/);
+  assert.doesNotMatch(workflowRouter, /location\.href = K\.blue\.assessment/);
+  assert.match(assessment, /nativeDetailHtml\(caseInfo, true\)/);
+  assert.match(assessment, /NEXT表示モード/);
+  assert.match(html, /id="assessmentView"/);
+});
+
+test("inventory detail supports downward close and horizontal photo browsing", () => {
+  assert.match(html, /id="inventoryDetailModal"[\s\S]*data-swipe-sheet/);
+  assert.match(gestureUx, /distance > 86/);
+  assert.match(gestureUx, /Math\.abs\(dx\) > Math\.abs\(raw\) \* 1\.15/);
+  assert.match(gestureUx, /sheet\.scrollTop > 2/);
+  assert.match(inventory, /K\.enableSwipeSheet/);
+  assert.match(assessment, /K\.enableSwipeSheet/);
+  assert.match(inventory, /classList\.toggle\("swipeGallery", photos\.length > 0\)/);
+});
+
+test("inventory creates three editable 100 by 70 mm price cards", () => {
+  assert.match(html, /id="detailPriceCard"/);
+  assert.match(html, /data-template="premium"/);
+  assert.match(html, /data-template="sale"/);
+  assert.match(html, /data-template="editorial"/);
+  assert.match(inventory, /K\.openPriceCard/);
+  assert.match(priceCard, /item\?\.maker/);
+  assert.match(priceCard, /item\?\.model/);
+  assert.match(priceCard, /displayYear\(item\?\.year\)/);
+  assert.match(priceCard, /window\.print\(\)/);
+  assert.match(priceCardCss, /size:100mm 70mm/);
+  assert.match(priceCardCss, /print-color-adjust:exact/);
+  assert.match(priceCardCss, /\.priceCard\{/);
+  assert.match(priceCardCss, /\.priceCard\.sale/);
+  assert.match(priceCardCss, /\.priceCard\.editorial/);
 });
 
 test("header exposes recycle sales slip QR and recoverable settings actions", () => {

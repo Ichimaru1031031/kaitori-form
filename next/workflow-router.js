@@ -8,7 +8,10 @@
       return;
     }
     if (tab === "assessment") {
-      location.href = K.blue.assessment;
+      K.screen("assessmentView");
+      K.setNav("assessment");
+      K.renderAssessment && K.renderAssessment();
+      K.requestBlueCases?.();
       return;
     }
     const native = {

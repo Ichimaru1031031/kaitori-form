@@ -899,6 +899,7 @@
     u.searchParams.delete("inventory");
     history.replaceState(null, "", u);
   }
+  K.closeInventoryDetail = closeDetail;
   function maybeDirectOpen() {
     if (directHandled || !K.snap.inventory.length) return;
     const key = new URL(location.href).searchParams.get("inventory");
@@ -1260,8 +1261,26 @@
     const d = detailItem && relatedDoc(detailItem);
     if (d?.fileUrl) window.open(d.fileUrl, "_blank", "noopener");
   };
+  K.$("#detailPriceCard").onclick = () => {
+    if (!detailItem || !K.openPriceCard) return;
+    K.openPriceCard({
+      ...detailItem,
+      salePrice: Number(
+        K.digits(K.$("#detailSalePrice").value || detailItem.salePrice || 0),
+      ),
+      saleNote: K.$("#detailSaleNote").value || "",
+    });
+  };
   K.$("#detailAllHistory").onclick = () =>
     detailItem && openProcess(detailItem, true);
+  setTimeout(
+    () =>
+      K.enableSwipeSheet?.(
+        K.$("#inventoryDetailModal [data-swipe-sheet]"),
+        closeDetail,
+      ),
+    0,
+  );
   K.$("#detailShareUrl").onclick = async () => {
     if (!detailItem) return;
     const url = directUrl(detailItem);
