@@ -2,7 +2,7 @@ const ADAPTER = Object.freeze({
   PAIR_HASH: "8f2be2c80f42c3d4a52ea98d2013127cae1fa596a5c7ecab49ad57b07a459cd9",
   SESSION_DAYS: 365,
   OCR_SESSION_SECONDS: 21600,
-  DEVICE_LINK_MINUTES: 10,
+  DEVICE_LINK_MINUTES: 1440,
 });
 
 function doGet(e) {
@@ -185,7 +185,7 @@ function createDeviceLink_() {
   const token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
   const expiresAt = Date.now() + ADAPTER.DEVICE_LINK_MINUTES * 60000;
   PropertiesService.getScriptProperties().setProperty("device-link:" + hash_(token), String(expiresAt));
-  return { ok: true, deviceToken: token, expiresAt: new Date(expiresAt).toISOString() };
+  return { ok: true, deviceToken: token, expiresAt: new Date(expiresAt).toISOString(), validHours: 24 };
 }
 
 function claimDeviceLink_(token) {

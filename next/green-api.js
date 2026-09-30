@@ -354,8 +354,8 @@
               copied = true;
             } catch {}
             result.textContent = copied
-              ? "10分有効の端末追加リンクをコピーしました"
-              : "10分有効のリンク：" + issued.url;
+              ? "24時間有効の端末接続リンクをコピーしました。接続後は継続利用できます"
+              : "24時間有効のリンク：" + issued.url;
           } catch (error) {
             result.textContent = "作成できません：" + String(error.message || error);
           }

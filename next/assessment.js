@@ -194,8 +194,8 @@
     const linkError = sessionStorage.getItem("kr-next-device-link-error") || "";
     sessionStorage.removeItem("kr-next-device-link-error");
     body.innerHTML =
-      '<div class="assessmentPair"><div class="assessmentPairIcon">📱</div><h2>この端末を追加</h2><p>接続コードの入力は廃止しました。接続済みの端末で「その他 → 新しい端末を追加」を押し、10分有効のリンクをこの端末で開いてください。</p>' +
-      (linkError ? '<small id="assessmentPairError">端末追加リンクを確認できません。新しいリンクを作成してください。</small>' : '<small>通常の利用時は自動接続されます。</small>') +
+      '<div class="assessmentPair"><div class="assessmentPairIcon">📱</div><h2>この端末は閲覧中です</h2><p>査定の更新・送信には、接続済み端末で「設定 → 別の端末を接続」から24時間有効のリンクを作成し、この端末で一度だけ開いてください。</p>' +
+      (linkError ? '<small id="assessmentPairError">端末接続リンクを確認できません。新しいリンクを作成してください。</small>' : '<small>一度接続すれば、この端末は継続して自動接続されます。</small>') +
       '</div>';
   }
   function money(value) {

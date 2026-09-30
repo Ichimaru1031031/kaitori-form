@@ -578,7 +578,7 @@ test("NEXT assessment uses the token-protected native workbench", () => {
 
 test("NEXT assessment removes code entry and uses a one-time device link", () => {
   assert.doesNotMatch(assessment, /id="assessmentPairCode"/);
-  assert.match(assessment, /接続コードの入力は廃止しました/);
+  assert.doesNotMatch(assessment, /接続コードを入力/);
   assert.match(html, /id="issueDeviceLink"/);
   assert.match(assessmentAdapter, /claim-device-link/);
   assert.match(assessmentAdapter, /createDeviceLink/);
@@ -587,6 +587,9 @@ test("NEXT assessment removes code entry and uses a one-time device link", () =>
   assert.match(adapterGas, /function claimDeviceLink_/);
   assert.match(adapterGas, /properties\.deleteProperty\(key\)/);
   assert.match(adapterGas, /SESSION_DAYS: 365/);
+  assert.match(adapterGas, /DEVICE_LINK_MINUTES: 1440/);
+  assert.match(assessment, /24時間有効/);
+  assert.match(assessment, /継続して自動接続/);
   assert.match(adapterGas, /properties\.setProperty\(key, String\(Date\.now\(\) \+ ADAPTER\.SESSION_DAYS/);
 });
 
