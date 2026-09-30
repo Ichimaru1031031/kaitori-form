@@ -160,6 +160,7 @@
       test: 0,
       salesprep: 0,
       mine: 0,
+      complete: 0,
     };
     const active = (K.snap.inventory || []).filter(
       (x) => effectiveStage(x) !== "販売完了",
@@ -168,6 +169,9 @@
       (a, b) => score(effectiveUpdated(b)) - score(effectiveUpdated(a)),
     );
     modes.recent = Math.min(20, sorted.length);
+    modes.complete = (K.snap.inventory || []).filter(
+      (x) => effectiveStage(x) === "販売完了",
+    ).length;
     for (const x of active) {
       const m = classForMode(x);
       for (const k of ["today", "clean", "test", "salesprep", "mine"])
@@ -184,6 +188,7 @@
         ["test", "テスト待ち"],
         ["salesprep", "販売準備"],
         ["mine", "自分の作業中"],
+        ["complete", "販売終了"],
       ];
     K.$("#inventoryQuick").innerHTML = defs
       .map(
@@ -264,7 +269,9 @@
     const q = K.norm(query);
     let rows = (K.snap.inventory || []).filter(
       (x) =>
-        effectiveStage(x) !== "販売完了" &&
+        (mode === "complete"
+          ? effectiveStage(x) === "販売完了"
+          : effectiveStage(x) !== "販売完了") &&
         (stage === "all" || effectiveStage(x) === stage) &&
         (!q ||
           K.norm(
@@ -278,7 +285,11 @@
           ).includes(q)),
     );
     if (mode !== "all") {
-      if (mode === "recent")
+      if (mode === "complete") {
+        rows.sort(
+          (a, b) => score(effectiveUpdated(b)) - score(effectiveUpdated(a)),
+        );
+      } else if (mode === "recent")
         rows.sort(
           (a, b) => score(effectiveUpdated(b)) - score(effectiveUpdated(a)),
         );
@@ -322,16 +333,15 @@
   function card(item) {
     const c = document.createElement("article"),
       s = effectiveStage(item),
-      emp = effectiveEmployee(item),
       firstPhoto = staticPhotosFor(item)[0],
       thumb = firstPhoto ? inventoryPhotoSrc(firstPhoto) : "";
-    c.className = "inventoryCard";
+    c.className =
+      "inventoryCard compactInventoryCard" +
+      (s === "販売完了" ? " inventoryComplete" : "");
+    c.tabIndex = 0;
+    c.setAttribute("role", "button");
+    c.setAttribute("aria-label", (item.inventoryNo || item.inventoryId) + " の詳細を開く");
     c.innerHTML =
-      '<div class="inventoryTop"><span class="inventoryNo">' +
-      K.esc(item.inventoryNo || item.inventoryId) +
-      '</span><span class="stageBadge">' +
-      K.esc(s) +
-      '</span></div><div class="inventorySummary">' +
       (thumb
         ? '<img class="inventoryThumb" src="' +
           K.esc(thumb) +
@@ -339,31 +349,28 @@
           K.esc(firstPhoto.fileName || "在庫写真") +
           '">'
         : '<span class="inventoryThumb empty" aria-hidden="true">📦</span>') +
-      '<div class="inventorySummaryBody"><div class="inventoryName">' +
+      '<div class="inventoryCompactBody"><b class="inventoryNo">' +
+      K.esc(item.inventoryNo || item.inventoryId) +
+      '</b><strong class="inventoryName">' +
       K.esc(
         [item.maker, item.model].filter(Boolean).join(" / ") || item.category,
       ) +
-      '</div><div class="inventorySub">' +
+      '</strong><span class="inventorySub">' +
       K.esc(
         [item.category, item.year, item.spec].filter(Boolean).join(" ・ "),
       ) +
-      "<br>買取 ¥" +
-      Number(item.purchasePrice || 0).toLocaleString() +
-      " / 販売 ¥" +
+      '</span></div><div class="inventoryCompactSide"><span class="stageBadge">' +
+      K.esc(s === "販売完了" ? "販売終了" : s) +
+      '</span><b>¥' +
       Number(item.salePrice || 0).toLocaleString() +
-      "</div></div></div>" +
-      trailHtml(item) +
-      '<div class="inventoryNext">次：' +
-      K.esc(nextAction(item)) +
-      '</div><div class="inventoryActions"><button class="detailBtn">詳細</button><button class="source">元伝票</button><button class="processBtn">工程変更</button></div>';
-    c.querySelector(".detailBtn").onclick = () => openDetail(item);
-    c.querySelector(".source").onclick = () =>
-      item.sourceServiceOrderId
-        ? K.openBlue("slips", { slip: item.sourceServiceOrderId })
-        : K.openBlue("slips");
-    c.querySelector(".processBtn").onclick = () => openProcess(item);
-    const trail = c.querySelector(".processTrail");
-    if (trail) trail.onclick = () => openProcess(item, true);
+      '</b><i aria-hidden="true">›</i></div>';
+    c.onclick = () => openDetail(item);
+    c.onkeydown = (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openDetail(item);
+      }
+    };
     return c;
   }
   K.renderInventory = async () => {
@@ -376,7 +383,9 @@
     const rows = rowsFiltered();
     K.$("#inventoryCount").textContent = rows.length + "件";
     K.$("#inventorySortLabel").textContent =
-      mode === "recent"
+      mode === "complete"
+        ? "販売終了・更新順"
+        : mode === "recent"
         ? "最近更新順"
         : mode === "today"
           ? "今日触った順"

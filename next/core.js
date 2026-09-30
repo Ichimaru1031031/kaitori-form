@@ -77,8 +77,16 @@
     );
   K.openBlue = (tab, params) => {
     K.screen("module");
-    K.setNav("");
+    K.setNav(tab === "assessment" ? "assessment" : "");
     K.$("#moduleTitle").textContent = K.titles[tab] || tab;
+    const moduleSub = K.$("#moduleSub");
+    if (moduleSub)
+      moduleSub.textContent =
+        tab === "assessment"
+          ? "旧査定ダッシュボード・本番データ"
+          : "現行Blue互換モード";
+    const newSlip = K.$("#newSlip");
+    if (newSlip) newSlip.classList.toggle("hidden", tab === "assessment");
     let u = new URL(K.blue[tab]);
     u.searchParams.set("embed", "1");
     u.searchParams.set("_next", Date.now());
@@ -86,6 +94,7 @@
       ([k, v]) => v && u.searchParams.set(k, v),
     );
     K.$("#frame").src = u.toString();
+    K.$("#frame").title = K.titles[tab] || tab;
   };
   K.openTab = (tab) => {
     if (tab === "home") {
@@ -433,7 +442,7 @@
     if ("serviceWorker" in navigator)
       window.addEventListener("load", () =>
         navigator.serviceWorker
-          .register("./service-worker.js?v=24", { updateViaCache: "none" })
+          .register("./service-worker.js?v=25", { updateViaCache: "none" })
           .then((r) => r.update())
           .catch(() => {}),
       );

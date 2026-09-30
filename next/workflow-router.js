@@ -7,9 +7,12 @@
       K.setNav("home");
       return;
     }
+    if (tab === "assessment") {
+      location.href = K.blue.assessment;
+      return;
+    }
     const native = {
       schedule: ["scheduleView", "renderCalendar"],
-      assessment: ["assessmentView", "renderAssessment"],
       slips: ["slipsView", "renderSlips"],
       inventory: ["inventoryView", "renderInventory"],
       recycle: ["recycleView", "renderRecycle"],

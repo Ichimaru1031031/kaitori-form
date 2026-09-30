@@ -58,6 +58,10 @@ const headerCss = await readFile(
   new URL("../next/header-actions.css", import.meta.url),
   "utf8",
 );
+const inventoryCompactCss = await readFile(
+  new URL("../next/inventory-compact.css", import.meta.url),
+  "utf8",
+);
 const greenGas = await readFile(
   new URL("../next-green-gas/Code.gs", import.meta.url),
   "utf8",
@@ -400,6 +404,22 @@ test("inventory photos render as a horizontal swipe gallery", () => {
   assert.match(headerCss, /scroll-snap-type:x mandatory/);
   assert.match(headerCss, /\.swipeGallery \.detailPhoto/);
   assert.match(greenGas, /file\.setSharing\(DriveApp\.Access\.ANYONE_WITH_LINK/);
+});
+
+test("inventory uses compact tappable rows and separates completed sales", () => {
+  assert.match(inventory, /compactInventoryCard/);
+  assert.match(inventory, /c\.onclick = \(\) => openDetail\(item\)/);
+  assert.match(inventory, /mode === "complete"/);
+  assert.match(inventory, /\["complete", "販売終了"\]/);
+  assert.match(inventoryCompactCss, /grid-template-columns: 72px minmax\(0, 1fr\) auto/);
+  assert.match(inventoryCompactCss, /compactInventoryCard\.inventoryComplete/);
+  assert.match(inventoryCompactCss, /\.processStageList[\s\S]*overflow-x: auto/);
+});
+
+test("assessment tab opens the existing production dashboard directly", () => {
+  assert.match(workflowRouter, /if \(tab === "assessment"\)[\s\S]*location\.href = K\.blue\.assessment/);
+  assert.match(core, /assessment:\s*K\.C\.assessment/);
+  assert.match(core, /AKfycby5yXQfe2Ki8V3TXqNTj1by9GtRZEo4a-yfdvsQ0e2k-EaUwnoeBpnprpRX1LjkMSUI/);
 });
 
 test("header exposes recycle sales slip QR and recoverable settings actions", () => {
