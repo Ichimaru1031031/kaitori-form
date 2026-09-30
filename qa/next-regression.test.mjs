@@ -62,6 +62,10 @@ const inventoryCompactCss = await readFile(
   new URL("../next/inventory-compact.css", import.meta.url),
   "utf8",
 );
+const slipCompactCss = await readFile(
+  new URL("../next/slip-compact.css", import.meta.url),
+  "utf8",
+);
 const gestureUx = await readFile(
   new URL("../next/gesture-ux.js", import.meta.url),
   "utf8",
@@ -509,6 +513,30 @@ test("slip list reloads live Green delivery status through the protected adapter
   assert.match(slips, /顧客へ未送信/);
   assert.match(slips, /送信失敗/);
   assert.match(slips, /Number\(d\.version \|\| 0\) > Number\(old\.version \|\| 0\)/);
+});
+
+test("slip and assessment lists share the compact tappable NEXT layout", () => {
+  assert.match(slips, /compactSlipRow/);
+  assert.match(slips, /class="slipMore"/);
+  assert.match(slips, /card\.classList\.toggle\("actionsOpen"\)/);
+  assert.match(slips, /openNextSlip\(\)/);
+  assert.match(slips, />現行編集</);
+  assert.match(slips, />PDF</);
+  assert.match(slips, />関連在庫</);
+
+  assert.match(assessment, /compactAssessmentRow/);
+  assert.match(assessment, /class="assessmentMore"/);
+  assert.match(assessment, /c\.classList\.toggle\("actionsOpen"\)/);
+  assert.match(assessment, /K\.openAssessmentOps\(x\)/);
+  assert.match(assessment, /☎ TEL/);
+  assert.match(assessment, />訪問予定</);
+  assert.match(assessment, />NEXT伝票</);
+
+  assert.match(slipCompactCss, /\.compactSlipRow/);
+  assert.match(slipCompactCss, /\.compactAssessmentRow/);
+  assert.match(slipCompactCss, /grid-template-columns:58px minmax\(0,1fr\) auto/);
+  assert.match(slipCompactCss, /\.compactActions\{display:none/);
+  assert.match(slipCompactCss, /actionsOpen .*compactActions\{display:grid/);
 });
 
 test("native assessment, inventory, and sales controls bind without startup errors", () => {

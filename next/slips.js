@@ -145,38 +145,6 @@
         );
       const name =
         c.name || String(k.title || "").replace(/様$/, "") || "顧客未登録";
-      const card = document.createElement("article");
-      card.className = "slipCardNative";
-      card.innerHTML =
-        '<div class="slipTop"><div><b class="slipCustomerName">' +
-        K.esc(name) +
-        '</b><span class="slipId">' +
-        K.esc(x.serviceOrderId) +
-        "</span></div><em>" +
-        K.esc(x.status || "") +
-        '</em></div><div class="slipServices">' +
-        K.esc(sv.join("・") || "業務未設定") +
-        '</div><div class="slipMoney"><span>販売/作業 ¥' +
-        Number(x.salesWorkTotal || 0).toLocaleString() +
-        "</span><span>買取 -¥" +
-        Number(x.purchaseTotal || 0).toLocaleString() +
-        "</span><b>差引 ¥" +
-        Number(x.netTotal || 0).toLocaleString() +
-        "</b></div>" +
-        delivery(d) +
-        '<div class="slipActions"><button class="edit">現行編集</button>' +
-        (d && d.fileUrl
-          ? '<a class="pdf" target="_blank" rel="noopener" href="' +
-            K.esc(d.fileUrl) +
-            '">PDF</a>'
-          : "<button disabled>PDFなし</button>") +
-        '<button class="related">関連在庫</button><button class="next">NEXT下書き</button></div>';
-      card.querySelector(".edit").onclick = () =>
-        K.openBlue("slips", { slip: x.serviceOrderId });
-      card.querySelector(".related").onclick = () =>
-        K.openInventoryForSlip
-          ? K.openInventoryForSlip(x.serviceOrderId)
-          : K.openTab("inventory");
       const openNextSlip = () =>
         K.openSlip &&
         K.openSlip({
@@ -187,7 +155,45 @@
           phone: c.phone,
           email: c.email,
         });
-      card.querySelector(".next").onclick = openNextSlip;
+      const net = Number(x.netTotal || 0),
+        amountLabel = net < 0 ? "買取 ¥" + Math.abs(net).toLocaleString() : "¥" + net.toLocaleString(),
+        firstService = parse(x.selectedServicesJson)[0] || "other";
+      const card = document.createElement("article");
+      card.className = "slipCardNative compactSlipRow";
+      card.innerHTML =
+        '<div class="slipCompactMain"><span class="slipThumb ' +
+        K.esc(firstService) +
+        '" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span><div class="slipCompactBody"><b class="slipCustomerName">' +
+        K.esc(name) +
+        ' 様</b><span class="slipId">' +
+        K.esc(x.serviceOrderId) +
+        '</span><strong class="slipServices">' +
+        K.esc(sv.join("・") || "業務未設定") +
+        '</strong>' +
+        delivery(d) +
+        '</div><div class="slipCompactSide"><em>' +
+        K.esc(x.status || "未設定") +
+        '</em><b>' +
+        K.esc(amountLabel) +
+        '</b><i aria-hidden="true">›</i><button class="slipMore" type="button" aria-expanded="false" aria-label="伝票のその他操作">•••</button></div></div>' +
+        '<div class="slipActions compactActions"><button class="edit">現行編集</button>' +
+        (d && d.fileUrl
+          ? '<a class="pdf" target="_blank" rel="noopener" href="' +
+            K.esc(d.fileUrl) +
+            '">PDF</a>'
+          : "<button disabled>PDFなし</button>") +
+        '<button class="related">関連在庫</button></div>';
+      card.querySelector(".edit").onclick = () =>
+        K.openBlue("slips", { slip: x.serviceOrderId });
+      card.querySelector(".related").onclick = () =>
+        K.openInventoryForSlip
+          ? K.openInventoryForSlip(x.serviceOrderId)
+          : K.openTab("inventory");
+      card.querySelector(".slipMore").onclick = (event) => {
+        event.stopPropagation();
+        const expanded = card.classList.toggle("actionsOpen");
+        event.currentTarget.setAttribute("aria-expanded", String(expanded));
+      };
       card.tabIndex = 0;
       card.setAttribute("role", "button");
       card.setAttribute("aria-label", name + " 様の伝票を開く");

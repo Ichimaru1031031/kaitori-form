@@ -387,29 +387,35 @@
     }
     rows.forEach((x) => {
       const c = document.createElement("article");
-      c.className = "assessmentCard";
-      c.dataset.group = group(x);
-      const tel = K.digits(x.phone) ? "tel:" + K.digits(x.phone) : "";
+      const rowGroup = group(x),
+        tel = K.digits(x.phone) ? "tel:" + K.digits(x.phone) : "";
+      c.className = "assessmentCard compactAssessmentRow";
+      c.dataset.group = rowGroup;
       c.innerHTML =
-        '<div class="assessmentTop"><div><b>' +
+        '<div class="assessmentCompactMain"><span class="assessmentThumb ' +
+        K.esc(rowGroup) +
+        '" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H13l7 7-8.5 8.5a1.7 1.7 0 0 1-2.4 0L4.5 14.9A1.7 1.7 0 0 1 4 13.7z"/><circle cx="8" cy="8" r="1.3"/><path d="M11 11.2h5M13.5 9v4.4"/></svg></span><div class="assessmentCompactBody"><b>' +
         K.esc(x.name || "氏名未登録") +
-        "</b><span>" +
+        " 様</b><span>" +
         K.esc(x.id || "") +
-        "</span></div><em>" +
-        K.esc(x.status || "") +
-        '</em></div><div class="assessmentProduct">' +
+        '</span><strong class="assessmentProduct">' +
         K.esc(x.product || "商品情報なし") +
-        '</div><div class="assessmentSub">' +
-        K.esc([x.date, x.time, x.address].filter(Boolean).join(" ／ ")) +
-        '</div><div class="assessmentNext">次：' +
-        K.esc(x.next || "確認") +
-        (x.total ? " ／ 査定合計 ¥" + x.total.toLocaleString("ja-JP") : "") +
-        '</div><div class="assessmentActions">' +
+        '</strong><small>' +
+        K.esc([x.date, x.time, x.address].filter(Boolean).join(" ／ ") || "次：" + (x.next || "確認")) +
+        '</small></div><div class="assessmentCompactSide"><em>' +
+        K.esc(x.status || "未設定") +
+        '</em><b>' +
+        (x.total ? "¥" + x.total.toLocaleString("ja-JP") : "—") +
+        '</b><i aria-hidden="true">›</i><button class="assessmentMore" type="button" aria-expanded="false" aria-label="査定のその他操作">•••</button></div></div><div class="assessmentActions compactActions">' +
         (tel
           ? '<a href="' + tel + '">☎ TEL</a>'
           : "<button disabled>☎ TEL</button>") +
-        '<button class="operate">査定を開く</button><button class="schedule">訪問予定</button><button class="next">NEXT伝票</button></div>';
-      c.querySelector(".operate").onclick = () => K.openAssessmentOps(x);
+        '<button class="schedule">訪問予定</button><button class="next">NEXT伝票</button></div>';
+      c.querySelector(".assessmentMore").onclick = (event) => {
+        event.stopPropagation();
+        const expanded = c.classList.toggle("actionsOpen");
+        event.currentTarget.setAttribute("aria-expanded", String(expanded));
+      };
       c.querySelector(".schedule").onclick = () =>
         K.openAppointmentFromCase &&
         K.openAppointmentFromCase({
@@ -453,6 +459,18 @@
             assessmentItems: Array.isArray(source.items) ? source.items : [],
           });
       };
+      c.tabIndex = 0;
+      c.setAttribute("role", "button");
+      c.setAttribute("aria-label", (x.name || "氏名未登録") + " 様の査定を開く");
+      c.addEventListener("click", (event) => {
+        if (event.target.closest("button,a")) return;
+        K.openAssessmentOps(x);
+      });
+      c.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        K.openAssessmentOps(x);
+      });
       list.appendChild(c);
     });
   };
