@@ -354,8 +354,14 @@
               copied = true;
             } catch {}
             result.textContent = copied
-              ? "24時間有効の端末接続リンクをコピーしました。接続後は継続利用できます"
-              : "24時間有効のリンク：" + issued.url;
+              ? "24時間有効の端末接続リンクをコピーしました。"
+              : "24時間有効の端末接続リンクを作成しました。";
+            const link = document.createElement("a");
+            link.id = "deviceConnectLink";
+            link.href = issued.url;
+            link.textContent = "接続する端末でこのリンクを開く";
+            result.append(document.createElement("br"), link);
+            result.append(document.createElement("br"), "一度接続すれば、継続して利用できます。");
           } catch (error) {
             result.textContent = "作成できません：" + String(error.message || error);
           }

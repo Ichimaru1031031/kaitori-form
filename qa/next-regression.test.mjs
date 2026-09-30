@@ -590,6 +590,8 @@ test("NEXT assessment removes code entry and uses a one-time device link", () =>
   assert.match(adapterGas, /DEVICE_LINK_MINUTES: 1440/);
   assert.match(assessment, /24時間有効/);
   assert.match(assessment, /継続して自動接続/);
+  assert.match(greenApi, /id = "deviceConnectLink"/);
+  assert.match(greenApi, /接続する端末でこのリンクを開く/);
   assert.match(adapterGas, /properties\.setProperty\(key, String\(Date\.now\(\) \+ ADAPTER\.SESSION_DAYS/);
 });
 
