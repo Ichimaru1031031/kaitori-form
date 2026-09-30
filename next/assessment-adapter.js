@@ -119,10 +119,14 @@
   }
 
   async function claimLink(value) {
-    let token = String(value || "").trim();
+    const raw = String(value || "").trim();
+    let token = raw;
     try {
-      const url = new URL(token, location.href);
-      token = new URLSearchParams(String(url.hash || "").replace(/^#/, "")).get("connect") || "";
+      const url = new URL(raw, location.href);
+      token =
+        new URLSearchParams(String(url.hash || "").replace(/^#/, "")).get("connect") ||
+        url.searchParams.get("connect") ||
+        (/^[A-Za-z0-9]+$/.test(raw) ? raw : "");
     } catch {}
     token = token.replace(/[^A-Za-z0-9]/g, "");
     if (!token) throw new Error("接続リンクをコピーしてください");

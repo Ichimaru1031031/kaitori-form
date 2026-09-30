@@ -209,7 +209,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
   assert.match(html, /slip\.js\?v=16/);
-  assert.match(html, /assessment-adapter\.js\?v=11/);
+  assert.match(html, /assessment-adapter\.js\?v=12/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -562,7 +562,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=11/);
+  assert.match(html, /assessment-adapter\.js\?v=12/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);
@@ -585,6 +585,8 @@ test("NEXT assessment removes code entry and uses a one-time device link", () =>
   assert.match(assessmentAdapter, /url\.hash = "connect="/);
   assert.match(assessmentAdapter, /async function claimLink\(value\)/);
   assert.match(assessment, /id="assessmentConnectClipboard"/);
+  assert.match(assessment, /id="assessmentConnectLinkInput"/);
+  assert.doesNotMatch(assessment, /navigator\.clipboard\.readText/);
   assert.match(adapterGas, /case "create-device-link"/);
   assert.match(adapterGas, /function claimDeviceLink_/);
   assert.match(adapterGas, /properties\.deleteProperty\(key\)/);
