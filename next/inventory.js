@@ -322,14 +322,24 @@
   function card(item) {
     const c = document.createElement("article"),
       s = effectiveStage(item),
-      emp = effectiveEmployee(item);
+      emp = effectiveEmployee(item),
+      firstPhoto = staticPhotosFor(item)[0],
+      thumb = firstPhoto ? inventoryPhotoSrc(firstPhoto) : "";
     c.className = "inventoryCard";
     c.innerHTML =
       '<div class="inventoryTop"><span class="inventoryNo">' +
       K.esc(item.inventoryNo || item.inventoryId) +
       '</span><span class="stageBadge">' +
       K.esc(s) +
-      '</span></div><div class="inventoryName">' +
+      '</span></div><div class="inventorySummary">' +
+      (thumb
+        ? '<img class="inventoryThumb" src="' +
+          K.esc(thumb) +
+          '" alt="' +
+          K.esc(firstPhoto.fileName || "在庫写真") +
+          '">'
+        : '<span class="inventoryThumb empty" aria-hidden="true">📦</span>') +
+      '<div class="inventorySummaryBody"><div class="inventoryName">' +
       K.esc(
         [item.maker, item.model].filter(Boolean).join(" / ") || item.category,
       ) +
@@ -341,7 +351,7 @@
       Number(item.purchasePrice || 0).toLocaleString() +
       " / 販売 ¥" +
       Number(item.salePrice || 0).toLocaleString() +
-      "</div>" +
+      "</div></div></div>" +
       trailHtml(item) +
       '<div class="inventoryNext">次：' +
       K.esc(nextAction(item)) +
@@ -502,14 +512,73 @@
     if (detailItem && detailItem.inventoryId === activeItem.inventoryId)
       await renderDetail(detailItem);
   }
+  function photoArray(value) {
+    if (Array.isArray(value)) return value;
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(String(value));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  function normalizePhoto(value, prefix, index) {
+    if (!value) return null;
+    if (typeof value === "string")
+      return {
+        id: prefix + "-" + index + "-" + value,
+        remoteRef: value,
+        fileName: "掲載写真 " + (index + 1),
+        source: "listing",
+      };
+    const remoteRef = value.remoteRef || value.url || value.fileUrl || "";
+    const dataUrl = value.dataUrl || "";
+    if (!remoteRef && !dataUrl) return null;
+    return {
+      ...value,
+      id:
+        value.id ||
+        value.photoId ||
+        value.publicId ||
+        prefix + "-" + index + "-" + (remoteRef || dataUrl.slice(0, 40)),
+      remoteRef,
+      dataUrl,
+      fileName: value.fileName || value.name || "掲載写真 " + (index + 1),
+    };
+  }
+  function staticPhotosFor(item) {
+    const catalog = (K.snap.catalogItems || []).find(
+        (x) =>
+          x.inventoryId === item.inventoryId ||
+          (item.inventoryNo && x.inventoryNo === item.inventoryNo),
+      ),
+      listing = (K.snap.ecListings || []).find(
+        (x) => x.inventoryId === item.inventoryId,
+      ),
+      sources = [
+        ...photoArray(item.photos),
+        ...photoArray(item.photoIdsJson),
+        ...photoArray(catalog?.photos),
+        ...photoArray(listing?.photos),
+        ...photoArray(listing?.photoIdsJson),
+      ],
+      unique = new Map();
+    sources.forEach((value, index) => {
+      const photo = normalizePhoto(value, item.inventoryId || "inventory", index);
+      if (!photo) return;
+      const key = photo.remoteRef || photo.dataUrl || photo.id;
+      if (!unique.has(key)) unique.set(key, photo);
+    });
+    return [...unique.values()];
+  }
   async function photosFor(item) {
     const local = await KRDB.photosFor(item.inventoryId),
       remote = (K.snap.inventoryPhotos || [])
         .filter((x) => x.inventoryId === item.inventoryId)
         .map((x) => ({ ...x, id: x.id || x.photoId || x.id }));
     const m = new Map();
-    for (const x of [...remote, ...local])
-      m.set(x.id || x.photoId || Math.random(), x);
+    for (const x of [...staticPhotosFor(item), ...remote, ...local])
+      m.set(x.remoteRef || x.dataUrl || x.id || x.photoId || Math.random(), x);
     return [...m.values()].sort((a, b) =>
       String(a.capturedAt || "").localeCompare(String(b.capturedAt || "")),
     );

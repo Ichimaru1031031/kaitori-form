@@ -311,7 +311,7 @@ test("protected Green bridge is used without exposing an anonymous write URL", (
   assert.match(adapterGas, /case "green-write"/);
   assert.match(adapterGas, /GreenNext\.greenBridgeRequest\("write", payload\)/);
   assert.match(adapterManifest, /"userSymbol": "GreenNext"/);
-  assert.match(adapterManifest, /"version": "6"/);
+  assert.match(adapterManifest, /"version": "7"/);
 });
 
 test("issued slip PDF email uses stored customer data and explicit resend", () => {
@@ -391,10 +391,15 @@ test("saved appointments show their content and a visible completion notice", ()
 
 test("inventory photos render as a horizontal swipe gallery", () => {
   assert.match(inventory, /function inventoryPhotoSrc\(photo\)/);
+  assert.match(inventory, /function staticPhotosFor\(item\)/);
+  assert.match(inventory, /K\.snap\.catalogItems/);
+  assert.match(inventory, /class="inventoryThumb"/);
+  assert.match(workflowRouter, /\.\/data\/catalog\.json/);
   assert.match(inventory, /drive\.google\.com\/thumbnail\?id=/);
   assert.match(inventory, /classList\.toggle\("swipeGallery", photos\.length > 0\)/);
   assert.match(headerCss, /scroll-snap-type:x mandatory/);
   assert.match(headerCss, /\.swipeGallery \.detailPhoto/);
+  assert.match(greenGas, /file\.setSharing\(DriveApp\.Access\.ANYONE_WITH_LINK/);
 });
 
 test("header exposes recycle sales slip QR and recoverable settings actions", () => {
@@ -409,6 +414,7 @@ test("header exposes recycle sales slip QR and recoverable settings actions", ()
   assert.match(headerActions, /jsqr@1\.4\.0/);
   assert.match(headerActions, /K\.openInventoryDetail\?\.\(item\)/);
   assert.match(headerCss, /\.topActions \.topIcon svg/);
+  assert.match(headerCss, /width:40px;height:40px/);
 });
 
 test("slip list reloads live Green delivery status through the protected adapter", () => {

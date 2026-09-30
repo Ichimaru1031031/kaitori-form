@@ -788,6 +788,7 @@ function opInventoryPhoto_(entityId,p,key){
     const name=safe+"_"+Utilities.formatDate(new Date(),"Asia/Tokyo","yyyyMMdd-HHmmss")+ext;
     const blob=Utilities.newBlob(bytes,mime,name);
     const file=DriveApp.getFolderById(CONFIG.PHOTO_FOLDER_ID).createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
     fileId=file.getId(); fileUrl=file.getUrl();
   }
   appendObject_("INVENTORY_PHOTO_LOG",{

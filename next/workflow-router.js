@@ -51,6 +51,20 @@
           K.customers = j.customers || [];
         }
       }
+      try {
+        const catalogRes = await fetch(
+          "./data/catalog.json?_=" + Date.now(),
+          { cache: "no-store" },
+        );
+        if (catalogRes.ok) {
+          const catalog = await catalogRes.json();
+          K.snap.catalogItems = Array.isArray(catalog.items)
+            ? catalog.items
+            : [];
+        }
+      } catch (_e) {
+        K.snap.catalogItems = K.snap.catalogItems || [];
+      }
       const t = new Date(K.snap.generatedAt),
         label =
           (live ? "ライブ " : "同期 ") +

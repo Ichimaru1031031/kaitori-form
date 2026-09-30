@@ -1,0 +1,40 @@
+.inventorySummary {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-top: 7px;
+}
+
+.inventorySummaryBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.inventoryThumb {
+  display: block;
+  width: 70px;
+  height: 60px;
+  flex: 0 0 70px;
+  border-radius: 9px;
+  object-fit: cover;
+  background: #eef3f1;
+}
+
+.inventoryThumb.empty {
+  display: grid;
+  place-items: center;
+  color: #6e827b;
+  font-size: 23px;
+}
+
+.inventorySummary .inventoryName {
+  margin-top: 0;
+}
+
+@media (max-width: 700px) {
+  .inventoryThumb {
+    width: 64px;
+    height: 56px;
+    flex-basis: 64px;
+  }
+}
