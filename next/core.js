@@ -442,7 +442,7 @@
     if ("serviceWorker" in navigator)
       window.addEventListener("load", () =>
         navigator.serviceWorker
-          .register("./service-worker.js?v=38", { updateViaCache: "none" })
+          .register("./service-worker.js?v=39", { updateViaCache: "none" })
           .then((r) => r.update())
           .catch(() => {}),
       );

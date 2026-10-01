@@ -1,6 +1,7 @@
 /* Neutral canvas, white content surfaces; preserve operational status colours. */
 :root{--bg:#f6f7f7;--card:#fff;--soft:#f8faf9}
 body{background:#f6f7f7!important}
+.nativeHero{color:#20372e!important}.nativeHero h2,.nativeHero b{color:#20372e!important}.nativeHero p,.nativeHero small{color:#526b5f!important}
 .card,.nativeSection,.nativeHero,.nativeMore,.nativeItem,.nativeVisitChoices button:not(.selected),
 .workflowCard,.slipCard,.inventoryRow,.inventoryDetailCard,.reviewCustomer,.reviewSection,
 .reviewLine,.reviewConsent,.reviewSignature,.previewBlock,.processCard,.appointmentInfo,
