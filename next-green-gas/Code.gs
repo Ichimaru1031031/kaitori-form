@@ -47,7 +47,12 @@ function greenBridgeRequest(request, payload) {
   payload = payload || {};
   if (request === "ping") return {ok:true,pong:true,time:new Date().toISOString()};
   if (request === "snapshot") return buildSnapshot_();
+  if (request === "appointments") return sheetObjects_("APPOINTMENTS");
+  if (request === "customer-pdf") return customerPdfByToken_(String(payload.shareToken||""));
   if (request === "write") {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
     const body = payload.job || payload;
     const key = String(body.idempotencyKey || body.id || "");
     const operation = String(body.operation || "");
@@ -60,6 +65,7 @@ function greenBridgeRequest(request, payload) {
     const result = dispatch_(operation, entityId, p, key);
     if (cacheable) writeIdempotency_(key, operation, entityId, result);
     return {ok:true,idempotent:false,result:result};
+    } finally { lock.releaseLock(); }
   }
   throw new Error("UNSUPPORTED_BRIDGE_REQUEST:"+request);
 }
@@ -599,6 +605,14 @@ function opAppointmentNoteUpdate_(entityId,p,key){
 function opAppointmentUpsert_(entityId,p,key){
   const now=String(p.updatedAt||new Date().toISOString());
   const row=findRow_("APPOINTMENTS","appointmentId",entityId);
+  if (!["休み","出勤"].includes(String(p.category||"")) && !["deleted","cancelled","completed"].includes(String(p.status||""))) {
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(p.date||"") || !/^\d{2}:\d{2}$/.test(p.startTime||"") || !/^\d{2}:\d{2}$/.test(p.endTime||"") || p.startTime>=p.endTime) throw new Error("訪問日時を確認してください。");
+    const sheet=sh_("APPOINTMENTS");
+    const rows=sheet.getDataRange().getDisplayValues(),headers=rows.shift();
+    const ix=function(key){return headers.indexOf(key);};
+    const conflict=rows.find(function(r){return String(r[ix("appointmentId")])!==entityId && String(r[ix("caseId")]).replace(/^BLUE-CASE-/,"")!==String(p.caseId||"__none__").replace(/^BLUE-CASE-/,"") && String(r[ix("date")])===p.date && !["休み","出勤"].includes(String(r[ix("category")])) && !["deleted","cancelled","completed"].includes(String(r[ix("status")])) && String(r[ix("startTime")])<p.endTime && p.startTime<String(r[ix("endTime")]);});
+    if(conflict) throw new Error("この時間は仮押さえ・予約済みです。別の日時を選択してください。");
+  }
   const obj={
     appointmentId:entityId,
     caseId:p.caseId||"",
@@ -626,7 +640,7 @@ function opAppointmentUpsert_(entityId,p,key){
     const caseRow=findRow_("CASES","caseId",obj.caseId);
     if(caseRow){
       const next=String(obj.category)==="買取"?"訪問・買取伝票作成":String(obj.category)==="工事"?"訪問・工事伝票作成":String(obj.category)+"対応";
-      updateRow_("CASES",caseRow,{status:"✅ 訪問日時確定",nextAction:next,confirmedDate:obj.date,confirmedStart:obj.startTime,confirmedEnd:obj.endTime,assignedEmployeeIds:obj.assignedEmployeeIds,updatedAt:now});
+      updateRow_("CASES",caseRow,{status:obj.status==="tentative"?"訪問日時確認待ち":"✅ 訪問日時確定",nextAction:obj.status==="tentative"?"お客様日時確認待ち":next,confirmedDate:obj.date,confirmedStart:obj.startTime,confirmedEnd:obj.endTime,assignedEmployeeIds:obj.assignedEmployeeIds,updatedAt:now});
     }
   }
   const sourceRef=String(obj.sourceRef||"");
@@ -847,7 +861,13 @@ function opFinalizeSlip_(entityId,p,key){
     }
   }
   const inventoryLinks=ensureLineItemsAndInventory_(links.serviceOrderId,linked.payload||{},confirmedAt);
-  const pdf=createCustomerPdf_(linked,p.signatureDataUrl||signatureFileUrl);
+  const kinds=[];
+  const slipItems=(linked.payload||{}).items||{};
+  if(["purchase","sale","work","delivery","estimate"].some(function(k){return (slipItems[k]||[]).length;})) kinds.push("other");
+  if((slipItems.recycle||[]).length) kinds.push("recycle");
+  if(!kinds.length) kinds.push("other");
+  const pdfs=kinds.map(function(kind){return Object.assign(createCustomerPdf_(linked,p.signatureDataUrl||signatureFileUrl,kind),{kind:kind});});
+  const pdf=pdfs[0];
   appendObject_("NEXT_FINALIZED_SLIPS",{
     snapshotId:p.id||entityId,
     draftId:p.draftId||"",
@@ -865,22 +885,22 @@ function opFinalizeSlip_(entityId,p,key){
     status:"issued",
     createdAt:new Date().toISOString()
   });
-  appendObject_("DOCUMENTS",{
+  pdfs.forEach(function(documentPdf){appendObject_("DOCUMENTS",{
     documentId:"NEXTDOC-"+Utilities.getUuid(),
     caseId:links.caseId,
     serviceOrderId:links.serviceOrderId,
     type:"customer-copy",
     version:version,
-    fileId:pdf.fileId,
-    fileUrl:pdf.fileUrl,
-    fileName:pdf.fileName,
+    fileId:documentPdf.fileId,
+    fileUrl:documentPdf.fileUrl,
+    fileName:documentPdf.fileName,
     issuedAt:confirmedAt,
     issuedBy:"NEXT",
     sentAt:"",
     sentMethod:"",
     status:"issued",
     snapshotHash:p.hash||""
-  });
+  });});
   const soRow=findRow_("SERVICE_ORDERS","serviceOrderId",links.serviceOrderId);
   if(soRow) updateRow_("SERVICE_ORDERS",soRow,{
     customerConfirmed:true,
@@ -903,7 +923,8 @@ function opFinalizeSlip_(entityId,p,key){
     pdfFileId:pdf.fileId,
     pdfFileUrl:pdf.fileUrl,
     signatureFileId:signatureFileId,
-    inventory:inventoryLinks
+    inventory:inventoryLinks,
+    pdfs:pdfs
   };
 }
 
@@ -923,6 +944,8 @@ function opSendSlipPdfEmail_(entityId,p,key){
   const requestedDocumentId=String(p.documentId||"");
   const documents=rowsBy_("DOCUMENTS","serviceOrderId",serviceOrderId)
     .filter(function(x){return String(x.obj.type||"")==="customer-copy";})
+    .filter(function(x){return !p.documentKind || String(x.obj.fileName||"").indexOf("_"+p.documentKind+"_")>=0;})
+    .filter(function(x){return !p.version || Number(x.obj.version)===Number(p.version);})
     .sort(function(a,b){return Number(b.obj.version||0)-Number(a.obj.version||0);});
   const selected=requestedDocumentId
     ? documents.find(function(x){return String(x.obj.documentId||"")===requestedDocumentId;})
@@ -963,6 +986,8 @@ function opGetSlipPdfShare_(entityId,p,key){
   if(String(serviceOrder.customerConfirmed).toLowerCase()!=="true") throw new Error("CUSTOMER_CONFIRMATION_REQUIRED");
   const documents=rowsBy_("DOCUMENTS","serviceOrderId",serviceOrderId)
     .filter(function(x){return String(x.obj.type||"")==="customer-copy";})
+    .filter(function(x){return !p.documentKind || String(x.obj.fileName||"").indexOf("_"+p.documentKind+"_")>=0;})
+    .filter(function(x){return !p.version || Number(x.obj.version)===Number(p.version);})
     .sort(function(a,b){return Number(b.obj.version||0)-Number(a.obj.version||0);});
   if(!documents.length) throw new Error("ISSUED_PDF_NOT_FOUND:"+serviceOrderId);
   const document=documents[0].obj,fileId=String(document.fileId||"");
@@ -974,9 +999,35 @@ function opGetSlipPdfShare_(entityId,p,key){
     version:Number(document.version||1),
     fileName:String(document.fileName||file.getName()),
     fileUrl:String(document.fileUrl||file.getUrl()),
+    shareToken:customerPdfToken_(document),
     mimeType:String(blob.getContentType()||MimeType.PDF),
     pdfBase64:Utilities.base64Encode(blob.getBytes())
   };
+}
+
+function customerPdfToken_(document){
+  const props=PropertiesService.getScriptProperties();
+  let secret=props.getProperty("PDF_CUSTOMER_LINK_SIGNING_KEY");
+  if(!secret){secret=Utilities.getUuid()+Utilities.getUuid();props.setProperty("PDF_CUSTOMER_LINK_SIGNING_KEY",secret);}
+  const expires=Date.now()+30*24*60*60*1000;
+  const body=String(document.documentId)+"."+expires;
+  return body+"."+Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret)).replace(/=+$/,"");
+}
+function customerPdfByToken_(token){
+  const parts=token.split("."),props=PropertiesService.getScriptProperties(),secret=props.getProperty("PDF_CUSTOMER_LINK_SIGNING_KEY");
+  if(!secret||parts.length!==3||!/^NEXTDOC-[a-zA-Z0-9-]+$/.test(parts[0])||!/^\d+$/.test(parts[1])||Number(parts[1])<Date.now())throw new Error("この明細リンクは期限切れ、または無効です。店舗に再送をご依頼ください。");
+  const expected=Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(parts[0]+"."+parts[1],secret)).replace(/=+$/,"");
+  if(parts[2].length!==expected.length)throw new Error("明細リンクが無効です。");
+  let mismatch=0;for(let i=0;i<expected.length;i++)mismatch|=expected.charCodeAt(i)^parts[2].charCodeAt(i);
+  if(mismatch)throw new Error("明細リンクが無効です。");
+  const row=findRow_("DOCUMENTS","documentId",parts[0]);
+  if(!row)throw new Error("明細が見つかりません。");
+  const doc=rowObject_(sh_("DOCUMENTS"),row);
+  if(doc.type!=="customer-copy"||!doc.fileId)throw new Error("明細リンクが無効です。");
+  const orderRow=findRow_("SERVICE_ORDERS","serviceOrderId",doc.serviceOrderId);
+  if(!orderRow||String(rowObject_(sh_("SERVICE_ORDERS"),orderRow).customerConfirmed).toLowerCase()!=="true")throw new Error("お客様確認が完了していません。");
+  const file=DriveApp.getFileById(doc.fileId),blob=file.getBlob();
+  return {fileName:doc.fileName||file.getName(),mimeType:"application/pdf",pdfBase64:Utilities.base64Encode(blob.getBytes()),version:Number(doc.version||1)};
 }
 
 function nextId_(prefix){
@@ -1152,7 +1203,7 @@ function newInventoryNo_(category){
   return prefix+"-"+Utilities.getUuid().replace(/-/g,"").slice(0,6).toUpperCase();
 }
 
-function createCustomerPdf_(snap,signatureUrl){
+function createCustomerPdf_(snap,signatureUrl,kind){
   const d=snap.payload||{},customer=d.customer||{},items=d.items||{},documents=[];
   function rowsFor(keys){
     const rows=[];
@@ -1162,27 +1213,30 @@ function createCustomerPdf_(snap,signatureUrl){
   function documentFor(title,keys,tone){
     const rows=rowsFor(keys); if(!rows.length) return;
     const body=rows.map(function(row){
-      const x=row.item||{},year=String(x.year||"").trim()||"不明",details=[x.maker,x.model,"年式 "+year,x.spec].filter(Boolean).join(" / ");
-      return "<tr><td><b>"+html_(x.category||"明細")+"</b><small>"+html_(details)+"</small></td><td class='qty'>"+html_(x.quantity||1)+"</td><td class='num'>"+yen_(x.amount||0)+"</td></tr>";
+      const x=row.item||{},year=String(x.year||"").trim()||"不明",details=[x.maker,x.model,(row.serviceType==="purchase"||row.serviceType==="sale")?"年式 "+year:"",x.spec,x.note].filter(Boolean).join(" / ");
+      const serviceLabel={purchase:"買取",sale:"販売",work:"工事",delivery:"配送",estimate:"見積",recycle:"リサイクル"}[row.serviceType]||"";
+      return "<tr><td><b>"+html_(serviceLabel+" · "+(x.category||"明細"))+"</b><small>"+html_(details)+"</small></td><td class='qty'>"+html_(x.quantity||1)+"</td><td class='num'>"+yen_(Math.abs(Number(x.amount||0)))+"</td></tr>";
     }).join("");
-    const total=rows.reduce(function(sum,row){return sum+Number(row.item.amount||0);},0);
+    const total=rows.reduce(function(sum,row){return sum+(row.serviceType==="purchase"?-1:1)*Number(row.item.amount||0);},0);
     documents.push({title:title,tone:tone,body:body,total:total});
   }
-  documentFor("販売・工事",["sale","work","delivery","estimate"],"commercial");
-  documentFor("リサイクル",["recycle"],"recycle");
-  documentFor("買取",["purchase"],"purchase");
+  if(kind==="recycle") documentFor("リサイクル",["recycle"],"recycle");
+  else documentFor("お取引",["purchase","sale","work","delivery","estimate"],"commercial");
   if(!documents.length) documents.push({title:"お客様控え",tone:"commercial",body:"<tr><td><b>明細なし</b></td><td class='qty'>-</td><td class='num'>¥0</td></tr>",total:0});
   const customerHtml="<div class='customer'><div><span>お客様</span><b>"+html_(customer.name||"未登録")+" 様</b></div><div><span>ご住所</span><strong>"+html_([customer.postalCode?("〒"+customer.postalCode):"",customer.address||"未登録"].filter(Boolean).join(" "))+"</strong></div><div class='contact'>"+html_([customer.phone,customer.email].filter(Boolean).join(" / "))+"</div></div>";
   const sign=signatureUrl?"<div class='signature'><h3>お客様サイン</h3><img src='"+html_(signatureUrl)+"'></div>":"";
-  const signedTotal=Number(snap.total||0),customerTotal=Math.abs(signedTotal),customerTotalLabel=signedTotal<0?"お客様受取額":"ご請求・差引合計";
+  const signedTotal=documents.reduce(function(sum,doc){return sum+doc.total;},0),customerTotal=Math.abs(signedTotal),customerTotalLabel=signedTotal<0?"お客様受取額":"お客様お支払額";
   const pages=documents.map(function(doc,index){
     const isLast=index===documents.length-1;
-    return "<section class='documentPage "+doc.tone+(isLast?" last":"")+"'><header><div><b>買取レスキュー</b><span>お客様送付用・お客様控え</span></div><em>第"+versionText_(snap.version)+"版</em></header><div class='documentTitle'><small>お客様用 明細書</small><h1>"+html_(doc.title)+"明細書</h1></div><div class='meta'>伝票番号 "+html_(snap.sourceServiceOrderId||snap.caseId||"")+"　発行 "+html_(snap.confirmedAt||"")+"</div>"+customerHtml+"<table><thead><tr><th>商品・作業内容</th><th class='qty'>数量</th><th class='num'>金額</th></tr></thead><tbody>"+doc.body+"</tbody></table><div class='documentTotal'><span>この明細の合計</span><b>"+yen_(doc.total)+"</b></div>"+(isLast?"<div class='grandTotal'><span>"+customerTotalLabel+"</span><b>"+yen_(customerTotal)+"</b></div><div class='consent'>お客様情報、明細および金額を確認し、内容に同意しました。</div>"+sign:"")+"<footer>お客様にお渡しする確定明細書です。過去版は上書きされません。<span>"+(index+1)+" / "+documents.length+"</span></footer></section>";
+    const purchase=rowsFor(["purchase"]).reduce(function(sum,row){return sum+Number(row.item.amount||0);},0);
+    const payment=doc.total+purchase;
+    const breakdown=kind!=="recycle"&&purchase?"<div class='documentTotal'><span>商品・作業料金</span><b>"+yen_(payment)+"</b></div><div class='documentTotal'><span>買取金額（お客様へお支払い）</span><b>"+yen_(purchase)+"</b></div>":"";
+    return "<section class='documentPage "+doc.tone+(isLast?" last":"")+"'><header><div><b>買取レスキュー</b><span>お客様送付用・お客様控え</span></div><em>第"+versionText_(snap.version)+"版</em></header><div class='documentTitle'><small>お客様用 明細書</small><h1>"+html_(doc.title)+"明細書</h1></div><div class='meta'>伝票番号 "+html_(snap.sourceServiceOrderId||snap.caseId||"")+"　発行 "+html_(snap.confirmedAt||"")+"</div>"+customerHtml+"<table><thead><tr><th>商品・作業内容</th><th class='qty'>数量</th><th class='num'>金額</th></tr></thead><tbody>"+doc.body+"</tbody></table>"+breakdown+(isLast?"<div class='grandTotal'><span>"+customerTotalLabel+"</span><b>"+yen_(customerTotal)+"</b></div><div class='consent'>お客様情報、明細および金額を確認し、内容に同意しました。</div>"+sign:"")+"<footer>お客様にお渡しする確定明細書です。過去版は上書きされません。<span>"+(index+1)+" / "+documents.length+"</span></footer></section>";
   }).join("");
   const html="<!doctype html><html><head><meta charset='utf-8'><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Noto Sans JP',sans-serif;color:#18251f;background:#fff}.documentPage{position:relative;min-height:277mm;padding:15mm 14mm 17mm;page-break-after:always}.documentPage.last{page-break-after:auto}.documentPage header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #3d7667;padding-bottom:8px}.documentPage header div b{display:block;font-size:18px}.documentPage header div span{font-size:9px;color:#60716a}.documentPage header em{font-style:normal;font-weight:bold;background:#e7f3ef;color:#2f6758;border-radius:20px;padding:6px 11px}.documentTitle{margin:16px 0 5px}.documentTitle small{font-size:10px;color:#6c7a75}.documentTitle h1{font-size:27px;line-height:1.25;margin:2px 0}.meta{font-size:10px;color:#62716b;margin-bottom:12px}.customer{border:2px solid #cbded7;border-radius:12px;padding:12px 14px;margin-bottom:16px;background:#f7fbf9}.customer span{display:block;font-size:9px;color:#66766f}.customer b{display:block;font-size:22px;line-height:1.4;margin-bottom:7px}.customer strong{display:block;font-size:15px;line-height:1.55}.customer .contact{font-size:12px;font-weight:bold;margin-top:7px}table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #cedbd6;border-radius:10px;overflow:hidden}th{background:#edf5f2;color:#344a42;font-size:11px;padding:9px;text-align:left}td{border-top:1px solid #dce5e1;padding:11px 9px;vertical-align:top;font-size:13px}td b{display:block;font-size:15px;line-height:1.4}td small{display:block;font-size:11px;line-height:1.5;color:#566861;margin-top:3px}.qty{width:52px;text-align:center}.num{width:108px;text-align:right;font-weight:bold;font-size:15px}.documentTotal,.grandTotal{display:flex;justify-content:flex-end;align-items:baseline;gap:18px;margin-top:13px}.documentTotal span{font-size:12px}.documentTotal b{font-size:21px}.grandTotal{border-top:2px solid #385f54;padding-top:12px}.grandTotal span{font-size:14px;font-weight:bold}.grandTotal b{font-size:27px;color:#214f43}.consent{margin-top:16px;border:1px solid #d5dfdb;background:#f8faf9;border-radius:9px;padding:10px;font-size:11px;font-weight:bold}.signature{margin-top:14px}.signature h3{font-size:12px;margin:0 0 6px}.signature img{display:block;max-width:300px;max-height:90px;border:1px solid #cad5d1;border-radius:7px}.documentPage footer{position:absolute;left:14mm;right:14mm;bottom:9mm;border-top:1px solid #d6dfdb;padding-top:6px;font-size:8px;color:#78847f}.documentPage footer span{float:right}.purchase header{border-color:#a9574e}.purchase header em{background:#fbecea;color:#8b4038}.recycle header{border-color:#557a91}.recycle header em{background:#eaf2f7;color:#365f76}</style></head><body>"+pages+"</body></html>";
   const blob=HtmlService.createHtmlOutput(html).getBlob().getAs(MimeType.PDF);
   const base=(snap.caseId||snap.draftId||"NEXT").replace(/[^0-9A-Za-z_-]/g,"_");
-  const fileName=base+"_お客様用明細書_v"+Number(snap.version||1)+"_"+Utilities.formatDate(new Date(),"Asia/Tokyo","yyyyMMdd-HHmmss")+".pdf";
+  const fileName=base+"_"+(kind||"other")+"_お客様用明細書_v"+Number(snap.version||1)+"_"+Utilities.formatDate(new Date(),"Asia/Tokyo","yyyyMMdd-HHmmss")+".pdf";
   blob.setName(fileName);
   const file=DriveApp.getFolderById(CONFIG.PDF_FOLDER_ID).createFile(blob);
   return {fileId:file.getId(),fileUrl:file.getUrl(),fileName:fileName};

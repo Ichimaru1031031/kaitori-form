@@ -60,6 +60,8 @@ function adapterPair(code) {
 
 function adapterRequest(token, operation, payload) {
   payload = payload || {};
+  // Public read-only access is restricted to one signed, confirmed PDF version.
+  if(operation==="customer-pdf") return GreenNext.greenBridgeRequest("customer-pdf",payload);
   if (operation === "label-ocr-status" || operation === "label-ocr") {
     requireOcrSession_(token);
   } else {
@@ -70,17 +72,95 @@ function adapterRequest(token, operation, payload) {
     case "case": return cachedCase_(String(payload.id || ""), Boolean(payload.force));
     case "save-assessment": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAssessmentDraft(String(payload.id || ""), payload.amounts || [], payload.data || null); });
     case "send-estimate": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAndSendEstimate(String(payload.id || ""), payload.amounts || [], String(payload.message || "")); });
-    case "send-combined": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAndSendCombined(String(payload.id || ""), payload.amounts || [], payload.data || {}, String(payload.message || "")); });
+    case "send-combined": return sendVisitWithHold_("send-combined", payload);
     case "save-visit": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveCase(String(payload.id || ""), payload.data || {}); });
-    case "send-visit": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAndSendVisit(String(payload.id || ""), payload.data || {}, String(payload.message || "")); });
+    case "send-visit": return sendVisitWithHold_("send-visit", payload);
     case "status": return mutateCase_(String(payload.id || ""), function () { return ProdDash.setStatus(String(payload.id || ""), String(payload.status || "")); });
     case "create-device-link": return createDeviceLink_();
     case "label-ocr-status": return labelOcrStatus_();
     case "label-ocr": return labelOcr_(payload, token);
     case "green-ping": return GreenNext.greenBridgeRequest("ping", payload);
-    case "green-snapshot": return GreenNext.greenBridgeRequest("snapshot", payload);
-    case "green-write": return GreenNext.greenBridgeRequest("write", payload);
+    case "green-snapshot": return visitSnapshot_(payload);
+    case "visit-calendar": return visitCalendar_();
+    case "green-write": {
+      const job = payload.job || payload;
+      if (job.operation === "appointment-upsert") assertBlueVisitAvailable_(job.entityId, job.payload || {});
+      return GreenNext.greenBridgeRequest("write", payload);
+    }
     default: throw new Error("UNSUPPORTED_OPERATION:" + operation);
+  }
+}
+
+function blueVisitAppointments_(force) {
+  const dashboard = cachedDashboard_(force);
+  return (dashboard.cases || []).filter(function(c) {
+    return c.visitDateKey && c.visitTime && !/キャンセル|予約変更/.test(c.status || "") && (/訪問日時確定/.test(c.status || "") || /確認待ち|承認待ち/.test(c.nextAction || ""));
+  }).map(function(c) {
+    const times = String(c.visitTime).split(/[〜～]/);
+    return {appointmentId:"NEXT-VISIT-"+c.id,caseId:c.id,date:c.visitDateKey,startTime:times[0],endTime:times[1],category:"買取",customerName:c.name,title:c.name+"様",phone:c.phone||"",address:c.address||"",status:/訪問日時確定/.test(c.status||"")?"confirmed":"tentative",sourceRef:c.id,blueReceptionId:c.id};
+  });
+}
+function assertBlueVisitAvailable_(entityId, p) {
+  if (["休み","出勤"].indexOf(p.category)>=0) return;
+  const id=String(p.caseId||p.sourceRef||"").replace(/^BLUE-CASE-/,"");
+  const conflict=blueVisitAppointments_(true).find(function(a){return a.appointmentId!==entityId && a.caseId!==id && a.date===p.date && a.startTime<p.endTime && p.startTime<a.endTime;});
+  if(conflict) throw new Error("この時間は仮押さえ・予約済みです："+conflict.customerName+" "+conflict.startTime+"〜"+conflict.endTime);
+}
+function visitSnapshot_(payload) {
+  const snap=GreenNext.greenBridgeRequest("snapshot",payload),visits=blueVisitAppointments_(false);
+  snap.appointments=overlayBlueVisits_(snap.appointments||[],visits);
+  return snap;
+}
+function overlayBlueVisits_(existing,visits){
+  const byCase={};
+  const projected=visits.map(function(visit){
+    byCase[visit.caseId]=true;
+    const prior=existing.find(function(a){return String(a.caseId||a.sourceRef||"").replace(/^BLUE-CASE-/,"")===visit.caseId && !["deleted","cancelled"].includes(a.status);});
+    return prior && prior.status==="completed" ? prior : Object.assign({},prior||{},visit);
+  });
+  return existing.filter(function(a){return !byCase[String(a.caseId||a.sourceRef||"").replace(/^BLUE-CASE-/,"")];}).concat(projected);
+}
+function visitCalendar_() {
+  const dashboard=cachedDashboard_(true),visits=blueVisitAppointments_(false);
+  let existing=GreenNext.greenBridgeRequest("appointments",{});
+  const byCase={};visits.forEach(function(a){byCase[a.caseId]=a;});
+  existing.forEach(function(a){
+    if(String(a.appointmentId||"").indexOf("NEXT-VISIT-")!==0 || a.status==="completed")return;
+    const id=String(a.caseId||""),c=(dashboard.cases||[]).find(function(row){return row.id===id;});
+    const current=byCase[id];
+    const next=current ? Object.assign({},a,current) : c && /キャンセル|予約変更/.test(c.status||"") ? Object.assign({},a,{status:"deleted"}) : null;
+    if(next && (a.status!==next.status || a.date!==next.date || a.startTime!==next.startTime || a.endTime!==next.endTime)){
+      GreenNext.greenBridgeRequest("write",{job:{id:"visit-reconcile:"+Utilities.getUuid(),operation:"appointment-upsert",entityId:a.appointmentId,payload:next}});
+      Object.assign(a,next);
+    }
+  });
+  return overlayBlueVisits_(existing,visits);
+}
+function sendVisitWithHold_(operation, payload) {
+  const id=String(payload.id||""),data=payload.data||{},times=String(data.visitTime||"").split(/[〜～]/);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data.visitDate||"") || times.length!==2 || !/^\d{2}:\d{2}$/.test(times[0]) || !/^\d{2}:\d{2}$/.test(times[1]) || times[0]>=times[1]) throw new Error("訪問日・開始・終了を確認してください。");
+  const date=new Date(data.visitDate+"T12:00:00+09:00");
+  if(!isFinite(date.getTime()) || Utilities.formatDate(date,"Asia/Tokyo","yyyy-MM-dd")!==data.visitDate)throw new Error("存在する日付を選択してください。");
+  if(data.visitDate<Utilities.formatDate(new Date(),"Asia/Tokyo","yyyy-MM-dd"))throw new Error("過去の日付は選択できません。");
+  if(date.getUTCDay()===4)throw new Error("木曜日は定休日です。別の日を選択してください。");
+  if(!/^\d{2}:00〜\d{2}:00$/.test(data.visitTime) || Number(times[0].slice(0,2))<8 || Number(times[1].slice(0,2))>20)throw new Error("訪問時間は8時〜20時の範囲で選択してください。");
+  if(!String(data.name||"").trim())throw new Error("お客様のお名前を確認してください。");
+  const current=ProdDash.getCase(id);
+  if(operation==="send-visit" && (!/買取確定/.test(current.status||"") || /確認待ち/.test(current.nextAction||""))) throw new Error("この案件は訪問日時を送信できません。最新状態を確認してください。");
+  if(operation==="send-combined" && !(payload.amounts||[]).some(function(x){return String(x).trim()!=="";})) throw new Error("査定額を入力してください。");
+  if(operation==="send-combined" && (!/新規|査定中|予約変更/.test(current.status||"") || (current.mode!=="出張買取希望" && !/予約変更/.test(current.status||""))))throw new Error("この案件は査定額・訪問日時を送信できません。最新状態を確認してください。");
+  if((payload.amounts||[]).some(function(x){const value=String(x).replace(/[,，￥¥円\s]/g,"");return value!=="" && (!isFinite(Number(value))||Number(value)<0);}))throw new Error("査定額は0以上の金額で入力してください。");
+  const appointment={appointmentId:"NEXT-VISIT-"+id,caseId:id,date:data.visitDate,startTime:times[0],endTime:times[1],category:"買取",customerName:current.name||data.name,phone:current.phone||data.phone,address:current.address||data.address,status:"tentative",sourceRef:id,notes:"訪問日時確認送信・仮押さえ"};
+  assertBlueVisitAvailable_(appointment.appointmentId,appointment);
+  // Reserve under the Green write lock before calling the protected delivery route.
+  const job={id:"visit-reserve:"+Utilities.getUuid(),operation:"appointment-upsert",entityId:appointment.appointmentId,payload:appointment};
+  GreenNext.greenBridgeRequest("write",{job:job});
+  try {
+    const result=mutateCase_(id,function(){return operation==="send-combined" ? ProdDash.saveAndSendCombined(id,payload.amounts||[],data,String(payload.message||"")) : ProdDash.saveAndSendVisit(id,data,String(payload.message||""));});
+    return Object.assign({},result,{appointment:appointment});
+  } catch(error) {
+    // A delivery timeout may occur after sending: keep the slot to prevent double booking.
+    throw new Error(String(error&&error.message||error)+"（枠は仮押さえ中です。送信履歴を確認してから予定を変更してください）");
   }
 }
 

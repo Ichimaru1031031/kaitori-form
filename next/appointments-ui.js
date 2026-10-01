@@ -170,6 +170,10 @@
         const wrap = document.createElement("div");
         wrap.className = "dayPopupItem";
         const card = K.apptCard(e);
+        if(e.status==="tentative"){
+          card.classList.add("tentative");
+          const mark=document.createElement("small");mark.textContent="仮押さえ・お客様確認待ち";mark.className="tentativeLabel";card.prepend(mark);
+        }
         if (e.localOnly && onEdit) {
           const edit = document.createElement("button");
           edit.type = "button";

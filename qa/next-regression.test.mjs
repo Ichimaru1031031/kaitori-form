@@ -212,7 +212,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=16/);
+  assert.match(html, /slip\.js\?v=17/);
   assert.match(html, /assessment-adapter\.js\?v=15/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
@@ -354,10 +354,10 @@ test("issued slip PDF email uses stored customer data and explicit resend", () =
   assert.match(slip, /dataset\.resend="1"/);
 });
 
-test("one versioned customer PDF uses separate readable statement pages", () => {
-  assert.match(greenGas, /documentFor\("販売・工事",\["sale","work","delivery","estimate"\]/);
+test("versioned customer PDFs separate recycling from all other transactions", () => {
+  assert.match(greenGas, /documentFor\("お取引",\["purchase","sale","work","delivery","estimate"\]/);
   assert.match(greenGas, /documentFor\("リサイクル",\["recycle"\]/);
-  assert.match(greenGas, /documentFor\("買取",\["purchase"\]/);
+  assert.match(greenGas, /pdfs\.forEach/);
   assert.match(greenGas, /class='documentPage/);
   assert.match(greenGas, /page-break-after:always/);
   assert.match(greenGas, /customer b\{display:block;font-size:22px/);
@@ -375,8 +375,8 @@ test("issued PDF can be shared by email, SMS, or LINE without changing the LINE 
   assert.match(slip, /get-slip-pdf-share/);
   assert.match(slip, /navigator\.canShare/);
   assert.match(slip, /async function getIssuedPdfForShare/);
-  assert.match(slip, /for\(let attempt=0;attempt<5;attempt\+\+\)/);
-  assert.match(slip, /KRAPI\.syncPending\?\.\(\)/);
+  assert.match(slip, /preparedPdfs\.get/);
+  assert.match(slip, /const sharing=navigator\.share/);
   assert.match(slip, /PDFの発行完了を待っています/);
   assert.match(slip, /navigator\.share/);
   assert.match(slip, /files:\[file\]/);

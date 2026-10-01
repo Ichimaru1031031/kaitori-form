@@ -1,0 +1,12 @@
+/* Neutral canvas, white content surfaces; preserve operational status colours. */
+:root{--bg:#f6f7f7;--card:#fff;--soft:#f8faf9}
+body{background:#f6f7f7!important}
+.card,.nativeSection,.nativeHero,.nativeMore,.nativeItem,.nativeVisitChoices button:not(.selected),
+.workflowCard,.slipCard,.inventoryRow,.inventoryDetailCard,.reviewCustomer,.reviewSection,
+.reviewLine,.reviewConsent,.reviewSignature,.previewBlock,.processCard,.appointmentInfo,
+.salesCard,.recycleCard,.caseCard,.compactSheet,.sheet,.appointmentSheet,
+.slipSheet,.nativeAssessment,.nativeAssessmentPair,
+input:not([type=checkbox]):not([type=radio]),select,textarea{background:#fff!important}
+.calEvent.tentative{background:#f0f6f3!important;color:#6b8175!important;border-left-color:#aac7b7!important;border-left-style:dashed!important}
+.dayEventCard.tentative{background:#f8fcfa!important;border:1px dashed #aac7b7!important}
+.card.tentative{border:1px dashed #aac7b7!important;color:#6b8175}.tentativeLabel{display:block;padding:6px 10px;background:#f1f7f3;color:#637e6c;font-weight:700}

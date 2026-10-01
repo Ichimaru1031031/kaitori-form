@@ -23,8 +23,13 @@
   function mergedAppointments() {
     const m = new Map();
     for (const a of K.snap.appointments || []) m.set(a.appointmentId, a);
-    for (const a of localAppointments) m.set(a.appointmentId, a);
-    return [...m.values()].filter((x) => x.status !== "deleted");
+    for (const a of localAppointments) {
+      if (String(a.appointmentId).startsWith("NEXT-VISIT-") && m.has(a.appointmentId)) continue;
+      const source=String(a.caseId||a.sourceRef||"").replace(/^BLUE-CASE-/,"");
+      if(!String(a.appointmentId).startsWith("NEXT-VISIT-") && m.has("NEXT-VISIT-"+source))continue;
+      m.set(a.appointmentId, a);
+    }
+    return [...m.values()].filter((x) => !["deleted", "cancelled"].includes(x.status));
   }
   K.getAppointments = mergedAppointments;
   function attendanceInfo(date) {
@@ -171,6 +176,7 @@
               (e) =>
                 '<div class="calEvent ' +
                 eventClass(e.category) +
+                (e.status === "tentative" ? " tentative" : "") +
                 '">' +
                 K.esc(
                   (e.startTime && e.endTime
@@ -293,6 +299,9 @@
     K.$("#saveAppointment").textContent = "予定を保存";
   }
   function openEditor(appt, date) {
+    if(appt?.status==="tentative" && String(appt.appointmentId).startsWith("NEXT-VISIT-")){
+      K.openAssessmentOps?.({id:appt.caseId,name:appt.customerName});return;
+    }
     editingAppointment = appt || null;
     seedCaseId = appt?.caseId || "";
     selectedEmployees = new Set();
@@ -387,6 +396,8 @@
     };
   }
   async function saveAppointment() {
+    const saveButton=K.$("#saveAppointment");if(saveButton.disabled)return;saveButton.disabled=true;
+    try{
     const wasEditing = Boolean(editingAppointment);
     const x = candidate();
     if (!x.date || !x.startTime || !x.endTime || !x.customerName) {
@@ -402,6 +413,11 @@
       return;
     }
     const conflicts = conflictRows(x);
+    if (conflicts.some(y => y.status === "tentative")) {
+      K.$("#apptConflict").textContent = "この時間はお客様確認待ちで仮押さえ中です。別の日時を選択してください。";
+      K.$("#apptConflict").classList.remove("hidden");
+      return;
+    }
     if (conflicts.length && !conflictAck) {
       K.$("#apptConflict").innerHTML =
         "<b>同時間帯に " +
@@ -425,6 +441,11 @@
       K.$("#saveAppointment").textContent = "重複あり・それでも保存";
       conflictAck = true;
       return;
+    }
+    let serverSaved=false;
+    if(window.KRAPI && (KRAPI.hasProtectedAdapter?.() || KRAPI.apiUrl?.())){
+      try{await KRAPI.runImmediate("appointment-upsert",x.appointmentId,x);serverSaved=true;}
+      catch(error){K.$("#apptConflict").textContent="予約を保存できません："+String(error?.message||error);K.$("#apptConflict").classList.remove("hidden");return;}
     }
     await KRDB.putAppointment(x);
     const i = localAppointments.findIndex(
@@ -453,7 +474,7 @@
         updatedAt: x.updatedAt,
       });
     }
-    await (window.KRAPI
+    if(!serverSaved)await (window.KRAPI
       ? KRAPI.run("appointment-upsert", x.appointmentId, x)
       : KRDB.enqueue({
           id: "sync-" + x.appointmentId + "-" + Date.now(),
@@ -495,6 +516,7 @@
       notice.classList.remove("show");
       setTimeout(() => notice.remove(), 250);
     }, 6500);
+    }finally{saveButton.disabled=false;}
   }
   [
     "apptDate",

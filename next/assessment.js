@@ -9,6 +9,18 @@
     dashboardLastSync = 0,
     detailCache = new Map(),
     visibleLimit = 40;
+  let calendarRequest=null,calendarSyncedAt=0;
+  K.refreshVisitCalendar=async(force=false)=>{
+    if(!KRAssessmentAdapter.hasSession() || (!force && Date.now()-calendarSyncedAt<15000))return;
+    if(calendarRequest)return calendarRequest;
+    calendarRequest=KRAssessmentAdapter.run("visit-calendar",{}).then(async appointments=>{
+      if(!Array.isArray(appointments))return;
+      K.snap.appointments=appointments;
+      for(const a of appointments.filter(x=>String(x.appointmentId).startsWith("NEXT-VISIT-")))await KRDB.putAppointment(a);
+      calendarSyncedAt=Date.now();K.renderCalendar?.();
+    }).catch(()=>{}).finally(()=>calendarRequest=null);
+    return calendarRequest;
+  };
   async function ensureCustomers() {
     if (loaded) return;
     if (Array.isArray(K.customers) && K.customers.length) {
@@ -228,6 +240,20 @@
   function money(value) {
     return "¥" + Number(value || 0).toLocaleString("ja-JP");
   }
+  function visitChoices(c) {
+    let values = [];
+    try { values = JSON.parse(c.requestedDatesJson || "[]"); } catch {}
+    const text = [c.hope || "", ...values].join("\n");
+    const year = Number((c.visitDate || K.keyDate(new Date())).slice(0, 4));
+    return [...text.matchAll(/(?:(\d{4})[年/\-])?(\d{1,2})[月/\-](\d{1,2})(?:日)?[^\n\d]*?(\d{1,2}:\d{2})\s*[〜～~\-–]\s*(\d{1,2}:\d{2})/g)].map(m => ({
+      date: `${m[1] || year}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`,
+      start: m[4].padStart(5, "0"), end: m[5].padStart(5, "0"), label: m[0],
+    })).filter((x, i, all) => all.findIndex(y => y.date === x.date && y.start === x.start && y.end === x.end) === i);
+  }
+  function visitChoicesHtml(c) {
+    const choices = visitChoices(c);
+    return '<div class="nativeVisitChoices"><b>お客様の希望日時</b>' + (choices.length ? choices.map((x, i) => '<button type="button" data-visit-choice="' + i + '">' + K.esc(x.label) + '</button>').join("") : '<p>' + K.esc(c.hope || "希望日時の登録はありません。下の欄から選択できます。") + '</p>') + '</div>';
+  }
   function visitData() {
     const date = K.$("#nativeVisitDate")?.value || "";
     const start = K.$("#nativeVisitStart")?.value || "";
@@ -253,12 +279,19 @@
     }
     try {
       const result = await KRAssessmentAdapter.run(operation, payload);
+      if (result?.appointment) {
+        const appt = result.appointment;
+        K.snap.appointments = (K.snap.appointments || []).filter(x => x.appointmentId !== appt.appointmentId && caseIdOf(x) !== payload.id);
+        K.snap.appointments.push(appt);
+        await KRDB.putAppointment(appt);
+        K.renderCalendar?.();
+      }
       actionNotice = {
         caseId: activeBlueCase,
         kind: "success",
         text: result?.message || success || "保存しました",
       };
-      await loadAssessmentCase({ id: activeBlueCase }, true);
+      if(activeBlueCase===payload.id)await loadAssessmentCase({ id: payload.id }, true);
     } catch (e) {
       if (/SESSION_EXPIRED/.test(String(e.message || e))) {
         KRAssessmentAdapter.clear();
@@ -291,16 +324,26 @@
     const combined = assessable && (c.mode === "出張買取希望" || /予約変更/.test(status));
     const rawItems = Array.isArray(c.items) && c.items.length ? c.items : String(c.productText || c.product || "商品").split(/\n/).filter(Boolean).map((name) => ({ name, amount: "" }));
     const itemRows = rawItems.map((item, index) => '<div class="nativeItem"><div><small>商品 ' + (index + 1) + '</small><b>' + K.esc(item.name || item.product || "商品") + '</b></div>' + (assessable && !readOnly ? '<label><span>査定額</span><input class="nativeAmount" inputmode="numeric" value="' + K.esc(item.amount || "") + '" placeholder="0"></label>' : '<strong>' + money(item.amount || 0) + '</strong>') + '</div>').join("");
-    const visitFields = '<div class="nativeVisit"><label>訪問日<input id="nativeVisitDate" type="date" value="' + K.esc(c.visitDate || "") + '"></label><label>開始<input id="nativeVisitStart" type="time" value="' + K.esc(String(c.visitTime || "").split(/〜/)[0] || "10:00") + '"></label><label>終了<input id="nativeVisitEnd" type="time" value="' + K.esc(String(c.visitTime || "").split(/〜/)[1] || "12:00") + '"></label></div>';
+    const visitFields = visitChoicesHtml(c) + '<div class="nativeVisit"><label>訪問日<input id="nativeVisitDate" type="date" value="' + K.esc(c.visitDate || "") + '"></label><label>開始<input id="nativeVisitStart" type="time" value="' + K.esc(String(c.visitTime || "").split(/〜/)[0] || "10:00") + '"></label><label>終了<input id="nativeVisitEnd" type="time" value="' + K.esc(String(c.visitTime || "").split(/〜/)[1] || "12:00") + '"></label></div>';
     const resultHtml = actionResultHtml(c);
     let actions = resultHtml + '<div class="nativeLocked">この案件は現在「' + K.esc(c.nextAction || status || "確認") + '」です。</div>';
     if (readOnly) actions = '<div class="nativeLocked"><b>NEXT表示モード</b><br>受付内容は確認できます。送信・更新は保護された接続が確認できた端末だけ有効になります。</div>';
     else if (assessable) actions = (combined ? visitFields : "") + '<textarea id="nativeMessage" placeholder="お客様への追加メッセージ（任意）"></textarea>' + resultHtml + '<div class="nativeActionBar"><button id="nativeSaveAssessment">下書き保存</button><button id="nativeSendAssessment" class="assessmentPrimary">' + (combined ? "査定額と訪問日時を確認・送信" : "査定結果を確認・送信") + "</button></div>";
     else if (visitEdit) actions = visitFields + '<textarea id="nativeMessage" placeholder="お客様への追加メッセージ（任意）"></textarea>' + resultHtml + '<div class="nativeActionBar"><button id="nativeSaveVisit">下書き保存</button><button id="nativeSendVisit" class="assessmentPrimary">訪問日時を確認・送信</button></div>';
-    return '<div class="nativeAssessment"><section class="nativeHero"><div><small>' + K.esc(c.id || activeBlueCase) + '</small><h2>' + K.esc(c.name || "氏名未登録") + ' 様</h2><p>' + K.esc(status) + '</p></div><div class="nativeTotal"><small>査定合計</small><b>' + money(c.total || 0) + '</b></div></section><section class="nativeSection"><h3>📦 商品と査定額</h3>' + itemRows + '</section><section class="nativeSection"><h3>📋 今やること</h3>' + actions + '</section><details class="nativeMore"><summary>お客様情報</summary><p>電話：' + K.esc(c.phone || "—") + '</p><p>メール：' + K.esc(c.email || "—") + '</p><p>住所：' + K.esc(c.address || "—") + '</p></details></div>';
+    const visitLabel = /訪問日時確定/.test(status) ? "訪問日時確定" : /確認待ち|承認待ち/.test(c.nextAction || "") ? "仮押さえ・お客様確認待ち" : "訪問日時（下書き）";
+    const visitSummary = c.visitDate && c.visitTime ? '<section class="nativeSection"><h3>' + visitLabel + '</h3><b>' + K.esc(c.visitDate + " " + c.visitTime) + '</b></section>' : "";
+    return '<div class="nativeAssessment"><section class="nativeHero"><div><small>' + K.esc(c.id || activeBlueCase) + '</small><h2>' + K.esc(c.name || "氏名未登録") + ' 様</h2><p>' + K.esc(status) + '</p></div><div class="nativeTotal"><small>査定合計</small><b>' + money(c.total || 0) + '</b></div></section>' + visitSummary + '<section class="nativeSection"><h3>📦 商品と査定額</h3>' + itemRows + '</section><section class="nativeSection"><h3>📋 今やること</h3>' + actions + '</section><details class="nativeMore"><summary>お客様情報</summary><p><b>希望の連絡方法：</b>' + K.esc(c.contact || c.preferredContact || '未登録') + '</p><p>電話：' + K.esc(c.phone || "—") + '</p><p>メール：' + K.esc(c.email || "—") + '</p><p>住所：' + K.esc(c.address || "—") + '</p></details></div>';
   }
   function bindNativeActions(c) {
     const id = c.id || activeBlueCase;
+    K.$$("[data-visit-choice]").forEach(button => button.addEventListener("click", () => {
+      const choice = visitChoices(c)[Number(button.dataset.visitChoice)];
+      if (!choice) return;
+      K.$("#nativeVisitDate").value = choice.date;
+      K.$("#nativeVisitStart").value = choice.start;
+      K.$("#nativeVisitEnd").value = choice.end;
+      K.$$("[data-visit-choice]").forEach(x => x.classList.toggle("selected", x === button));
+    }));
     K.$("#nativeSaveAssessment")?.addEventListener("click", () => runAssessment("save-assessment", { id, amounts: amounts(), data: visitData() }, "下書きを保存しました"));
     K.$("#nativeSendAssessment")?.addEventListener("click", () => {
       if (!confirm("査定内容を確認し、お客様へ送信しますか？")) return;
@@ -314,6 +357,7 @@
     });
   }
   async function loadAssessmentCase(caseInfo, force = false) {
+    const requestedId=activeBlueCase;
     const body = K.$("#assessmentOpsBody");
     const cached = detailCache.get(activeBlueCase);
     if (!force && cached && Date.now() - cached.savedAt < 30000) {
@@ -328,6 +372,7 @@
       '<div class="nativeAssessmentLoading"><b>最新情報を確認中…</b></div>';
     try {
       const detail = await KRAssessmentAdapter.getCase(activeBlueCase, { force });
+      if(activeBlueCase!==requestedId)return;
       detailCache.set(activeBlueCase, { detail, savedAt: Date.now() });
       K.__assessmentCase = detail;
       mergeNativeDetail(detail);

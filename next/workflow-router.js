@@ -25,6 +25,7 @@
       K.screen(native[0]);
       K.setNav(tab);
       K[native[1]] && K[native[1]]();
+      if(tab==="schedule")K.refreshVisitCalendar?.();
       return;
     }
     K.openBlue(tab);

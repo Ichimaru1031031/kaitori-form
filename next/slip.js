@@ -142,6 +142,8 @@ async function finalizeSnapshot(){
   if(pdfUrl)statusHtml+='<a class="confirmedPdfLink" target="_blank" rel="noopener" href="'+K.esc(pdfUrl)+'">発行PDFを確認</a>';
   if(generated.length)statusHtml+='<div class="generatedInventoryLinks"><small>在庫を自動生成しました</small>'+generated.map((x,i)=>'<button type="button" data-inv="'+K.esc(x.inventoryId||"")+'" data-no="'+K.esc(x.inventoryNo||"")+'">'+K.esc(x.inventoryNo||("在庫"+(i+1)))+' を開く</button>').join("")+'</div>';
   K.$("#confirmedPanel").innerHTML=statusHtml;
+  setupDocumentChoices(apiResult?.pdfs || [], serviceOrderId);
+  if(apiResult && serviceOrderId) prepareIssuedPdf(serviceOrderId).catch(()=>{});
   K.$$("#confirmedPanel .generatedInventoryLinks button").forEach(b=>b.onclick=async()=>{
     const id=b.dataset.inv,no=b.dataset.no;
     try{
@@ -173,7 +175,7 @@ function updateConsentState(){K.$("#finalizeConfirmation").disabled=!(K.$("#conf
 K.$("#customerPreview").onclick=()=>{if(!draft||stopForDraftIssues())return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#confirmCustomerDetails").checked=false;K.$("#confirmPurchaseTerms").checked=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";updateConsentState();const send=K.$("#bluePdfSend");send.disabled=true;setDeliveryLabel(send,"確定後に送信");send.dataset.slip="";send.dataset.mode="";send.dataset.email="";send.dataset.phone="";send.dataset.pdf="";send.dataset.version="";send.dataset.resend="0";[K.$("#smsPdfShare"),K.$("#linePdfShare")].forEach(button=>{button.disabled=true;button.dataset.slip="";button.dataset.pdf=""});K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
 K.$("#clearSignature").onclick=clearSignature;
 K.$("#finalizeConfirmation").onclick=finalizeSnapshot;
-K.$("#printPreview").onclick=()=>window.print();
+K.$("#printPreview").onclick=()=>{const slip=K.$("#smsPdfShare").dataset.slip,ready=preparedPdfs.get(pdfShareKey(slip,selectedDocumentKind));if(ready){const url=URL.createObjectURL(ready.file);window.open(url,"_blank","noopener");setTimeout(()=>URL.revokeObjectURL(url),60000)}else if(slip){prepareIssuedPdf(slip).then(()=>{K.$("#documentSendResult").textContent="PDFを準備しました。もう一度「PDF表示・印刷」を押してください。"}).catch(e=>{K.$("#documentSendResult").textContent="PDF準備に失敗："+e.message})}else window.print()};
 K.$("#bluePdfSend").onclick=async()=>{
   const button=K.$("#bluePdfSend"),slip=button.dataset.slip||draft?.sourceServiceOrderId||"";
   if(button.dataset.mode!=="email"){
@@ -189,11 +191,12 @@ K.$("#bluePdfSend").onclick=async()=>{
   setDeliveryLabel(button,resend?"再送信中…":"送信中…");
   if(resultEl){resultEl.className="documentSendResult working";resultEl.textContent="宛先とPDFを確認しています…"}
   try{
-    const raw=await KRAPI.runImmediate("send-slip-pdf-email",slip,{resend}),result=raw?.result||raw||{};
+    const raw=await KRAPI.runImmediate("send-slip-pdf-email",slip,{resend,documentKind:selectedDocumentKind,version:Number(version)}),result=raw?.result||raw||{};
     const delivery=K.$("#confirmedPanel .documentDeliveryStatus .unsent");
     if(delivery){delivery.classList.remove("unsent");delivery.classList.add("sent");delivery.textContent="送信済み（メール）"}
     if(resultEl){resultEl.className="documentSendResult success";resultEl.textContent=result.message||("\u7b2c"+version+"\u7248PDF\u3092\u30e1\u30fc\u30eb\u3067\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002")}
     button.dataset.resend="1";
+    sentPdfKeys.add(pdfShareKey(slip,selectedDocumentKind));
     setDeliveryLabel(button,"メール再送");
   }catch(error){
     if(resultEl){resultEl.className="documentSendResult error";resultEl.textContent="送信できません："+String(error?.message||error)}
@@ -205,8 +208,50 @@ K.$("#bluePdfSend").onclick=async()=>{
 
 function decodeBase64File(base64,mimeType,fileName){const raw=atob(base64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new File([bytes],fileName,{type:mimeType||"application/pdf"})}
 function shareResult(raw){return raw?.result?.result||raw?.result||raw||{}}
-async function getIssuedPdfForShare(slip,onWait){let error=null;for(let attempt=0;attempt<5;attempt++){try{if(attempt===0)await KRAPI.syncPending?.();const result=shareResult(await KRAPI.runImmediate("get-slip-pdf-share",slip,{}));if(result.pdfBase64)return result;throw new Error("PDF_DATA_MISSING")}catch(e){error=e;if(attempt<4){onWait?.(attempt+1);await KRAPI.syncPending?.().catch(()=>{});await new Promise(resolve=>setTimeout(resolve,1200*(attempt+1)))}}}throw error||new Error("PDF_SHARE_FAILED")}
-async function shareIssuedPdf(channel){const button=channel==="sms"?K.$("#smsPdfShare"):K.$("#linePdfShare"),slip=button.dataset.slip||draft?.sourceServiceOrderId||"",resultEl=K.$("#documentSendResult"),label=channel==="sms"?"SMS":"LINE";if(!slip)return;button.disabled=true;if(resultEl){resultEl.className="documentSendResult working";resultEl.textContent="共有用PDFを安全に準備しています…"}try{const result=await getIssuedPdfForShare(slip,()=>{if(resultEl){resultEl.className="documentSendResult working";resultEl.textContent="PDFの発行完了を待っています…このままお待ちください"}}),file=decodeBase64File(result.pdfBase64,result.mimeType,result.fileName),text="買取レスキュー お客様控え "+slip+" 第"+(result.version||button.dataset.version||1)+"版",canFileShare=Boolean(navigator.share&&navigator.canShare?.({files:[file]}));if(!canFileShare)throw new Error("FILE_SHARE_NOT_SUPPORTED");await navigator.share({title:text,text:label+"でお客様へPDFを共有してください",files:[file]});if(resultEl){resultEl.className="documentSendResult success";resultEl.textContent=label+"を選べる共有画面を開きました。送信完了は端末側で確認してください。"}}catch(error){if(error?.name==="AbortError"){if(resultEl){resultEl.className="documentSendResult";resultEl.textContent="共有をキャンセルしました。PDFは送信されていません。"}}else if(resultEl){resultEl.className="documentSendResult error";const message=String(error?.message||error);resultEl.textContent=message.includes("FILE_SHARE_NOT_SUPPORTED")?"この端末ではPDF添付共有を使えません。iPhoneはSafari、AndroidはChromeでNEXTを開いて再試行してください。":"PDFを発行できませんでした。通信を確認し、少し待って「"+label+"」をもう一度押してください。"}}finally{button.disabled=false}}
+let selectedDocumentKind="";
+const sentPdfKeys=new Set();
+const preparedPdfs=new Map(), preparingPdfs=new Map();
+function pdfShareKey(slip,kind){return slip+":"+(K.$("#smsPdfShare")?.dataset.version||"1")+":"+kind}
+function setupDocumentChoices(pdfs,slip){
+  selectedDocumentKind=pdfs[0]?.kind||"";
+  let box=K.$("#issuedDocumentChoices");
+  if(!box){box=document.createElement("div");box.id="issuedDocumentChoices";K.$("#documentSendResult")?.before(box)}
+  box.innerHTML=pdfs.map(p=>'<button type="button" data-document-kind="'+K.esc(p.kind)+'">'+(p.kind==="recycle"?"リサイクル明細":"その他の明細（買取・販売・工事）")+'</button>').join("");
+  const select=kind=>{selectedDocumentKind=kind;box.querySelectorAll("button").forEach(b=>b.classList.toggle("selected",b.dataset.documentKind===kind));const pdf=pdfs.find(p=>p.kind===kind);[K.$("#smsPdfShare"),K.$("#linePdfShare"),K.$("#bluePdfSend")].forEach(b=>{b.dataset.pdf=pdf?.fileUrl||""});const email=K.$("#bluePdfSend");const sent=sentPdfKeys.has(pdfShareKey(slip,kind));email.dataset.resend=sent?"1":"0";setDeliveryLabel(email,email.dataset.email?(sent?"メール再送":"メール送信"):"メール未登録");const link=K.$(".confirmedPdfLink");if(link&&pdf?.fileUrl)link.href=pdf.fileUrl;prepareIssuedPdf(slip,kind).catch(()=>{})};
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>select(b.dataset.documentKind));
+  if(pdfs.length)select(selectedDocumentKind);
+}
+async function getIssuedPdfForShare(slip,onWait,kind=selectedDocumentKind){
+  const result=shareResult(await KRAPI.runImmediate("get-slip-pdf-share",slip,{documentKind:kind,version:Number(K.$("#smsPdfShare")?.dataset.version||1)}));
+  if(!result.pdfBase64)throw new Error("PDF_DATA_MISSING");
+  return result;
+}
+async function prepareIssuedPdf(slip,kind=selectedDocumentKind){
+  const key=pdfShareKey(slip,kind);
+  if(preparedPdfs.has(key))return preparedPdfs.get(key);
+  if(preparingPdfs.has(key))return preparingPdfs.get(key);
+  const task=getIssuedPdfForShare(slip,null,kind).then(result=>{const value={result,file:decodeBase64File(result.pdfBase64,result.mimeType,result.fileName)};preparedPdfs.set(key,value);while(preparedPdfs.size>6)preparedPdfs.delete(preparedPdfs.keys().next().value);return value}).finally(()=>preparingPdfs.delete(key));
+  preparingPdfs.set(key,task);return task;
+}
+async function shareIssuedPdf(channel){
+  const button=channel==="sms"?K.$("#smsPdfShare"):K.$("#linePdfShare"),slip=button.dataset.slip||draft?.sourceServiceOrderId||"",resultEl=K.$("#documentSendResult"),label=channel==="sms"?"SMS":"LINE";
+  if(!slip)return;
+  const ready=preparedPdfs.get(pdfShareKey(slip,selectedDocumentKind));
+  if(!ready){button.disabled=true;resultEl.className="documentSendResult working";resultEl.textContent="PDFの発行完了を待っています…";try{await prepareIssuedPdf(slip);resultEl.textContent="PDFを準備しました。もう一度「"+label+"」を押すと、すぐ共有画面が開きます。"}catch(error){resultEl.className="documentSendResult error";resultEl.textContent="PDFを準備できません："+String(error?.message||error)}finally{button.disabled=false}return}
+  const {file,result}=ready,text="買取レスキュー 明細書 "+slip+" 第"+result.version+"版";
+  if(channel==="sms"){
+    const phone=String(button.dataset.phone||"").replace(/[^\d+]/g,"");
+    if(!phone){resultEl.className="documentSendResult error";resultEl.textContent="電話番号が未登録です。伝票入力へ戻り、お客様の携帯電話番号を登録してください。";return}
+    if(!result.shareToken){resultEl.className="documentSendResult error";resultEl.textContent="明細リンクを準備できませんでした。接続を確認してください。";return}
+    const url=new URL("./statement.html",location.href);url.search="";url.hash="document="+encodeURIComponent(result.shareToken);
+    const body="買取レスキューです。"+(selectedDocumentKind==="recycle"?"リサイクル":"お取引")+"明細書（第"+result.version+"版）をお送りします。\n"+url.href+"\nリンクは30日間有効です。";
+    const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Mac/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
+    location.href="sms:"+phone+(ios?"&body=":"?body=")+encodeURIComponent(body);
+    resultEl.className="documentSendResult";resultEl.textContent="メッセージ画面で宛先・本文を確認し、送信してください。まだ送信済みにはしていません。";return;
+  }
+  if(!navigator.share||!navigator.canShare?.({files:[file]})){resultEl.className="documentSendResult error";resultEl.textContent="この端末はPDF添付共有に対応していません。メール送信、またはPDFを保存してメッセージアプリへ添付してください。";return}
+  try{const sharing=navigator.share({title:text,text:channel==="sms"?"明細書をお送りします。メッセージアプリで宛先 "+button.dataset.phone+" を確認してください。":"明細書をお送りします。",files:[file]});button.disabled=true;await sharing;resultEl.className="documentSendResult success";resultEl.textContent="共有画面の操作が完了しました。送信結果はメッセージアプリで確認してください。"}catch(error){resultEl.className="documentSendResult error";resultEl.textContent=error?.name==="AbortError"?"共有をキャンセルしました。":"共有画面を開けません："+String(error?.message||error)}finally{button.disabled=false}
+}
 K.$("#smsPdfShare").onclick=()=>shareIssuedPdf("sms");
 K.$("#linePdfShare").onclick=()=>shareIssuedPdf("line");
 

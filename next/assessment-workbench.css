@@ -335,3 +335,4 @@
   .nativeActionBar { grid-template-columns: 1fr; }
 }
 .nativeActionResult{min-height:20px;margin:8px 0 0;font-size:13px;font-weight:700}.nativeActionResult.pending{color:#5f6f69}.nativeActionResult.success{color:#087f47}.nativeActionResult.error{color:#b42318}
+.nativeVisitChoices{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.nativeVisitChoices>b{width:100%;font-size:14px}.nativeVisitChoices button{padding:12px;border:1px solid #c5dcd3;background:#f3faf6;border-radius:12px;color:#235d49;font-size:15px;min-height:44px}.nativeVisitChoices button.selected{background:#245f4b;color:white}.calEvent.tentative{background:#edf6f0!important;color:#698172!important;border-left-color:#aac7b7!important;border-left-style:dashed!important}
