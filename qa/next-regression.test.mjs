@@ -212,7 +212,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=17/);
+  assert.match(html, /slip\.js\?v=18/);
   assert.match(html, /assessment-adapter\.js\?v=15/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
@@ -335,7 +335,7 @@ test("protected Green bridge is used without exposing an anonymous write URL", (
   assert.match(adapterGas, /case "green-write"/);
   assert.match(adapterGas, /GreenNext\.greenBridgeRequest\("write", payload\)/);
   assert.match(adapterManifest, /"userSymbol": "GreenNext"/);
-  assert.match(adapterManifest, /"version": "7"/);
+  assert.ok(Number(JSON.parse(adapterManifest).dependencies.libraries.find(x=>x.userSymbol==="GreenNext").version)>=8);
 });
 
 test("issued slip PDF email uses stored customer data and explicit resend", () => {

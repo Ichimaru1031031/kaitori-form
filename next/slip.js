@@ -175,7 +175,7 @@ function updateConsentState(){K.$("#finalizeConfirmation").disabled=!(K.$("#conf
 K.$("#customerPreview").onclick=()=>{if(!draft||stopForDraftIssues())return;renderPreview();K.$("#confirmedPanel").classList.add("hidden");K.$("#previewStatus").textContent="内容をご確認ください";K.$("#confirmCustomerDetails").checked=false;K.$("#confirmPurchaseTerms").checked=false;K.$("#finalizeConfirmation").textContent="✓ 確認・署名を確定";updateConsentState();const send=K.$("#bluePdfSend");send.disabled=true;setDeliveryLabel(send,"確定後に送信");send.dataset.slip="";send.dataset.mode="";send.dataset.email="";send.dataset.phone="";send.dataset.pdf="";send.dataset.version="";send.dataset.resend="0";[K.$("#smsPdfShare"),K.$("#linePdfShare")].forEach(button=>{button.disabled=true;button.dataset.slip="";button.dataset.pdf=""});K.overlay("preview").classList.add("on");requestAnimationFrame(setupSignature)};
 K.$("#clearSignature").onclick=clearSignature;
 K.$("#finalizeConfirmation").onclick=finalizeSnapshot;
-K.$("#printPreview").onclick=()=>{const slip=K.$("#smsPdfShare").dataset.slip,ready=preparedPdfs.get(pdfShareKey(slip,selectedDocumentKind));if(ready){const url=URL.createObjectURL(ready.file);window.open(url,"_blank","noopener");setTimeout(()=>URL.revokeObjectURL(url),60000)}else if(slip){prepareIssuedPdf(slip).then(()=>{K.$("#documentSendResult").textContent="PDFを準備しました。もう一度「PDF表示・印刷」を押してください。"}).catch(e=>{K.$("#documentSendResult").textContent="PDF準備に失敗："+e.message})}else window.print()};
+K.$("#printPreview").onclick=()=>{const slip=K.$("#smsPdfShare").dataset.slip,ready=preparedPdfs.get(pdfShareKey(slip,selectedDocumentKind));if(ready?.file){const url=URL.createObjectURL(ready.file);window.open(url,"_blank","noopener");setTimeout(()=>URL.revokeObjectURL(url),60000)}else if(slip){prepareIssuedPdf(slip).then(()=>{K.$("#documentSendResult").textContent="PDFを準備しました。もう一度「PDF表示・印刷」を押してください。"}).catch(e=>{K.$("#documentSendResult").textContent="PDF準備に失敗："+e.message})}else window.print()};
 K.$("#bluePdfSend").onclick=async()=>{
   const button=K.$("#bluePdfSend"),slip=button.dataset.slip||draft?.sourceServiceOrderId||"";
   if(button.dataset.mode!=="email"){
@@ -214,6 +214,7 @@ const preparedPdfs=new Map(), preparingPdfs=new Map();
 function pdfShareKey(slip,kind){return slip+":"+(K.$("#smsPdfShare")?.dataset.version||"1")+":"+kind}
 function setupDocumentChoices(pdfs,slip){
   selectedDocumentKind=pdfs[0]?.kind||"";
+  for(const pdf of pdfs){if(pdf.shareToken)preparedPdfs.set(pdfShareKey(slip,pdf.kind),{file:null,result:{...pdf,version:Number(K.$("#smsPdfShare").dataset.version||1)}})}
   let box=K.$("#issuedDocumentChoices");
   if(!box){box=document.createElement("div");box.id="issuedDocumentChoices";K.$("#documentSendResult")?.before(box)}
   box.innerHTML=pdfs.map(p=>'<button type="button" data-document-kind="'+K.esc(p.kind)+'">'+(p.kind==="recycle"?"リサイクル明細":"その他の明細（買取・販売・工事）")+'</button>').join("");
@@ -228,7 +229,7 @@ async function getIssuedPdfForShare(slip,onWait,kind=selectedDocumentKind){
 }
 async function prepareIssuedPdf(slip,kind=selectedDocumentKind){
   const key=pdfShareKey(slip,kind);
-  if(preparedPdfs.has(key))return preparedPdfs.get(key);
+  if(preparedPdfs.get(key)?.file)return preparedPdfs.get(key);
   if(preparingPdfs.has(key))return preparingPdfs.get(key);
   const task=getIssuedPdfForShare(slip,null,kind).then(result=>{const value={result,file:decodeBase64File(result.pdfBase64,result.mimeType,result.fileName)};preparedPdfs.set(key,value);while(preparedPdfs.size>6)preparedPdfs.delete(preparedPdfs.keys().next().value);return value}).finally(()=>preparingPdfs.delete(key));
   preparingPdfs.set(key,task);return task;
@@ -237,7 +238,7 @@ async function shareIssuedPdf(channel){
   const button=channel==="sms"?K.$("#smsPdfShare"):K.$("#linePdfShare"),slip=button.dataset.slip||draft?.sourceServiceOrderId||"",resultEl=K.$("#documentSendResult"),label=channel==="sms"?"SMS":"LINE";
   if(!slip)return;
   const ready=preparedPdfs.get(pdfShareKey(slip,selectedDocumentKind));
-  if(!ready){button.disabled=true;resultEl.className="documentSendResult working";resultEl.textContent="PDFの発行完了を待っています…";try{await prepareIssuedPdf(slip);resultEl.textContent="PDFを準備しました。もう一度「"+label+"」を押すと、すぐ共有画面が開きます。"}catch(error){resultEl.className="documentSendResult error";resultEl.textContent="PDFを準備できません："+String(error?.message||error)}finally{button.disabled=false}return}
+  if(!ready || (channel!=="sms"&&!ready.file)){button.disabled=true;resultEl.className="documentSendResult working";resultEl.textContent="PDFの発行完了を待っています…";try{await prepareIssuedPdf(slip);resultEl.textContent="PDFを準備しました。もう一度「"+label+"」を押すと、すぐ共有画面が開きます。"}catch(error){resultEl.className="documentSendResult error";resultEl.textContent="PDFを準備できません："+String(error?.message||error)}finally{button.disabled=false}return}
   const {file,result}=ready,text="買取レスキュー 明細書 "+slip+" 第"+result.version+"版";
   if(channel==="sms"){
     const phone=String(button.dataset.phone||"").replace(/[^\d+]/g,"");

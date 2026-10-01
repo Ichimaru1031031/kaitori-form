@@ -885,8 +885,11 @@ function opFinalizeSlip_(entityId,p,key){
     status:"issued",
     createdAt:new Date().toISOString()
   });
-  pdfs.forEach(function(documentPdf){appendObject_("DOCUMENTS",{
-    documentId:"NEXTDOC-"+Utilities.getUuid(),
+  pdfs.forEach(function(documentPdf){
+    documentPdf.documentId="NEXTDOC-"+Utilities.getUuid();
+    documentPdf.shareToken=customerPdfToken_(documentPdf);
+    appendObject_("DOCUMENTS",{
+    documentId:documentPdf.documentId,
     caseId:links.caseId,
     serviceOrderId:links.serviceOrderId,
     type:"customer-copy",
