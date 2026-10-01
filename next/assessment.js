@@ -7,6 +7,7 @@
     actionNotice = null,
     dashboardPromise = null,
     dashboardLastSync = 0,
+    detailCache = new Map(),
     visibleLimit = 40;
   async function ensureCustomers() {
     if (loaded) return;
@@ -154,6 +155,7 @@
           ...(existing.find((x) => caseIdOf(x) === caseIdOf(row)) || {}),
           ...row,
         }));
+        if (force) detailCache.clear();
         dashboardLastSync = Date.now();
         return true;
       } catch {
@@ -313,12 +315,20 @@
   }
   async function loadAssessmentCase(caseInfo, force = false) {
     const body = K.$("#assessmentOpsBody");
+    const cached = detailCache.get(activeBlueCase);
+    if (!force && cached && Date.now() - cached.savedAt < 30000) {
+      K.__assessmentCase = cached.detail;
+      body.innerHTML = nativeDetailHtml(cached.detail);
+      bindNativeActions(cached.detail);
+      return;
+    }
     const preview = normCase({ ...caseInfo, id: activeBlueCase });
     body.innerHTML =
       nativeDetailHtml(preview, true) +
       '<div class="nativeAssessmentLoading"><b>最新情報を確認中…</b></div>';
     try {
       const detail = await KRAssessmentAdapter.getCase(activeBlueCase, { force });
+      detailCache.set(activeBlueCase, { detail, savedAt: Date.now() });
       K.__assessmentCase = detail;
       mergeNativeDetail(detail);
       body.innerHTML = nativeDetailHtml(detail);

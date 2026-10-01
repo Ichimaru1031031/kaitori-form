@@ -183,14 +183,20 @@ function labelOcr_(payload, token) {
 }
 
 function requireSession_(token) {
-  const key = "session:" + hash_(String(token || ""));
+  const tokenHash = hash_(String(token || ""));
+  const key = "session:" + tokenHash;
+  const fastKey = "session-ok:" + tokenHash.slice(0, 32);
+  const cache = CacheService.getScriptCache();
+  if (cache.get(fastKey) === "1") return;
   const properties = PropertiesService.getScriptProperties();
   const expiresAt = Number(properties.getProperty(key) || 0);
   if (!expiresAt || expiresAt < Date.now()) {
     properties.deleteProperty(key);
     throw new Error("SESSION_EXPIRED");
   }
-  properties.setProperty(key, String(Date.now() + ADAPTER.SESSION_DAYS * 86400000));
+  if (expiresAt - Date.now() < 30 * 86400000)
+    properties.setProperty(key, String(Date.now() + ADAPTER.SESSION_DAYS * 86400000));
+  cache.put(fastKey, "1", 600);
 }
 
 function requireOcrSession_(token) {
@@ -224,7 +230,9 @@ function issueOcrSession_() {
 function issueSession_() {
   const token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
   const expiresAt = Date.now() + ADAPTER.SESSION_DAYS * 86400000;
-  PropertiesService.getScriptProperties().setProperty("session:" + hash_(token), String(expiresAt));
+  const tokenHash = hash_(token);
+  PropertiesService.getScriptProperties().setProperty("session:" + tokenHash, String(expiresAt));
+  CacheService.getScriptCache().put("session-ok:" + tokenHash.slice(0, 32), "1", 600);
   return { ok: true, token: token, expiresAt: new Date(expiresAt).toISOString() };
 }
 

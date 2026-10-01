@@ -213,7 +213,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
   assert.match(html, /slip\.js\?v=16/);
-  assert.match(html, /assessment-adapter\.js\?v=14/);
+  assert.match(html, /assessment-adapter\.js\?v=15/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -566,7 +566,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=14/);
+  assert.match(html, /assessment-adapter\.js\?v=15/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);
@@ -631,6 +631,11 @@ test("assessment shows an immediate preview and safely caches read-only GAS data
   assert.match(adapterGas, /function mutateCase_\(id, operation\)/);
   assert.match(adapterGas, /cache\.remove\("assessment-dashboard:v2"\)/);
   assert.match(adapterGas, /cache\.remove\(assessmentCaseCacheKey_\(id\)\)/);
+  assert.match(assessment, /Date\.now\(\) - cached\.savedAt < 30000/);
+  assert.match(assessment, /detailCache\.set\(activeBlueCase/);
+  assert.match(adapterGas, /cache\.get\(fastKey\) === "1"/);
+  assert.match(adapterGas, /cache\.put\(fastKey, "1", 600\)/);
+  assert.match(adapterGas, /expiresAt - Date\.now\(\) < 30 \* 86400000/);
 });
 
 test("assessment reuses one protected bridge and avoids repeated full-list rendering", () => {
