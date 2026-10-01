@@ -144,7 +144,7 @@
     if (dashboardPromise) return dashboardPromise;
     dashboardPromise = (async () => {
       try {
-        const result = await KRAssessmentAdapter.run("dashboard", {});
+        const result = await KRAssessmentAdapter.run("dashboard", { force });
         const rows = dashboardCases(result).filter((x) =>
           /^KR-/i.test(caseIdOf(x)),
         );
@@ -256,7 +256,7 @@
         kind: "success",
         text: result?.message || success || "保存しました",
       };
-      await loadAssessmentCase({ id: activeBlueCase });
+      await loadAssessmentCase({ id: activeBlueCase }, true);
     } catch (e) {
       if (/SESSION_EXPIRED/.test(String(e.message || e))) {
         KRAssessmentAdapter.clear();
@@ -311,11 +311,14 @@
       runAssessment("send-visit", { id, data: visitData(), message: K.$("#nativeMessage")?.value || "" }, "訪問日時を送信しました");
     });
   }
-  async function loadAssessmentCase(caseInfo) {
+  async function loadAssessmentCase(caseInfo, force = false) {
     const body = K.$("#assessmentOpsBody");
-    body.innerHTML = '<div class="nativeAssessmentLoading"><b>査定データを読み込み中…</b></div>';
+    const preview = normCase({ ...caseInfo, id: activeBlueCase });
+    body.innerHTML =
+      nativeDetailHtml(preview, true) +
+      '<div class="nativeAssessmentLoading"><b>最新情報を確認中…</b></div>';
     try {
-      const detail = await KRAssessmentAdapter.getCase(activeBlueCase);
+      const detail = await KRAssessmentAdapter.getCase(activeBlueCase, { force });
       K.__assessmentCase = detail;
       mergeNativeDetail(detail);
       body.innerHTML = nativeDetailHtml(detail);
@@ -522,7 +525,7 @@
   };
   K.$("#refreshAssessment").onclick = () => refreshBlueList(true);
   K.$("#assessmentOpsReload").onclick = () =>
-    activeBlueCase && loadAssessmentCase({ id: activeBlueCase });
+    activeBlueCase && loadAssessmentCase({ id: activeBlueCase }, true);
   K.$("#assessmentOpsClose").addEventListener("click", () =>
     K.renderAssessment(),
   );

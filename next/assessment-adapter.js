@@ -288,7 +288,8 @@
     claimLink,
     clear,
     hasSession,
-    getCase: (id) => request("case", { id }),
+    getCase: (id, options) =>
+      request("case", { id, force: Boolean(options?.force) }),
     run,
   };
   addEventListener("DOMContentLoaded", () => setTimeout(init, 0));

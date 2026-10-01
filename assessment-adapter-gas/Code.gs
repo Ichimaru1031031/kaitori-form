@@ -66,14 +66,14 @@ function adapterRequest(token, operation, payload) {
     requireSession_(token);
   }
   switch (String(operation || "")) {
-    case "dashboard": return ProdDash.getDashboardData(true);
-    case "case": return ProdDash.getCase(String(payload.id || ""));
-    case "save-assessment": return ProdDash.saveAssessmentDraft(String(payload.id || ""), payload.amounts || [], payload.data || null);
-    case "send-estimate": return ProdDash.saveAndSendEstimate(String(payload.id || ""), payload.amounts || [], String(payload.message || ""));
-    case "send-combined": return ProdDash.saveAndSendCombined(String(payload.id || ""), payload.amounts || [], payload.data || {}, String(payload.message || ""));
-    case "save-visit": return ProdDash.saveCase(String(payload.id || ""), payload.data || {});
-    case "send-visit": return ProdDash.saveAndSendVisit(String(payload.id || ""), payload.data || {}, String(payload.message || ""));
-    case "status": return ProdDash.setStatus(String(payload.id || ""), String(payload.status || ""));
+    case "dashboard": return cachedDashboard_(Boolean(payload.force));
+    case "case": return cachedCase_(String(payload.id || ""), Boolean(payload.force));
+    case "save-assessment": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAssessmentDraft(String(payload.id || ""), payload.amounts || [], payload.data || null); });
+    case "send-estimate": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAndSendEstimate(String(payload.id || ""), payload.amounts || [], String(payload.message || "")); });
+    case "send-combined": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAndSendCombined(String(payload.id || ""), payload.amounts || [], payload.data || {}, String(payload.message || "")); });
+    case "save-visit": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveCase(String(payload.id || ""), payload.data || {}); });
+    case "send-visit": return mutateCase_(String(payload.id || ""), function () { return ProdDash.saveAndSendVisit(String(payload.id || ""), payload.data || {}, String(payload.message || "")); });
+    case "status": return mutateCase_(String(payload.id || ""), function () { return ProdDash.setStatus(String(payload.id || ""), String(payload.status || "")); });
     case "create-device-link": return createDeviceLink_();
     case "label-ocr-status": return labelOcrStatus_();
     case "label-ocr": return labelOcr_(payload, token);
@@ -82,6 +82,53 @@ function adapterRequest(token, operation, payload) {
     case "green-write": return GreenNext.greenBridgeRequest("write", payload);
     default: throw new Error("UNSUPPORTED_OPERATION:" + operation);
   }
+}
+
+function cachedDashboard_(force) {
+  const cache = CacheService.getScriptCache();
+  const key = "assessment-dashboard:v2";
+  if (!force) {
+    const stored = cache.get(key);
+    if (stored) {
+      try { return JSON.parse(stored); } catch (_error) {}
+    }
+  }
+  const result = ProdDash.getDashboardData(true);
+  putSmallJson_(cache, key, result, 20);
+  return result;
+}
+
+function cachedCase_(id, force) {
+  const cache = CacheService.getScriptCache();
+  const key = assessmentCaseCacheKey_(id);
+  if (!force) {
+    const stored = cache.get(key);
+    if (stored) {
+      try { return JSON.parse(stored); } catch (_error) {}
+    }
+  }
+  const result = ProdDash.getCase(id);
+  putSmallJson_(cache, key, result, 120);
+  return result;
+}
+
+function putSmallJson_(cache, key, value, seconds) {
+  try {
+    const json = JSON.stringify(value);
+    if (json.length < 90000) cache.put(key, json, seconds);
+  } catch (_error) {}
+}
+
+function assessmentCaseCacheKey_(id) {
+  return "assessment-case:v2:" + hash_(String(id || "")).slice(0, 24);
+}
+
+function mutateCase_(id, operation) {
+  const result = operation();
+  const cache = CacheService.getScriptCache();
+  cache.remove("assessment-dashboard:v2");
+  cache.remove(assessmentCaseCacheKey_(id));
+  return result;
 }
 
 function labelOcrStatus_() {

@@ -213,7 +213,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
   assert.match(html, /slip\.js\?v=16/);
-  assert.match(html, /assessment-adapter\.js\?v=13/);
+  assert.match(html, /assessment-adapter\.js\?v=14/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -566,7 +566,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=13/);
+  assert.match(html, /assessment-adapter\.js\?v=14/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);
@@ -615,11 +615,22 @@ test("assessment action result survives the post-send detail refresh", () => {
 });
 
 test("assessment list refreshes from the protected production dashboard", () => {
-  assert.match(assessment, /KRAssessmentAdapter\.run\("dashboard", \{\}\)/);
+  assert.match(assessment, /KRAssessmentAdapter\.run\("dashboard", \{ force \}\)/);
   assert.match(assessment, /K\.liveCases = rows\.map/);
   assert.match(assessment, /existing\.find\(\(x\) => caseIdOf\(x\) === caseIdOf\(row\)\)/);
   assert.match(assessment, /mergeNativeDetail\(detail\)/);
   assert.match(assessment, /setTimeout\(\(\) => refreshBlueList\(false\), 1200\)/);
+});
+
+test("assessment shows an immediate preview and safely caches read-only GAS data", () => {
+  assert.match(assessment, /nativeDetailHtml\(preview, true\)/);
+  assert.match(assessment, /最新情報を確認中/);
+  assert.match(assessmentAdapter, /force: Boolean\(options\?\.force\)/);
+  assert.match(adapterGas, /function cachedDashboard_\(force\)/);
+  assert.match(adapterGas, /function cachedCase_\(id, force\)/);
+  assert.match(adapterGas, /function mutateCase_\(id, operation\)/);
+  assert.match(adapterGas, /cache\.remove\("assessment-dashboard:v2"\)/);
+  assert.match(adapterGas, /cache\.remove\(assessmentCaseCacheKey_\(id\)\)/);
 });
 
 test("assessment reuses one protected bridge and avoids repeated full-list rendering", () => {
