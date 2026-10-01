@@ -1,9 +1,14 @@
 (() => {
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbyna99PhsT4kx3gFNsUYY3QJwY2C6aMJrx0bP4eSq2wVMJxbfCa6M0sr5I0DV2w20OP/exec";
+  const BRIDGE_URL = ENDPOINT + "?action=bridge";
   const TOKEN_KEY = "kr-next-assessment-session";
   const OCR_TOKEN_KEY = "kr-next-ocr-session";
   const pending = new Map();
   let initPromise = null;
+  let bridgeFrame = null;
+  let bridgeReady = false;
+  let bridgePromise = null;
+  let bridgeResolve = null;
 
   function hasSession() {
     return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -14,7 +19,13 @@
     initPromise = (async () => {
       const params = new URLSearchParams(String(location.hash || "").replace(/^#/, ""));
       const deviceToken = params.get("connect") || "";
-      if (!deviceToken) return hasSession();
+      if (!deviceToken) {
+        const warmBridge = () => ensureBridge().catch(() => {});
+        if ("requestIdleCallback" in window)
+          requestIdleCallback(warmBridge, { timeout: 3000 });
+        else setTimeout(warmBridge, 1200);
+        return hasSession();
+      }
       try {
         const result = await request("claim-device-link", { token: deviceToken });
         saveSession(result);
@@ -42,24 +53,105 @@
 
   addEventListener("message", (event) => {
     const data = event.data || {};
+    if (
+      data.type === "kr-assessment-adapter-ready" &&
+      allowedOrigin(event.origin) &&
+      bridgeFrame &&
+      event.source === bridgeFrame.contentWindow
+    ) {
+      bridgeReady = true;
+      bridgeResolve?.(true);
+      return;
+    }
     if (data.type !== "kr-assessment-adapter-response" || !data.requestId) return;
     const item = pending.get(data.requestId);
     if (!item) return;
     if (!allowedOrigin(event.origin) || data.channel !== item.channel) return;
+    if (
+      item.transport === "bridge" &&
+      (!bridgeFrame || event.source !== bridgeFrame.contentWindow)
+    )
+      return;
     clearTimeout(item.timer);
     pending.delete(data.requestId);
-    item.form.remove();
-    item.frame.remove();
+    item.form?.remove();
+    item.frame?.remove();
     data.error ? item.reject(new Error(data.error)) : item.resolve(data.result);
   });
 
-  function request(operation, payload, timeout = 30000, tokenOverride) {
+  function resetBridge() {
+    bridgeFrame?.remove();
+    bridgeFrame = null;
+    bridgeReady = false;
+    bridgePromise = null;
+    bridgeResolve = null;
+  }
+
+  function ensureBridge(timeout = 4500) {
+    if (bridgeReady && bridgeFrame?.contentWindow) return Promise.resolve(true);
+    if (!bridgePromise) {
+      bridgePromise = new Promise((resolve) => {
+        bridgeResolve = resolve;
+      });
+      bridgeFrame = document.createElement("iframe");
+      bridgeFrame.title = "査定高速接続";
+      bridgeFrame.setAttribute("aria-hidden", "true");
+      bridgeFrame.style.cssText =
+        "position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0";
+      bridgeFrame.src = BRIDGE_URL + "&_=" + Date.now();
+      document.body.appendChild(bridgeFrame);
+    }
+    return Promise.race([
+      bridgePromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("ASSESSMENT_BRIDGE_NOT_READY")), timeout),
+      ),
+    ]);
+  }
+
+  function requestMeta(operation, payload, tokenOverride) {
     const requestId = "ass-" + Date.now() + "-" + Math.random().toString(36).slice(2);
     const channel = crypto.randomUUID
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2) + Date.now();
+    return {
+      requestId,
+      channel,
+      operation,
+      token:
+        tokenOverride === undefined
+          ? localStorage.getItem(TOKEN_KEY) || ""
+          : tokenOverride,
+      payload: payload || {},
+    };
+  }
+
+  function requestBridge(operation, payload, timeout, tokenOverride) {
+    const message = requestMeta(operation, payload, tokenOverride);
     return new Promise((resolve, reject) => {
-      const target = "kr-assessment-" + requestId;
+      const timer = setTimeout(() => {
+        pending.delete(message.requestId);
+        resetBridge();
+        reject(new Error("査定サーバーから応答がありません"));
+      }, timeout);
+      pending.set(message.requestId, {
+        resolve,
+        reject,
+        timer,
+        channel: message.channel,
+        transport: "bridge",
+      });
+      bridgeFrame.contentWindow.postMessage(
+        { type: "kr-assessment-adapter-request", ...message },
+        "*",
+      );
+    });
+  }
+
+  function requestPost(operation, payload, timeout, tokenOverride) {
+    const message = requestMeta(operation, payload, tokenOverride);
+    return new Promise((resolve, reject) => {
+      const target = "kr-assessment-" + message.requestId;
       const frame = document.createElement("iframe");
       frame.name = target;
       frame.title = "査定安全接続";
@@ -71,14 +163,8 @@
       form.target = target;
       form.style.display = "none";
       const fields = {
-        requestId,
-        channel,
-        operation,
-        token:
-          tokenOverride === undefined
-            ? localStorage.getItem(TOKEN_KEY) || ""
-            : tokenOverride,
-        payload: JSON.stringify(payload || {}),
+        ...message,
+        payload: JSON.stringify(message.payload),
       };
       Object.entries(fields).forEach(([name, value]) => {
         const input = document.createElement("input");
@@ -89,14 +175,31 @@
       });
       document.body.append(frame, form);
       const timer = setTimeout(() => {
-        pending.delete(requestId);
+        pending.delete(message.requestId);
         form.remove();
         frame.remove();
         reject(new Error("査定サーバーから応答がありません"));
       }, timeout);
-      pending.set(requestId, { resolve, reject, timer, form, frame, channel });
+      pending.set(message.requestId, {
+        resolve,
+        reject,
+        timer,
+        form,
+        frame,
+        channel: message.channel,
+        transport: "post",
+      });
       form.submit();
     });
+  }
+
+  async function request(operation, payload, timeout = 30000, tokenOverride) {
+    try {
+      await ensureBridge();
+    } catch {
+      return requestPost(operation, payload, timeout, tokenOverride);
+    }
+    return requestBridge(operation, payload, timeout, tokenOverride);
   }
 
   async function pair(code) {

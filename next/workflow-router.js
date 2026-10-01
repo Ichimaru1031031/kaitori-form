@@ -11,7 +11,7 @@
       K.screen("assessmentView");
       K.setNav("assessment");
       K.renderAssessment && K.renderAssessment();
-      K.requestBlueCases?.();
+      K.refreshAssessmentData?.(false);
       return;
     }
     const native = {
@@ -106,10 +106,10 @@
   };
   K.startBridge = () => {
     oldStart();
-    setInterval(() => {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
       const v = K.$("#assessmentView");
-      if (v && v.classList.contains("active") && K.renderAssessment)
-        K.renderAssessment();
-    }, 2500);
+      if (v?.classList.contains("active")) K.refreshAssessmentData?.(false);
+    });
   };
 })();

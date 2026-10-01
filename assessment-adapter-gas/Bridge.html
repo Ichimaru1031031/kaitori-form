@@ -1,15 +1,15 @@
 <!doctype html><html><head><meta charset="utf-8"></head><body><script>
 (() => {
   const allowed = "https://ichimaru1031031.github.io";
-  const send = (event, body) => event.source.postMessage(body, event.origin);
+  const send = (event, data, body) => event.source.postMessage({ ...body, channel: data.channel || "" }, event.origin);
   parent.postMessage({ type: "kr-assessment-adapter-ready" }, allowed);
   addEventListener("message", (event) => {
     if (event.origin !== allowed) return;
     const data = event.data || {};
     if (data.type !== "kr-assessment-adapter-request" || !data.requestId) return;
     const runner = google.script.run
-      .withSuccessHandler((result) => send(event, { type: "kr-assessment-adapter-response", requestId: data.requestId, result }))
-      .withFailureHandler((error) => send(event, { type: "kr-assessment-adapter-response", requestId: data.requestId, error: String(error && error.message || error) }));
+      .withSuccessHandler((result) => send(event, data, { type: "kr-assessment-adapter-response", requestId: data.requestId, result }))
+      .withFailureHandler((error) => send(event, data, { type: "kr-assessment-adapter-response", requestId: data.requestId, error: String(error && error.message || error) }));
     if (data.operation === "pair") runner.adapterPair(data.payload && data.payload.code);
     else runner.adapterRequest(data.token, data.operation, data.payload || {});
   });

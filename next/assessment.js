@@ -5,7 +5,9 @@
     loaded = false,
     activeBlueCase = "",
     actionNotice = null,
-    dashboardLoading = false;
+    dashboardPromise = null,
+    dashboardLastSync = 0,
+    visibleLimit = 40;
   async function ensureCustomers() {
     if (loaded) return;
     if (Array.isArray(K.customers) && K.customers.length) {
@@ -135,24 +137,32 @@
       confirmedEnd: visit[1] || target[index].confirmedEnd,
     };
   }
-  async function syncNativeDashboard() {
-    if (dashboardLoading || !KRAssessmentAdapter.hasSession()) return false;
-    dashboardLoading = true;
-    try {
-      const result = await KRAssessmentAdapter.run("dashboard", {});
-      const rows = dashboardCases(result).filter((x) => /^KR-/i.test(caseIdOf(x)));
-      if (!rows.length) return false;
-      const existing = K.liveCases.length ? K.liveCases : K.snap.cases;
-      K.liveCases = rows.map((row) => ({
-        ...(existing.find((x) => caseIdOf(x) === caseIdOf(row)) || {}),
-        ...row,
-      }));
+  async function syncNativeDashboard(force = false) {
+    if (!KRAssessmentAdapter.hasSession()) return false;
+    if (!force && K.liveCases.length && Date.now() - dashboardLastSync < 15000)
       return true;
-    } catch {
-      return false;
-    } finally {
-      dashboardLoading = false;
-    }
+    if (dashboardPromise) return dashboardPromise;
+    dashboardPromise = (async () => {
+      try {
+        const result = await KRAssessmentAdapter.run("dashboard", {});
+        const rows = dashboardCases(result).filter((x) =>
+          /^KR-/i.test(caseIdOf(x)),
+        );
+        if (!rows.length) return false;
+        const existing = K.liveCases.length ? K.liveCases : K.snap.cases;
+        K.liveCases = rows.map((row) => ({
+          ...(existing.find((x) => caseIdOf(x) === caseIdOf(row)) || {}),
+          ...row,
+        }));
+        dashboardLastSync = Date.now();
+        return true;
+      } catch {
+        return false;
+      } finally {
+        dashboardPromise = null;
+      }
+    })();
+    return dashboardPromise;
   }
   function bindFilters() {
     const counts = { all: 0, action: 0, wait: 0, confirmed: 0, cancel: 0 };
@@ -185,6 +195,7 @@
       (b) =>
         (b.onclick = () => {
           filter = b.dataset.f;
+          visibleLimit = 40;
           K.renderAssessment();
         }),
     );
@@ -246,7 +257,6 @@
         text: result?.message || success || "保存しました",
       };
       await loadAssessmentCase({ id: activeBlueCase });
-      refreshBlueList();
     } catch (e) {
       if (/SESSION_EXPIRED/.test(String(e.message || e))) {
         KRAssessmentAdapter.clear();
@@ -335,13 +345,13 @@
       K.$("#assessmentOpsBody").innerHTML = nativeDetailHtml(caseInfo, true);
     } else await loadAssessmentCase(caseInfo);
   };
-  async function refreshBlueList() {
+  async function refreshBlueList(force = false) {
     const state = K.$("#assessmentBridgeState");
     if (state) {
       state.textContent = "同期中";
       state.classList.remove("connected");
     }
-    if (await syncNativeDashboard()) {
+    if (await syncNativeDashboard(force)) {
       K.renderAssessment();
       if (state) {
         state.textContent = "ライブ接続";
@@ -399,7 +409,7 @@
       list.innerHTML = '<div class="empty">対象案件はありません</div>';
       return;
     }
-    rows.forEach((x) => {
+    rows.slice(0, visibleLimit).forEach((x) => {
       const c = document.createElement("article");
       const rowGroup = group(x),
         tel = K.digits(x.phone) ? "tel:" + K.digits(x.phone) : "";
@@ -487,26 +497,42 @@
       });
       list.appendChild(c);
     });
+    if (rows.length > visibleLimit) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "assessmentLoadMore";
+      more.textContent =
+        "さらに表示（残り" + (rows.length - visibleLimit) + "件）";
+      more.onclick = () => {
+        visibleLimit += 40;
+        K.renderAssessment();
+      };
+      list.appendChild(more);
+    }
   };
   K.$("#assessmentSearch").addEventListener("input", (e) => {
     query = e.target.value;
+    visibleLimit = 40;
     clearTimeout(window.__assT);
     window.__assT = setTimeout(K.renderAssessment, 100);
   });
   K.$("#openAssessmentDashboard").onclick = async () => {
-    await refreshBlueList();
+    await refreshBlueList(true);
     K.$("#assessmentView").scrollTo({ top: 0, behavior: "smooth" });
   };
-  K.$("#refreshAssessment").onclick = refreshBlueList;
+  K.$("#refreshAssessment").onclick = () => refreshBlueList(true);
   K.$("#assessmentOpsReload").onclick = () =>
     activeBlueCase && loadAssessmentCase({ id: activeBlueCase });
-  K.$("#assessmentOpsClose").addEventListener("click", refreshBlueList);
+  K.$("#assessmentOpsClose").addEventListener("click", () =>
+    K.renderAssessment(),
+  );
   K.enableSwipeSheet?.(
     K.$("#assessmentOpsModal [data-swipe-sheet]"),
     () => {
       K.overlay("assessmentOpsModal").classList.remove("on");
-      refreshBlueList();
+      K.renderAssessment();
     },
   );
-  setTimeout(refreshBlueList, 1200);
+  K.refreshAssessmentData = refreshBlueList;
+  setTimeout(() => refreshBlueList(false), 1200);
 })();

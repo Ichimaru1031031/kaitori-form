@@ -94,6 +94,10 @@ const adapterManifest = await readFile(
   new URL("../assessment-adapter-gas/appsscript.json", import.meta.url),
   "utf8",
 );
+const adapterBridge = await readFile(
+  new URL("../assessment-adapter-gas/Bridge.html", import.meta.url),
+  "utf8",
+);
 
 test("appointment cards show a start and end time range", () => {
   assert.match(core, /x\.startTime\s*\+\s*"〜"\s*\+\s*x\.endTime/);
@@ -209,7 +213,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
   assert.match(html, /slip\.js\?v=16/);
-  assert.match(html, /assessment-adapter\.js\?v=12/);
+  assert.match(html, /assessment-adapter\.js\?v=13/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
   assert.match(slip, /tesseract\.js@5\.1\.1/);
@@ -434,7 +438,7 @@ test("inventory uses compact tappable rows and separates completed sales", () =>
 
 test("assessment stays inside NEXT without the GAS or legacy menu chrome", () => {
   assert.match(workflowRouter, /if \(tab === "assessment"\)[\s\S]*K\.screen\("assessmentView"\)/);
-  assert.match(workflowRouter, /K\.requestBlueCases\?\.\(\)/);
+  assert.match(workflowRouter, /K\.refreshAssessmentData\?\.\(false\)/);
   assert.doesNotMatch(workflowRouter, /location\.href = K\.blue\.assessment/);
   assert.match(assessment, /nativeDetailHtml\(caseInfo, true\)/);
   assert.match(assessment, /NEXT表示モード/);
@@ -562,7 +566,7 @@ test("NEXT assessment keeps the read-only Blue customer-case bridge", () => {
 test("NEXT assessment uses the token-protected native workbench", () => {
   assert.match(html, /id="assessmentOpsModal"/);
   assert.match(html, /id="assessmentOpsBody"/);
-  assert.match(html, /assessment-adapter\.js\?v=12/);
+  assert.match(html, /assessment-adapter\.js\?v=13/);
   assert.match(assessmentAdapter, /form\.method = "post"/);
   assert.match(assessmentAdapter, /data\.channel !== item\.channel/);
   assert.match(assessmentAdapter, /kr-next-assessment-session/);
@@ -615,5 +619,18 @@ test("assessment list refreshes from the protected production dashboard", () => 
   assert.match(assessment, /K\.liveCases = rows\.map/);
   assert.match(assessment, /existing\.find\(\(x\) => caseIdOf\(x\) === caseIdOf\(row\)\)/);
   assert.match(assessment, /mergeNativeDetail\(detail\)/);
-  assert.match(assessment, /setTimeout\(refreshBlueList, 1200\)/);
+  assert.match(assessment, /setTimeout\(\(\) => refreshBlueList\(false\), 1200\)/);
+});
+
+test("assessment reuses one protected bridge and avoids repeated full-list rendering", () => {
+  assert.match(assessmentAdapter, /const BRIDGE_URL = ENDPOINT \+ "\?action=bridge"/);
+  assert.match(assessmentAdapter, /function ensureBridge\(timeout = 4500\)/);
+  assert.match(assessmentAdapter, /requestIdleCallback\(warmBridge/);
+  assert.match(assessmentAdapter, /transport: "bridge"/);
+  assert.match(adapterBridge, /channel: data\.channel \|\| ""/);
+  assert.match(assessment, /rows\.slice\(0, visibleLimit\)\.forEach/);
+  assert.match(assessment, /className = "assessmentLoadMore"/);
+  assert.match(assessment, /Date\.now\(\) - dashboardLastSync < 15000/);
+  assert.doesNotMatch(workflowRouter, /setInterval/);
+  assert.match(workflowRouter, /visibilitychange/);
 });

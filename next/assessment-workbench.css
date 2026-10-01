@@ -246,6 +246,7 @@
   color: #fff !important;
 }
 .assessmentPair button { width: 100%; padding: 13px; border-radius: 12px; font-weight: 900; }
+.assessmentLoadMore { width: 100%; min-height: 48px; border: 1px solid #cfe0d8; border-radius: 14px; background: #fff; color: #23664e; font-weight: 900; }
 .nativeAssessment { width: min(760px, 100%); margin: 0 auto; display: grid; gap: 12px; }
 .nativeHero,
 .nativeSection,
