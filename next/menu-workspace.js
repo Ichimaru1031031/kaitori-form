@@ -18,7 +18,7 @@
       saved.set(current,{open,windowY:window.scrollY,screenY:screen?.scrollTop||0,overlayY:open.map(id=>[id,K.$('#'+id+' > section')?.scrollTop||0])});
       for(const id of open)K.overlay(id).classList.remove('on');
       const target=saved.get(tab);
-      if(target?.open.length && tab!=='slips'){K.screen(screens[tab]);K.setNav(tab);}
+      if(target && screens[tab] && tab!=='slips'){K.screen(screens[tab]);K.setNav(tab);}
       else await original(tab);
       current=tab;
       if(target){for(const id of target.open)K.overlay(id).classList.add('on');for(const [id,y] of target.overlayY){const el=K.$('#'+id+' > section');if(el)el.scrollTop=y;}const el=K.$('#'+screens[tab]);if(el)el.scrollTop=target.screenY;window.scrollTo(0,target.windowY);}
