@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../next/slip-workspace.js',import.meta.url),'utf8');
+function setup(){
+  const elements=new Map();
+  function element(){const classes=new Set();return{value:'',textContent:'',scrollTop:0,children:[],classList:{contains:x=>classes.has(x),add:x=>classes.add(x),remove:x=>classes.delete(x),toggle(x,on){on?classes.add(x):classes.delete(x)}},after(){},before(){},append(x){this.children.push(x)},replaceChildren(){this.children=[]},addEventListener(event,fn){this[event]=fn}};}
+  const $=key=>{if(!elements.has(key))elements.set(key,element());return elements.get(key)};
+  const createElement=()=>{const el=element();Object.defineProperty(el,'id',{set:value=>elements.set('#'+value,el)});return el;};
+  const draft={id:'draft-test',customer:{name:'テスト'},selected:['purchase'],items:{purchase:[],sale:[],work:[],recycle:[],delivery:[],estimate:[]}},state={saves:0,tabs:[],writes:[],draft};
+  const workspace={current:()=>state.draft,save:async()=>{state.saves++;if(state.failSave)throw Error('disk');},restore:async d=>{state.draft=d;$('#slip').classList.add('on');},setVisit:v=>{state.draft.visit=v;state.draft.appointmentId=v.appointmentId;}};
+  const K={$ ,slipWorkspace:workspace,snap:{appointments:[],serviceOrders:[]},overlay:name=>$('#'+name),openTab:tab=>state.tabs.push(tab),openSlip:async()=>{},setNav:()=>{},renderSlips:()=>{},esc:s=>s};
+  const ctx=vm.createContext({window:{KRN:K,addEventListener:()=>{}},document:{createElement,body:element()},MutationObserver:class{observe(){}},KRDB:{listDrafts:async()=>[draft],listSnapshots:async()=>[],listQueue:async()=>[],putAppointment:async()=>{},getDraft:async()=>null},KRAPI:{runImmediate:async(...args)=>{state.writes.push(args);if(state.failWrite)throw Error('conflict');}},alert:()=>{},Date});vm.runInContext(source,ctx);return{K,state,$};
+}
+test('menu suspension saves and restores the same slip with its scroll position',async()=>{const{K,state,$}=setup();$('#slip').classList.add('on');$('#slip .sheet').scrollTop=180;await K.openTab('schedule');assert.equal(state.saves,1);assert.deepEqual(state.tabs,['schedule']);assert.equal($('#slip').classList.contains('on'),false);await K.openTab('slips');assert.equal($('#slip').classList.contains('on'),true);assert.equal($('#slip .sheet').scrollTop,180);assert.equal(state.draft.id,'draft-test');});
+test('failed local persistence keeps the editor open',async()=>{const{K,state,$}=setup();state.failSave=true;$('#slip').classList.add('on');await K.openTab('schedule');assert.equal($('#slip').classList.contains('on'),true);assert.equal(state.tabs.length,0);});
+test('calendar conflicts do not falsely save a visit',async()=>{const{state,$}=setup();state.draft.visit={date:'2026-10-03',startTime:'10:00',endTime:'12:00'};state.failWrite=true;await $('#slipVisitSave').onclick();assert.match($('#slipVisitStatus').textContent,/conflict/);assert.equal(state.draft.appointmentId,undefined);assert.equal($('#slipVisitSave').disabled,false);});
+test('calendar success links the visit and preserves it in the draft',async()=>{const{K,state,$}=setup();state.draft.visit={date:'2026-10-03',startTime:'10:00',endTime:'12:00'};await $('#slipVisitSave').onclick();assert.equal(state.writes[0][0],'appointment-upsert');assert.equal(state.draft.appointmentId,'NEXT-SLIP-draft-test');assert.equal(K.snap.appointments.length,1);assert.equal(state.saves,1);});
+test('drafts appear in the slip list and reopen without new identity',async()=>{const{K,state,$}=setup();await K.renderLocalSlips();assert.equal($('#localSlipList').children.length,2);await $('#localSlipList').children[1].onclick();assert.equal(state.draft.id,'draft-test');assert.equal($('#slip').classList.contains('on'),true);});
+test('reopening a saved slip restores its actual line items rather than intake estimates',async()=>{const{K,state}=setup();K.snap.lineItems=[{serviceOrderId:'UT-TEST',serviceType:'sale',category:'冷蔵庫',maker:'テスト',amount:'18000'}];await K.openSlip({serviceOrderId:'UT-TEST'});assert.equal(state.draft.items.sale[0].amount,18000);assert.deepEqual(Array.from(state.draft.selected),['sale']);});

@@ -593,6 +593,10 @@ function opCaseUpsert_(entityId,p,key){
   return {caseId:caseId,customerId:customerId,saved:true,updatedAt:now};
 }
 
+function slipAppointmentStatus_(appointment,confirmedAt){
+  const today=Utilities.formatDate(new Date(confirmedAt),"Asia/Tokyo","yyyy-MM-dd");
+  return appointment.date&&String(appointment.date)<=today&&appointment.status!=="tentative"?"completed":appointment.status||"confirmed";
+}
 function opAppointmentNoteUpdate_(entityId,p,key){
   const row=findRow_("APPOINTMENTS","appointmentId",entityId);
   if(!row) throw new Error("APPOINTMENT_NOT_FOUND:"+entityId);
@@ -915,7 +919,7 @@ function opFinalizeSlip_(entityId,p,key){
   });
   if(links.appointmentId){
     const apptRow=findRow_("APPOINTMENTS","appointmentId",links.appointmentId);
-    if(apptRow) updateRow_("APPOINTMENTS",apptRow,{serviceOrderId:links.serviceOrderId,status:"completed",updatedAt:confirmedAt});
+    if(apptRow){const appointment=rowObject_(sh_("APPOINTMENTS"),apptRow);updateRow_("APPOINTMENTS",apptRow,{serviceOrderId:links.serviceOrderId,status:slipAppointmentStatus_(appointment,confirmedAt),updatedAt:confirmedAt});}
   }
   audit_("service-order",links.serviceOrderId,"finalize-slip",{snapshotId:p.id,version:version,pdfFileId:pdf.fileId,inventory:inventoryLinks},"NEXT");
   return {

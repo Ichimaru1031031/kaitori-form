@@ -65,7 +65,8 @@ function calc(){const it=item(),tr=masters.transport.find(x=>x.type===type.value
 function calc(){let total=0;for(const key of draft.selected)for(const x of draft.items[key])total+=(key==="purchase"?-1:1)*(+x.amount||0);K.$("#total").textContent="¥"+total.toLocaleString()}K.refreshResume=async()=>{const a=(await KRDB.listDrafts()).sort((x,y)=>y.updatedAt-x.updatedAt);K.$("#resume").disabled=!a.length;K.$("#draftSummary").textContent=a.length?(a[0].customer?.name||"未入力")+"｜NEXT伝票入力中":"保存中のNEXT伝票はありません";K.$("#resume").onclick=()=>{if(!a[0])return;draft=a[0];fill();K.overlay("slip").classList.add("on")}};
 
 function draftTotal(){let total=0;for(const key of draft.selected)for(const x of draft.items[key])total+=(key==="purchase"?-1:1)*(+x.amount||0);return total}
-async function closeSlipSafely(){clearTimeout(timer);K.overlay("slip").classList.remove("on");try{await save()}catch{}}
+K.slipWorkspace={current:()=>draft,save,restore:async value=>{clearTimeout(timer);draft=JSON.parse(JSON.stringify(value));await loadMasters();fill();K.overlay("slip").classList.add("on");},setVisit:value=>{draft.visit=value;draft.appointmentId=value.appointmentId||draft.appointmentId;queue();}};
+async function closeSlipSafely(){clearTimeout(timer);try{if(!K.slipWorkspace.confirmed)await save();K.overlay("slip").classList.remove("on");K.slipWorkspace.onClosed?.();K.renderLocalSlips?.();}catch{K.$("#saveState").textContent="保存できません。画面を閉じずに再度保存してください。"}}
 ["closeSlip","closeSlipFooter"].forEach(id=>K.$("#"+id).addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();closeSlipSafely()},true));
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(K.overlay("preview").classList.contains("on")){K.overlay("preview").classList.remove("on");return}if(K.overlay("slip").classList.contains("on"))closeSlipSafely()});
 function draftValidationIssues(){if(!draft)return["伝票がありません"];const issues=[];if(!String(draft.customer?.name||"").trim())issues.push("お客様のお名前");const itemCount=Object.values(draft.items||{}).reduce((sum,rows)=>sum+(Array.isArray(rows)?rows.length:0),0);if(!itemCount)issues.push("明細を1件以上");(draft.items?.purchase||[]).forEach((item,index)=>{const missing=[["category","品目"],["maker","メーカー"]].filter(([key])=>!String(item[key]||"").trim()).map(([,label])=>label);if(missing.length)issues.push("買取明細"+(index+1)+"の"+missing.join("・"))});return issues}
@@ -80,6 +81,7 @@ function clearSignature(){if(!sig.ctx||!sig.canvas)return;sig.ctx.clearRect(0,0,
 async function sha256(text){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function setDeliveryLabel(button,label){const text=button?.querySelector("span:last-child");if(text)text.textContent=label;else if(button)button.textContent=label}
 async function finalizeSnapshot(){
+  clearTimeout(timer);
   if(!draft)return;
   if(stopForDraftIssues())return;
   if(!K.$("#confirmCustomerDetails").checked||!K.$("#confirmPurchaseTerms").checked){
@@ -105,6 +107,7 @@ async function finalizeSnapshot(){
 
   const apiResult=syncState&&!syncState.queued?(syncState.result?.result||syncState.result||{}):null;
   const serviceOrderId=apiResult?.serviceOrderId||draft.sourceServiceOrderId||"";
+  snap.serviceOrderId=serviceOrderId;snap.status=apiResult?"shared-confirmed":"local-confirmed";await KRDB.putSnapshot(snap);K.slipWorkspace.confirmed=true;K.renderLocalSlips?.();
   const blueSend=K.$("#bluePdfSend");
   blueSend.dataset.slip=serviceOrderId;
   blueSend.dataset.version=String(version);
@@ -126,7 +129,8 @@ async function finalizeSnapshot(){
   if(draft.appointmentId){
     const appts=await KRDB.listAppointments().catch(()=>[]),a=appts.find(x=>String(x.appointmentId)===String(draft.appointmentId));
     if(a){
-      a.status="completed";
+      const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Tokyo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(confirmedAt));
+      if(a.date&&a.date<=today&&a.status!=="tentative")a.status="completed";
       a.updatedAt=confirmedAt;
       if(serviceOrderId)a.serviceOrderId=serviceOrderId;
       await KRDB.putAppointment(a);
