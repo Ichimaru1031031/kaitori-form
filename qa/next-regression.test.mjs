@@ -212,7 +212,7 @@ test("NEXT slip carries postal address lookup through confirmation and Green cus
 });
 
 test("NEXT product entry uses protected cloud OCR with on-device fallback and manual confirmation", () => {
-  assert.match(html, /slip\.js\?v=20/);
+  assert.match(html, /slip\.js\?v=21/);
   assert.match(html, /assessment-adapter\.js\?v=15/);
   assert.match(slip, /capture="environment"/);
   assert.match(slip, /カメラで品目・メーカー・年式・型番を読み取る/);
