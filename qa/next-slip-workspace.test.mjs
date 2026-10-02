@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../next/slip-workspace.js',import.meta.url),'utf8');
 function setup(){
   const elements=new Map();
-  function element(){const classes=new Set();return{value:'',textContent:'',scrollTop:0,children:[],classList:{contains:x=>classes.has(x),add:x=>classes.add(x),remove:x=>classes.delete(x),toggle(x,on){on?classes.add(x):classes.delete(x)}},after(){},before(){},append(x){this.children.push(x)},replaceChildren(){this.children=[]},addEventListener(event,fn){this[event]=fn}};}
+  function element(){const classes=new Set();return{dataset:{},value:'',textContent:'',scrollTop:0,children:[],classList:{contains:x=>classes.has(x),add:x=>classes.add(x),remove:x=>classes.delete(x),toggle(x,on){on?classes.add(x):classes.delete(x)}},after(){},before(){},append(x){this.children.push(x)},replaceChildren(){this.children=[]},addEventListener(event,fn){this[event]=fn}};}
   const $=key=>{if(!elements.has(key))elements.set(key,element());return elements.get(key)};
   const createElement=()=>{const el=element();Object.defineProperty(el,'id',{set:value=>elements.set('#'+value,el)});return el;};
   const draft={id:'draft-test',customer:{name:'テスト'},selected:['purchase'],items:{purchase:[],sale:[],work:[],recycle:[],delivery:[],estimate:[]}},state={saves:0,tabs:[],writes:[],draft};

@@ -94,6 +94,7 @@ function buildSnapshot_() {
     checkouts:"CHECKOUTS"
   };
   const out = {
+    archivedServiceOrderIds:JSON.parse(PropertiesService.getScriptProperties().getProperty("NEXT_ARCHIVED_SERVICE_ORDERS")||"[]"),
     schemaVersion:3,
     generatedAt:new Date().toISOString(),
     source:"Kaitori Rescue NEXT Green API",
@@ -140,6 +141,7 @@ function dispatch_(op, entityId, p, key) {
     case "call-log": return opCallLog_(entityId,p,key);
     case "visit-start": return opVisitStart_(entityId,p,key);
     case "finalize-slip": return opFinalizeSlip_(entityId,p,key);
+    case "service-order-archive": return opServiceOrderArchive_(entityId,p);
     case "send-slip-pdf-email": return opSendSlipPdfEmail_(entityId,p,key);
     case "get-slip-pdf-share": return opGetSlipPdfShare_(entityId,p,key);
     case "appointment-upsert": return opAppointmentUpsert_(entityId,p,key);
@@ -593,6 +595,13 @@ function opCaseUpsert_(entityId,p,key){
   return {caseId:caseId,customerId:customerId,saved:true,updatedAt:now};
 }
 
+function opServiceOrderArchive_(entityId,p){
+  if(!findRow_("SERVICE_ORDERS","serviceOrderId",entityId))throw new Error("伝票が見つかりません");
+  const props=PropertiesService.getScriptProperties(),ids=JSON.parse(props.getProperty("NEXT_ARCHIVED_SERVICE_ORDERS")||"[]");
+  const next=ids.filter(function(id){return id!==entityId;});if(p.archived!==false)next.push(entityId);
+  props.setProperty("NEXT_ARCHIVED_SERVICE_ORDERS",JSON.stringify(next));audit_("service-order",entityId,p.archived===false?"unarchive":"archive",{historyPreserved:true},"NEXT");
+  return {serviceOrderId:entityId,archived:p.archived!==false,archivedServiceOrderIds:next};
+}
 function slipAppointmentStatus_(appointment,confirmedAt){
   const today=Utilities.formatDate(new Date(confirmedAt),"Asia/Tokyo","yyyy-MM-dd");
   return appointment.date&&String(appointment.date)<=today&&appointment.status!=="tentative"?"completed":appointment.status||"confirmed";

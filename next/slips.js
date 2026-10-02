@@ -101,7 +101,7 @@
       dm = docMap(),
       q = K.norm(query);
     let rows = (K.snap.serviceOrders || []).filter(
-      (x) => filter === "all" || group(x) === filter,
+      (x) => !(K.snap.archivedServiceOrderIds||[]).includes(x.serviceOrderId) && (filter === "all" || group(x) === filter),
     );
     rows = rows
       .filter((x) => {

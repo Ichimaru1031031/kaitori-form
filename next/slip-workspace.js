@@ -3,15 +3,19 @@
   let suspended=false, scrollTop=0, renderToken=0;
   const section=document.createElement('details');
   section.className='slipVisit';
-  section.innerHTML='<summary>訪問日時 <span id="slipVisitSummary">未設定・任意</span></summary><div class="slipVisitFields"><label>訪問日<input id="slipVisitDate" type="date"></label><div><label>開始<input id="slipVisitStart" type="time"></label><label>終了<input id="slipVisitEnd" type="time"></label></div><button type="button" id="slipVisitSave">カレンダーへ反映</button><small id="slipVisitStatus" role="status">日時の入力は下書き保存されます。反映ボタンで予約します。</small></div>';
+  section.innerHTML='<summary>訪問日時 <span id="slipVisitSummary">未設定・任意</span></summary><div class="slipVisitFields"><label>訪問日<input id="slipVisitDate" type="date"></label><div><label>開始<select id="slipVisitStart"></select></label><label>終了<select id="slipVisitEnd"></select></label></div><button type="button" id="slipVisitSave">カレンダーへ反映</button><small id="slipVisitStatus" role="status">日時の入力は下書き保存されます。反映ボタンで予約します。</small></div>';
   K.$('#slip .common').after(section);
   const fields=['Date','Start','End'].map(key=>K.$('#slipVisit'+key));
+  const slots=Array.from({length:25},(_,i)=>String(8+Math.floor(i/2)).padStart(2,'0')+':'+(i%2?'30':'00'));
+  function setSlots(start='',end=''){fields[1].innerHTML='<option value="">開始を選択</option>'+slots.slice(0,-1).map(t=>'<option value="'+t+'">'+t+'</option>').join('');fields[2].innerHTML='<option value="">終了を選択</option>'+slots.filter(t=>!start||t>start).map(t=>'<option value="'+t+'">'+t+'</option>').join('');if(start&&!slots.slice(0,-1).includes(start))fields[1].innerHTML+='<option value="'+K.esc(start)+'">'+K.esc(start)+'（既存の日時）</option>';if(end&&(!slots.includes(end)||end<=start))fields[2].innerHTML+='<option value="'+K.esc(end)+'">'+K.esc(end)+'（既存の日時）</option>';fields[1].value=start;fields[2].value=end;}
+  setSlots();
   function visitSummary(){const [date,start,end]=fields.map(x=>x.value);K.$('#slipVisitSummary').textContent=date?date+' '+(start||'')+(end?'〜'+end:''):'未設定・任意';}
-  function hydrate(){const d=workspace.current();if(!d)return;const a=(K.snap.appointments||[]).find(x=>x.appointmentId===d.appointmentId || (d.caseId&&x.caseId===d.caseId));if(a&&!d.appointmentId)d.appointmentId=a.appointmentId;const v=d.visit||a||{};fields[0].value=v.date||'';fields[1].value=v.startTime||'';fields[2].value=v.endTime||'';visitSummary();K.$('#slipVisitStatus').textContent=v.savedAt?'✓ カレンダーに反映済み':'日時の入力は下書き保存されます。反映ボタンで予約します。';}
-  fields.forEach(field=>field.addEventListener('input',()=>{const d=workspace.current();workspace.setVisit({...d.visit,date:fields[0].value,startTime:fields[1].value,endTime:fields[2].value,savedAt:''});visitSummary();}));
+  function hydrate(){const d=workspace.current();if(!d)return;const a=(K.snap.appointments||[]).find(x=>x.appointmentId===d.appointmentId || (d.caseId&&x.caseId===d.caseId));if(a&&!d.appointmentId)d.appointmentId=a.appointmentId;const v=d.visit||a||{};fields[0].value=v.date||'';setSlots(v.startTime||'',v.endTime||'');visitSummary();K.$('#slipVisitStatus').textContent=v.savedAt?'✓ カレンダーに反映済み':'日時の入力は下書き保存されます。反映ボタンで予約します。';}
+  fields.forEach(field=>field.addEventListener('input',()=>{if(field===fields[1]){const start=field.value,end=fields[2].value;setSlots(start,end>start?end:slots.find(t=>t>start)||'');}const d=workspace.current();workspace.setVisit({...d.visit,date:fields[0].value,startTime:fields[1].value,endTime:fields[2].value,savedAt:''});visitSummary();}));
   K.$('#slipVisitSave').onclick=async()=>{
     const d=workspace.current(),v=d?.visit||{},button=K.$('#slipVisitSave'),status=K.$('#slipVisitStatus');
     if(!v.date||!v.startTime||!v.endTime||v.startTime>=v.endTime){status.textContent='訪問日・開始・終了を確認してください。';return;}
+    if(!slots.includes(v.startTime)||!slots.includes(v.endTime)){status.textContent='時間は8:00〜20:00の30分刻みで選択してください。';return;}
     if(!d.customer.name.trim()){status.textContent='お客様のお名前を入力してください。';return;}
     button.disabled=true;
     try{
@@ -37,6 +41,7 @@
     hydrate();K.setNav('slips');
   };
   const originalTab=K.openTab;
+  K.routeTab=originalTab;
   K.openTab=async tab=>{
     if(K.overlay('preview').classList.contains('on')){if(!workspace.confirmed){alert('お客様確認を閉じてから移動してください。');return;}K.overlay('preview').classList.remove('on');}
     if(K.overlay('slip').classList.contains('on')){if(!workspace.confirmed){try{await workspace.save();}catch{alert('保存できません。画面を閉じずに再度保存してください。');return;}suspended=true;scrollTop=K.$('#slip .sheet').scrollTop;}K.overlay('slip').classList.remove('on');}
@@ -51,7 +56,7 @@
     const entries=[...drafts.map(d=>({d,label:'入力中・この端末に保存'})),...[...latest.values()].filter(s=>!s.serviceOrderId||!(K.snap.serviceOrders||[]).some(x=>x.serviceOrderId===s.serviceOrderId)).map(s=>({d:s.payload,s,label:s.status==='shared-confirmed'?'確定・共有保存済み':'確定・共有同期待ち'}))];
     if(!entries.length)return;
     const heading=document.createElement('h3');heading.textContent='この端末の伝票';local.append(heading);
-    for(const {d,s,label} of entries){const button=document.createElement('button');button.className='localSlipRow';button.innerHTML='<b>'+K.esc(d.customer?.name||'お名前未入力')+' 様</b><small>'+K.esc(label)+(s?'・第'+s.version+'版':'')+'</small>';button.onclick=async()=>{if(s){alert('確定内容（編集不可）\n'+(d.customer?.name||'')+' 様\n'+(d.customer?.address||'')+'\n'+Object.values(d.items||{}).flat().map(x=>[x.category,x.maker,x.model,'¥'+Number(x.amount||0).toLocaleString()].filter(Boolean).join(' / ')).join('\n')+'\n'+label);return;}workspace.confirmed=false;suspended=false;await workspace.restore(d);hydrate();K.setNav('slips');};local.append(button);}
+    for(const {d,s,label} of entries){const button=document.createElement('button');button.className='localSlipRow';button.dataset.draftId=d.id;button.dataset.snapshotId=s?.id||'';button.innerHTML='<b>'+K.esc(d.customer?.name||'お名前未入力')+' 様</b><small>'+K.esc(label)+(s?'・第'+s.version+'版':'')+'</small>';button.onclick=async()=>{if(s){alert('確定内容（編集不可）\n'+(d.customer?.name||'')+' 様\n'+(d.customer?.address||'')+'\n'+Object.values(d.items||{}).flat().map(x=>[x.category,x.maker,x.model,'¥'+Number(x.amount||0).toLocaleString()].filter(Boolean).join(' / ')).join('\n')+'\n'+label);return;}workspace.confirmed=false;suspended=false;await workspace.restore(d);hydrate();K.captureSlipBaseline?.(d);K.setNav('slips');};local.append(button);}
   };
   const render=K.renderSlips;K.renderSlips=()=>{render();K.renderLocalSlips();};
   const observer=new MutationObserver(()=>{const active=K.overlay('slip').classList.contains('on')&&!K.overlay('preview').classList.contains('on');document.body.classList.toggle('slipEditing',active);if(active)hydrate();});
