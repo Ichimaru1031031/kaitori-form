@@ -24,7 +24,9 @@
   function todayKey() {
     return K.keyDate(new Date());
   }
-  async function loadProcess() {
+  let processLoadInFlight=null;
+  function loadProcess(){if(!processLoadInFlight)processLoadInFlight=loadProcessOnce().finally(()=>{processLoadInFlight=null;});return processLoadInFlight;}
+  async function loadProcessOnce() {
     try {
       const [local, sales] = await Promise.all([
         KRDB.listProcess(),
@@ -330,10 +332,10 @@
       "</div>"
     );
   }
-  function card(item) {
+  function card(item,photoLookup) {
     const c = document.createElement("article"),
       s = effectiveStage(item),
-      firstPhoto = staticPhotosFor(item)[0],
+      firstPhoto = staticPhotosFor(item,photoLookup)[0],
       thumb = firstPhoto ? inventoryPhotoSrc(firstPhoto) : "";
     c.className =
       "inventoryCard compactInventoryCard" +
@@ -347,7 +349,7 @@
           K.esc(thumb) +
           '" alt="' +
           K.esc(firstPhoto.fileName || "在庫写真") +
-          '">'
+          '" loading="lazy" decoding="async">'
         : '<span class="inventoryThumb empty" aria-hidden="true">📦</span>') +
       '<div class="inventoryCompactBody"><b class="inventoryNo">' +
       K.esc(item.inventoryNo || item.inventoryId) +
@@ -373,7 +375,7 @@
     };
     return c;
   }
-  K.renderInventory = async () => {
+  K.renderInventory = async (append=false) => {
     if (!K.$("#inventoryList")) return;
     syncProcessSnapshot();
     if (!processData.stages.length) await loadProcess();
@@ -391,11 +393,17 @@
           ? "今日触った順"
           : "工程・更新順";
     const list = K.$("#inventoryList");
-    list.innerHTML = "";
-    rows.slice(0, limit).forEach((x) => list.appendChild(card(x)));
+    const photoLookup=K.buildPhotoLookup(K.snap.catalogItems||[],K.snap.ecListings||[]),visible=rows.slice(0,limit);
+    const keys=visible.map(x=>JSON.stringify([x,effectiveStage(x),staticPhotosFor(x,photoLookup)]));
+    const previous=list.__inventoryKeys||[];
+    const keep=append===true&&previous.length===list.children.length&&previous.length<=keys.length&&previous.every((key,i)=>key===keys[i]);
+    const fragment=document.createDocumentFragment();
+    visible.slice(keep?previous.length:0).forEach(x=>fragment.appendChild(card(x,photoLookup)));
+    if(!keep)list.replaceChildren(fragment);else list.appendChild(fragment);
+    list.__inventoryKeys=keys;
     const more=K.$("#inventoryMore");more.classList.toggle("hidden", rows.length <= limit);
     K.inventoryMoreObserver?.disconnect();
-    if(rows.length>limit)K.inventoryMoreObserver=K.autoMore(more,()=>{limit+=60;K.renderInventory();});
+    if(rows.length>limit)K.inventoryMoreObserver=K.autoMore(more,()=>{limit+=60;K.renderInventory(true);});
     if (!directHandled) maybeDirectOpen();
     K.renderHomeWork && K.renderHomeWork();
   };
@@ -557,13 +565,13 @@
       fileName: value.fileName || value.name || "掲載写真 " + (index + 1),
     };
   }
-  function staticPhotosFor(item) {
-    const catalog = (K.snap.catalogItems || []).find(
+  function staticPhotosFor(item,photoLookup) {
+    const catalog = photoLookup ? photoLookup.catalog(item) : (K.snap.catalogItems || []).find(
         (x) =>
           x.inventoryId === item.inventoryId ||
           (item.inventoryNo && x.inventoryNo === item.inventoryNo),
       ),
-      listing = (K.snap.ecListings || []).find(
+      listing = photoLookup ? photoLookup.listing(item.inventoryId) : (K.snap.ecListings || []).find(
         (x) => x.inventoryId === item.inventoryId,
       ),
       sources = [

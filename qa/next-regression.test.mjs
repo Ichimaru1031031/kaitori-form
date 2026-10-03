@@ -415,7 +415,7 @@ test("saved appointments show their content and a visible completion notice", ()
 
 test("inventory photos render as a horizontal swipe gallery", () => {
   assert.match(inventory, /function inventoryPhotoSrc\(photo\)/);
-  assert.match(inventory, /function staticPhotosFor\(item\)/);
+  assert.match(inventory, /function staticPhotosFor\(item,photoLookup\)/);
   assert.match(inventory, /K\.snap\.catalogItems/);
   assert.match(inventory, /class="inventoryThumb"/);
   assert.match(workflowRouter, /\.\/data\/catalog\.json/);
