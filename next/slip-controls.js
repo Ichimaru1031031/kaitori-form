@@ -15,6 +15,9 @@
  K.requestSlipExit=()=>{if(!changed())return Promise.resolve('save');if(exitPending)return exitPending;exitPending=new Promise(resolve=>{modal.classList.add('on');modal.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{modal.classList.remove('on');const choice=b.dataset.choice;exitPending=null;resolve(choice);});});return exitPending;};
  w.discardOnExit=async()=>{const id=w.current()?.id;w.clear();if(id){if(baseline)await KRDB.putDraft(baseline);else await KRDB.deleteDraft(id);}await K.refreshResume();};
  const text=K.$('#closeSlipFooter');text.textContent='← 戻る';K.$('#closeSlip').setAttribute('aria-label','伝票入力を閉じる');
+ const sheet=K.$('#slip > .sheet'),grabber=document.createElement('div');grabber.className='sheetGrabber';grabber.setAttribute('aria-hidden','true');sheet.prepend(grabber);
+ sheet.querySelector('.body')?.setAttribute('data-no-swipe-close','');
+ K.enableSwipeSheet(sheet,()=>K.$('#closeSlip').click());
  // Deletion removes draft data; completed slips are hidden with a reversible archive marker.
  const key='kr-next-archived-slips';const hidden=()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return[]}};
  const archive=id=>{const ids=new Set(hidden());ids.add(id);localStorage.setItem(key,JSON.stringify([...ids]));};
