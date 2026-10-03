@@ -369,7 +369,7 @@
     const preview = normCase({ ...caseInfo, id: activeBlueCase });
     body.innerHTML =
       nativeDetailHtml(preview, true) +
-      '<div class="nativeAssessmentLoading"><b>最新情報を確認中…</b></div>';
+      '<div class="nativeAssessmentLoading" role="status"><span class="loadingSpinner" aria-hidden="true"></span><b>最新情報を確認中…</b></div>';
     try {
       const detail = await KRAssessmentAdapter.getCase(activeBlueCase, { force });
       if(activeBlueCase!==requestedId)return;
@@ -556,8 +556,8 @@
       list.appendChild(c);
     });
     if (rows.length > visibleLimit) {
-      const more = document.createElement("button");
-      more.type = "button";
+      K.assessmentMoreObserver?.disconnect();
+      const more = document.createElement("div");
       more.className = "assessmentLoadMore";
       more.textContent =
         "さらに表示（残り" + (rows.length - visibleLimit) + "件）";
@@ -566,6 +566,7 @@
         K.renderAssessment();
       };
       list.appendChild(more);
+      K.assessmentMoreObserver=K.autoMore(more,more.onclick);
     }
   };
   K.$("#assessmentSearch").addEventListener("input", (e) => {

@@ -393,7 +393,9 @@
     const list = K.$("#inventoryList");
     list.innerHTML = "";
     rows.slice(0, limit).forEach((x) => list.appendChild(card(x)));
-    K.$("#inventoryMore").classList.toggle("hidden", rows.length <= limit);
+    const more=K.$("#inventoryMore");more.classList.toggle("hidden", rows.length <= limit);
+    K.inventoryMoreObserver?.disconnect();
+    if(rows.length>limit)K.inventoryMoreObserver=K.autoMore(more,()=>{limit+=60;K.renderInventory();});
     if (!directHandled) maybeDirectOpen();
     K.renderHomeWork && K.renderHomeWork();
   };
